@@ -107,7 +107,12 @@
   --file-archive: oklch(0.72 0.025 255);
 }
 @layer base {
-  * { border-color: var(--color-border); }
+  * { border-color: var(--color-border); scrollbar-width: thin; scrollbar-color: color-mix(in oklab, var(--color-border) 70%, transparent) transparent; }
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-thumb { background: color-mix(in oklab, var(--color-border) 65%, transparent); border-radius: 99px; border: 1px solid transparent; background-clip: content-box; }
+  ::-webkit-scrollbar-thumb:hover { background: color-mix(in oklab, var(--color-foreground) 22%, transparent); background-clip: content-box; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-corner { background: transparent; }
   html { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
   body { background: var(--color-background); color: var(--color-foreground); margin: 0; font-feature-settings: "cv02", "ss01"; }
   ::selection { background: color-mix(in oklab, var(--color-primary) 22%, transparent); }
@@ -117,10 +122,12 @@
 @utility hairline { border-color: var(--color-border); }
 @utility soft-scroll {
   scrollbar-width: thin;
-  scrollbar-color: color-mix(in oklab, var(--color-border) 80%, transparent) transparent;
-  &::-webkit-scrollbar { width: 8px; height: 8px; }
-  &::-webkit-scrollbar-thumb { background: color-mix(in oklab, var(--color-border) 85%, transparent); border-radius: 99px; border: 2px solid transparent; background-clip: content-box; }
+  scrollbar-color: color-mix(in oklab, var(--color-border) 70%, transparent) transparent;
+  &::-webkit-scrollbar { width: 5px; height: 5px; }
+  &::-webkit-scrollbar-thumb { background: color-mix(in oklab, var(--color-border) 65%, transparent); border-radius: 99px; border: 1px solid transparent; background-clip: content-box; }
   &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-corner { background: transparent; }
+  &::-webkit-scrollbar-thumb:hover { background: color-mix(in oklab, var(--color-foreground) 22%, transparent); background-clip: content-box; }
 }
 @utility agent-grid { background-image: linear-gradient(var(--color-border) 1px, transparent 1px), linear-gradient(90deg, var(--color-border) 1px, transparent 1px); background-size: 18px 18px; }
 @utility glass { background: color-mix(in oklab, var(--color-background) 88%, transparent); backdrop-filter: blur(16px) saturate(1.15); }
