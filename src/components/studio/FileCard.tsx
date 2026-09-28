@@ -116,7 +116,7 @@ export function FileCard({ file, onOpen }: { file: StudioFile; onOpen: (id: stri
   const style = kindStyles[file.kind];
   const Icon = style.icon;
   return (
-    <div className="lift group rounded-lg border bg-card p-3">
+    <div role="button" tabIndex={0} onClick={() => onOpen(file.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(file.id); } }} className="lift group cursor-pointer rounded-lg border bg-card p-3 outline-none focus-visible:ring-2 focus-visible:ring-ring/40">
       <div className="flex items-start gap-2.5">
         <span className={`flex size-8 shrink-0 items-center justify-center rounded-md ring-1 ring-inset ${style.tint} ${style.text} ${style.ring}`}>
           <Icon className="size-4" />
