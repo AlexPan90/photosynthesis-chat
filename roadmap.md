@@ -8,4 +8,4 @@
 - [x] Add playback, pause, seek, and speed controls for browser-generated story narration.
 - [x] Verify controls, branch switching, and narrow-screen placement.
 - [x] Rework story view around chapter-specific narration and remove duplicate media display.
-- [ ] Verify graphite light/dark layouts, chapter switching, narration controls, and mobile reading.
+- [x] Verify graphite light/dark layouts, chapter switching, narration controls, and mobile reading.
