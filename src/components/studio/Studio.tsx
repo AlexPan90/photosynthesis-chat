@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { UIMessage } from "ai";
-import { Activity, ArrowUpRight, BookOpen, Bot, Check, ChevronDown, CircleAlert, Clock3, Command, Copy, Folder, Keyboard, LayoutPanelLeft, MessageSquare, MoreHorizontal, PanelRight, Paperclip, Search, Settings2, SlidersHorizontal, SquarePen, Sun, Tags, Trash2, X } from "lucide-react";
+import { Activity, ArrowUpRight, BookOpen, Bot, Check, ChevronDown, CircleAlert, Clock3, Command, Copy, Folder, Keyboard, LayoutPanelLeft, ListFilter, MessageSquare, MoreHorizontal, PanelRight, Paperclip, Search, Settings2, SlidersHorizontal, SquarePen, Sun, Tags, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
