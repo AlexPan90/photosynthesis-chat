@@ -29,6 +29,12 @@
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-info: var(--info);
+  --color-file-code: var(--file-code);
+  --color-file-data: var(--file-data);
+  --color-file-doc: var(--file-doc);
+  --color-file-image: var(--file-image);
+  --color-file-media: var(--file-media);
+  --color-file-archive: var(--file-archive);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --radius-sm: 4px;
@@ -60,6 +66,12 @@
   --info: oklch(0.52 0.13 240);
   --sidebar: oklch(0.971 0.004 250);
   --sidebar-foreground: var(--foreground);
+  --file-code: oklch(0.55 0.14 250);
+  --file-data: oklch(0.55 0.13 160);
+  --file-doc: oklch(0.56 0.17 20);
+  --file-image: oklch(0.56 0.16 300);
+  --file-media: oklch(0.62 0.15 60);
+  --file-archive: oklch(0.55 0.05 255);
 }
 .dark {
   --background: oklch(0.18 0.012 255);
@@ -86,15 +98,36 @@
   --info: oklch(0.72 0.11 240);
   --sidebar: oklch(0.205 0.011 255);
   --sidebar-foreground: var(--foreground);
+  --file-code: oklch(0.72 0.12 250);
+  --file-data: oklch(0.74 0.12 160);
+  --file-doc: oklch(0.72 0.14 20);
+  --file-image: oklch(0.74 0.13 300);
+  --file-media: oklch(0.78 0.13 60);
+  --file-archive: oklch(0.72 0.03 255);
 }
 @layer base {
   * { border-color: var(--color-border); }
-  html { font-family: var(--font-sans); }
-  body { background: var(--color-background); color: var(--color-foreground); margin: 0; }
+  html { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  body { background: var(--color-background); color: var(--color-foreground); margin: 0; font-feature-settings: "cv02", "ss01"; }
+  ::selection { background: color-mix(in oklab, var(--color-info) 22%, transparent); }
 }
 @utility hairline { border-color: var(--color-border); }
-@utility soft-scroll { scrollbar-width: thin; scrollbar-color: var(--color-border) transparent; }
+@utility soft-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--color-border) 80%, transparent) transparent;
+  &::-webkit-scrollbar { width: 8px; height: 8px; }
+  &::-webkit-scrollbar-thumb { background: color-mix(in oklab, var(--color-border) 85%, transparent); border-radius: 99px; border: 2px solid transparent; background-clip: content-box; }
+  &::-webkit-scrollbar-track { background: transparent; }
+}
 @utility agent-grid { background-image: linear-gradient(var(--color-border) 1px, transparent 1px), linear-gradient(90deg, var(--color-border) 1px, transparent 1px); background-size: 18px 18px; }
+@utility glass { background: color-mix(in oklab, var(--color-background) 72%, transparent); backdrop-filter: blur(14px) saturate(1.4); }
+@utility inner-hairline { box-shadow: inset 0 1px 0 color-mix(in oklab, var(--color-foreground) 5%, transparent); }
+@utility lift { transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), border-color 180ms ease, box-shadow 180ms ease; &:hover { transform: translateY(-1px); border-color: color-mix(in oklab, var(--color-foreground) 18%, var(--color-border)); box-shadow: 0 6px 20px -12px color-mix(in oklab, var(--color-foreground) 55%, transparent); } }
+@utility checker { background-image: linear-gradient(45deg, var(--color-muted) 25%, transparent 25%), linear-gradient(-45deg, var(--color-muted) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, var(--color-muted) 75%), linear-gradient(-45deg, transparent 75%, var(--color-muted) 75%); background-size: 12px 12px; background-position: 0 0, 0 6px, 6px -6px, -6px 0px; }
 @keyframes cursor-blink { 50% { opacity: 0; } }
+@keyframes rise-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-warning) 45%, transparent); } 70% { box-shadow: 0 0 0 6px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+@utility rise { animation: rise-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+@utility pulse-dot { animation: pulse-ring 1.8s ease-out infinite; }
 @utility stream-cursor { &::after { content: ""; display: inline-block; width: 5px; height: 1em; margin-left: 3px; vertical-align: -2px; background: var(--color-success); animation: cursor-blink 1s step-end infinite; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; scroll-behavior: auto !important; } }
