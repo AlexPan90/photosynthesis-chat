@@ -68,19 +68,19 @@ export function Studio({ threadId }: { threadId?: string }) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => { setThreads(loadThreads()); setReady(true); setDark(localStorage.getItem("relay-dark") === "true"); setFontSize(Number(localStorage.getItem("relay-font")) || 14); }, []);
   useEffect(() => { document.documentElement.classList.toggle("dark", dark); if (ready) localStorage.setItem("relay-dark", String(dark)); }, [dark, ready]);
-  useEffect(() => { if (ready) localStorage.setItem(STORAGE, JSON.stringify(threads)); }, [threads, ready]);
   useEffect(() => { if (ready) localStorage.setItem("relay-font", String(fontSize)); }, [fontSize, ready]);
   useEffect(() => { textareaRef.current?.focus(); }, [threadId, status]);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
   const active = threads.find(t => t.id === threadId);
   const shown = useMemo(() => [...threads].filter(t => (group === "全部会话" || t.group === group) && t.title.toLowerCase().includes(search.toLowerCase())).sort((a,b) => b.updatedAt - a.updatedAt), [threads, group, search]);
-  function updateThread(id: string, updater: (thread: Thread) => Thread) { setThreads(prev => prev.map(t => t.id === id ? updater(t) : t)); }
-  function createThread() { const id = makeId(); setThreads(prev => [{ id, title: "新对话", group: "未分组", updatedAt: Date.now(), messages: [] }, ...prev]); setScenario("default"); setMobileSidebar(false); navigate({ to: "/chat/$threadId", params: { threadId: id } }); }
+  function persist(next: Thread[]) { localStorage.setItem(STORAGE, JSON.stringify(next)); return next; }
+  function updateThread(id: string, updater: (thread: Thread) => Thread) { setThreads(prev => persist(prev.map(t => t.id === id ? updater(t) : t))); }
+  function createThread() { const id = makeId(); setThreads(prev => persist([{ id, title: "新对话", group: "未分组", updatedAt: Date.now(), messages: [] }, ...prev])); setScenario("default"); setMobileSidebar(false); navigate({ to: "/chat/$threadId", params: { threadId: id } }); }
   useEffect(() => { const onKey = (event: KeyboardEvent) => { if (!(event.metaKey || event.ctrlKey)) return; if (event.key.toLowerCase() === "k") { event.preventDefault(); createThread(); } if (event.key.toLowerCase() === "f") { event.preventDefault(); setSidebar(true); setMobileSidebar(true); requestAnimationFrame(() => document.querySelector<HTMLInputElement>('input[aria-label="搜索对话"]')?.focus()); } }; window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey); });
   function stop() { if (timer.current) clearTimeout(timer.current); setStatus("ready"); setScenario("default"); }
   function send(text: string, files: { filename?: string }[]) { if (!text.trim() && files.length === 0) return; const id = active?.id; if (!id) { setNotice("请先新建会话"); return; } const content = [text.trim(), ...files.map(f => `📎 ${f.filename || "附件"}`)].filter(Boolean).join("\n"); const message: UIMessage = { id: makeId(), role: "user", parts: [{ type: "text", text: content }] }; updateThread(id, t => ({ ...t, title: t.messages.length === 0 ? (text.trim().slice(0, 22) || "附件对话") : t.title, updatedAt: Date.now(), messages: [...t.messages, message] })); setDraft(""); setStatus("submitted"); timer.current = setTimeout(() => { setStatus("streaming"); updateThread(id, t => ({ ...t, messages: [...t.messages, { id: makeId(), role: "assistant", parts: [{ type: "text", text: "这是一套交互界面稿。消息发送、状态切换和本地会话均可体验；真实 AI 回复需要配置服务后接入。" }] }] })); timer.current = setTimeout(() => setStatus("ready"), 1000); }, 700); }
   function copyText(text: string) { navigator.clipboard.writeText(text); setNotice("已复制到剪贴板"); setTimeout(() => setNotice(""), 2200); }
-  function removeThread(id: string) { setThreads(prev => prev.filter(t => t.id !== id)); if (id === threadId) navigate({ to: "/" }); }
+  function removeThread(id: string) { setThreads(prev => persist(prev.filter(t => t.id !== id))); if (id === threadId) navigate({ to: "/" }); }
   const grouped = ["产品研究", "工作流", "未分组"];
   return <TooltipProvider delayDuration={350}><div className="flex h-dvh min-h-[560px] overflow-hidden bg-background text-foreground">
     {mobileSidebar && <div className="fixed inset-0 z-30 bg-foreground/30 lg:hidden" onClick={() => setMobileSidebar(false)} />}
