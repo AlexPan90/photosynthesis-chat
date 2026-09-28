@@ -5,5 +5,5 @@
 - [x] Check conversation, file preview, dark theme, and narrow layout after visual changes.
 - [x] Add a subtle chapter/branch transition and restore each chapter's reading position when revisited.
 - [x] Verify chapter-tree, story-choice, and mobile switching behavior.
-- [ ] Add playback, pause, seek, and speed controls for browser-generated story narration.
-- [ ] Verify controls, branch switching, and narrow-screen placement.
+- [x] Add playback, pause, seek, and speed controls for browser-generated story narration.
+- [x] Verify controls, branch switching, and narrow-screen placement.
