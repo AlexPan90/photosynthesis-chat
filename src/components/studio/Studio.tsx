@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { UIMessage } from "ai";
-import { Activity, ArrowDown, ArrowUpRight, BookOpen, Bot, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, CircleCheck, CircleDot, Clock3, Code2, Command, Copy, Download, FileCode2, FileText, Folder, Globe2, Keyboard, LayoutPanelLeft, ListFilter, MessageSquare, Moon, MoreHorizontal, Paperclip, Plus, Search, Settings2, SlidersHorizontal, SquarePen, Sun, Tags, Terminal, Trash2, X } from "lucide-react";
+import { Activity, ArrowDown, ArrowUpRight, BookOpen, Bot, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, CircleCheck, CircleDot, Clock3, Code2, Command, Copy, Download, FileCode2, FileText, Folder, Globe2, Keyboard, LayoutPanelLeft, ListFilter, MessageSquare, Moon, MoreHorizontal, PanelRight, Paperclip, Plus, Search, Settings2, SlidersHorizontal, SquarePen, Sun, Tags, Terminal, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -14,6 +14,16 @@ import { Message, MessageContent, MessageResponse, MessageActions, MessageAction
 import { Tool, ToolHeader, ToolContent, ToolInput, ToolOutput } from "@/components/ai-elements/tool";
 import { PromptInput, PromptInputTextarea, PromptInputFooter, PromptInputButton, PromptInputSubmit, PromptInputTools, usePromptInputAttachments } from "@/components/ai-elements/prompt-input";
 import { Shimmer } from "@/components/ai-elements/shimmer";
+import { FileCard } from "./FileCard";
+import { WorkspacePanel } from "./WorkspacePanel";
+import { demoFiles } from "./files";
+
+const trajectory: { title: string; tool: string; ms: string; detail: string; state: "done" | "running" | "error" }[] = [
+  { title: "解析任务意图", tool: "planner", ms: "412ms", detail: "拆解为三步：采集定价页面、检索竞品资料、生成对比摘要。", state: "done" },
+  { title: "访问定价页面", tool: "browser.open", ms: "1.8s", detail: "https://example.com/pricing · 已提取 3 个方案与 12 条特性。", state: "done" },
+  { title: "检索竞品资料", tool: "web.search", ms: "2.3s", detail: "query: AI workspace pricing comparison · 命中 8 条，保留 3 条高相关结果。", state: "done" },
+  { title: "写入分析文件", tool: "fs.write", ms: "running", detail: "reports/pricing-summary.md · 正在写入结构化摘要与对比表格。", state: "running" },
+];
 
 const STORAGE = "relay-studio-threads-v1";
 type Thread = { id: string; title: string; group: string; updatedAt: number; messages: UIMessage[] };
@@ -64,6 +74,8 @@ export function Studio({ threadId }: { threadId?: string }) {
   const [status, setStatus] = useState<"ready" | "submitted" | "streaming" | "error">("ready");
   const [draft, setDraft] = useState("");
   const [notice, setNotice] = useState("");
+  const [view, setView] = useState<"chat" | "trajectory" | "files">("chat");
+  const [openFileId, setOpenFileId] = useState<string | undefined>(undefined);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => { setThreads(loadThreads()); setReady(true); setDark(localStorage.getItem("relay-dark") === "true"); setFontSize(Number(localStorage.getItem("relay-font")) || 14); }, []);
