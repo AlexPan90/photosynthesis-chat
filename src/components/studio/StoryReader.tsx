@@ -159,20 +159,12 @@ export function StoryReader() {
           <div className="mb-3 font-mono text-[10px] text-muted-foreground">{chapter.number}</div>
           <h1 className="font-display text-[27px] font-semibold leading-tight text-foreground sm:text-[32px]">{chapter.title}</h1>
           <p className="mt-2 text-[12px] leading-relaxed text-muted-foreground">{chapter.subtitle}</p>
+          <div className="mt-6 border-y py-3" aria-label="当前章节配音"><div className="mb-2 flex items-center gap-2 text-[11px] font-medium text-muted-foreground"><Headphones className="size-3.5"/>本章试听 <span className="ml-auto truncate font-normal">{chapter.number}</span></div><NarrationControls {...controls}/><p className="mt-2 text-[10px] text-muted-foreground">浏览器语音合成 · 时长估算</p></div>
           <figure className="mt-7 overflow-hidden rounded border bg-muted"><img src={chapter.image} alt={chapter.imageCaption.replace(/^插图 \d+ · /, "")} width={1280} height={832} className="aspect-[16/9] w-full object-cover"/><figcaption className="border-t px-3 py-1.5 text-[10px] text-muted-foreground">{chapter.imageCaption}</figcaption></figure>
           <article className="mt-8 space-y-6 text-[14px] leading-[2.05] text-foreground/90 sm:text-[15px]">{chapter.paragraphs.map((paragraph, i) => <p key={i}>{paragraph}</p>)}</article>
           {chapter.choices ? <section className="mt-10 border-t pt-5" aria-label="选择故事走向"><h2 className="mb-3 text-[11px] font-semibold text-muted-foreground">接下来</h2><div className="grid gap-2 sm:grid-cols-2">{chapter.choices.map((choice, i) => <Button key={choice.target} variant="outline" onClick={() => select(choice.target)} className="group h-auto min-h-[66px] justify-start gap-3 whitespace-normal rounded px-3 py-2 text-left shadow-none transition-colors hover:border-primary/40"><span className="font-mono text-[10px] text-muted-foreground">{String.fromCharCode(65 + i)}</span><span className="min-w-0 flex-1"><span className="block text-xs font-semibold">{choice.label}</span><span className="mt-0.5 block text-[10px] font-normal text-muted-foreground">{choice.description}</span></span><ArrowRight className="size-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1"/></Button>)}</div></section> : <div className="mt-10 flex items-center justify-between gap-3 border-t pt-5"><span className="text-xs text-muted-foreground">本分支完</span><Button variant="ghost" size="sm" onClick={() => select(chapter.parent ?? "arrival")}><ArrowLeft className="mr-1.5 size-3.5"/>上一章</Button></div>}
-          <div className="mt-10 border-t pt-5 min-[1100px]:hidden"><div className="mb-3 flex items-center gap-2 text-xs font-semibold"><Headphones className="size-3.5"/>本章朗读</div><NarrationControls {...controls}/><p className="mt-3 text-[10px] text-muted-foreground">浏览器语音合成试听 · 非录制音频，时长为估算值</p></div>
         </div>
       </div>
-      <aside className="soft-scroll hidden w-[220px] shrink-0 overflow-y-auto border-l bg-sidebar/50 min-[1100px]:block 2xl:w-[260px]" aria-label="当前章节配音">
-        <div key={chapter.id} className="story-enter sticky top-0 px-5 py-10">
-          <div className="mb-2 flex items-center gap-2 text-xs font-semibold"><Headphones className="size-3.5"/>本章朗读</div>
-          <p className="mb-6 truncate text-[11px] text-muted-foreground">{chapter.number} · {chapter.title}</p>
-          <NarrationControls {...controls}/>
-          <p className="mt-5 border-t pt-4 text-[10px] leading-5 text-muted-foreground">浏览器语音合成试听<br/>非录制音频，时长为估算值</p>
-        </div>
-      </aside>
     </div>
   );
 }

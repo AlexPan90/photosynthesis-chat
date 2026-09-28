@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Folder, FolderOpen, Globe2, PanelRightClose, RefreshCw } from "lucide-react";
+import { ChevronDown, ChevronRight, Folder, FolderOpen, Globe2, PanelRightClose } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { demoFiles, fileById, kindStyles, workspaceTree, type TreeNode } from "./files";
+import { fileById, kindStyles, workspaceTree, type TreeNode } from "./files";
 import { FileViewer } from "./FileViewer";
 
 function Tree({ nodes, depth = 0, onOpen, activeId }: { nodes: TreeNode[]; depth?: number; onOpen: (id: string) => void; activeId?: string | undefined }) {
@@ -57,9 +57,8 @@ const activity: [string, string, "done" | "now"][] = [
 export function WorkspacePanel({ openFileId, onOpenFile, onClose }: { openFileId?: string | undefined; onOpenFile: (id?: string | undefined) => void; onClose: () => void }) {
   const [tab, setTab] = useState<"文件" | "浏览器">("文件");
   const file = openFileId ? fileById(openFileId) : undefined;
-  const changed = demoFiles.filter((f) => f.badge);
   return (
-     <aside className="hidden min-w-0 flex-1 flex-col border-l bg-sidebar/50 lg:flex">
+     <aside className="fixed inset-y-0 right-0 z-30 flex w-[min(100vw,440px)] min-w-0 flex-col border-l bg-sidebar shadow-xl lg:static lg:w-auto lg:flex-1 lg:shadow-none">
        <div className="glass flex h-11 shrink-0 items-center gap-1 border-b px-4">
          <div className="flex h-full items-center gap-4">
           {(["文件", "浏览器"] as const).map((t) => (
@@ -75,8 +74,7 @@ export function WorkspacePanel({ openFileId, onOpenFile, onClose }: { openFileId
             </Button>
           ))}
         </div>
-         <Button variant="ghost" size="icon-sm" aria-label="刷新工作区" title="示例文件不会自动更新" className="ml-auto"><RefreshCw className="size-3.5" /></Button>
-        <Button variant="ghost" size="icon-sm" aria-label="收起工作台" onClick={onClose}><PanelRightClose className="size-3.5" /></Button>
+        <Button variant="ghost" size="icon-sm" aria-label="收起工作台" className="ml-auto" onClick={onClose}><PanelRightClose className="size-3.5" /></Button>
       </div>
 
       {tab === "文件" && file && (
@@ -87,27 +85,6 @@ export function WorkspacePanel({ openFileId, onOpenFile, onClose }: { openFileId
          <div className="soft-scroll min-h-0 flex-1 overflow-y-auto p-5">
           <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">工作区目录</p>
           <Tree nodes={workspaceTree} onOpen={(id) => onOpenFile(id)} activeId={openFileId} />
-          <p className="mb-2 mt-5 px-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">本次会话变更 · {changed.length}</p>
-          <div className="space-y-1">
-            {changed.map((f) => {
-              const style = kindStyles[f.kind];
-              const Icon = style.icon;
-              return (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => onOpenFile(f.id)}
-                   className="lift flex w-full items-center gap-2 rounded-md border bg-card px-3 py-2 text-left"
-                >
-                  <Icon className={`size-3.5 shrink-0 ${style.text}`} />
-                  <span className="min-w-0 flex-1 truncate text-[11px]">{f.name}</span>
-                  <span className={`shrink-0 rounded-sm px-1 py-px font-mono text-[9px] ${f.badge === "new" ? "bg-success/12 text-success" : "bg-warning/14 text-warning"}`}>
-                    {f.badge === "new" ? "NEW" : "EDIT"}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
         </div>
       )}
 
