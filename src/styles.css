@@ -66,6 +66,12 @@
   --info: oklch(0.52 0.13 240);
   --sidebar: oklch(0.971 0.004 250);
   --sidebar-foreground: var(--foreground);
+  --file-code: oklch(0.55 0.14 250);
+  --file-data: oklch(0.55 0.13 160);
+  --file-doc: oklch(0.56 0.17 20);
+  --file-image: oklch(0.56 0.16 300);
+  --file-media: oklch(0.62 0.15 60);
+  --file-archive: oklch(0.55 0.05 255);
 }
 .dark {
   --background: oklch(0.18 0.012 255);
