@@ -9,6 +9,6 @@
 - [x] Verify controls, branch switching, and narrow-screen placement.
 - [x] Rework story view around chapter-specific narration and remove duplicate media display.
 - [x] Verify graphite light/dark layouts, chapter switching, narration controls, and mobile reading.
-- [ ] Refocus the desktop workspace around the conversation and a contextual file pane, reducing duplicate chrome and file listings.
-- [ ] Recompose story narration near the chapter and simplify the chapter workspace.
-- [ ] Verify light/dark desktop, file opening, story switching and mobile layout.
+- [x] Refocus the desktop workspace around the conversation and a contextual file pane, reducing duplicate chrome and file listings.
+- [x] Recompose story narration near the chapter and simplify the chapter workspace.
+- [x] Verify light/dark desktop, file opening, story switching and mobile layout.
