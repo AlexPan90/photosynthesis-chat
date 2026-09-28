@@ -1,3 +1,5 @@
 - [x] Add an interactive branching story reader with chapter tree and branch choices.
 - [x] Show chapter-linked illustrations and browser narration preview.
 - [x] Verify story navigation and media states on desktop and mobile.
+- [x] Refine the existing three-column studio to the selected cool gray/teal, Sora/Manrope direction.
+- [x] Check conversation, file preview, dark theme, and narrow layout after visual changes.
