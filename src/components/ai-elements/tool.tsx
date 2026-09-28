@@ -213,9 +213,7 @@ export const ToolInput = ({ className, input, ...props }: ToolInputProps) => (
     <span className="text-[9.5px] font-medium uppercase tracking-wider text-muted-foreground/60">
       In
     </span>
-    <div className="overflow-hidden rounded-md bg-muted/50 text-[11.5px] [&_pre]:!bg-transparent">
-      <CodeBlock code={JSON.stringify(input, null, 2)} language="json" />
-    </div>
+    <ToolPayload code={JSON.stringify(input, null, 2)} />
   </div>
 );
 
@@ -237,11 +235,9 @@ export const ToolOutput = ({
   let Output = <div>{output as ReactNode}</div>;
 
   if (typeof output === "object" && !isValidElement(output)) {
-    Output = (
-      <CodeBlock code={JSON.stringify(output, null, 2)} language="json" />
-    );
+    Output = <ToolPayload code={JSON.stringify(output, null, 2)} />;
   } else if (typeof output === "string") {
-    Output = <CodeBlock code={output} language="json" />;
+    Output = <ToolPayload code={output} />;
   }
 
   return (
