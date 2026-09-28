@@ -116,7 +116,7 @@ export function FileCard({ file, onOpen }: { file: StudioFile; onOpen: (id: stri
   const style = kindStyles[file.kind];
   const Icon = style.icon;
   return (
-    <div role="button" tabIndex={0} onClick={() => onOpen(file.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(file.id); } }} className="lift group cursor-pointer rounded-lg border bg-card p-3 outline-none focus-visible:ring-2 focus-visible:ring-ring/40">
+    <Button type="button" variant="ghost" onClick={() => onOpen(file.id)} aria-label={`在工作台打开 ${file.name}`} className="lift group h-auto w-full flex-col items-stretch whitespace-normal rounded-lg border bg-card p-3 text-left font-normal hover:bg-card focus-visible:ring-2 focus-visible:ring-ring/40">
       <div className="flex items-start gap-2.5">
         <span className={`flex size-8 shrink-0 items-center justify-center rounded-md ring-1 ring-inset ${style.tint} ${style.text} ${style.ring}`}>
           <Icon className="size-4" />
@@ -125,15 +125,7 @@ export function FileCard({ file, onOpen }: { file: StudioFile; onOpen: (id: stri
           <div className="flex items-center gap-1.5">
             <span className="truncate text-[12px] font-medium">{file.name}</span>
             <Badge badge={file.badge} />
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={`在工作台打开 ${file.name}`}
-              className="ml-auto size-6 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-              onClick={() => onOpen(file.id)}
-            >
-              <ArrowUpRight className="size-3.5" />
-            </Button>
+            <ArrowUpRight className="ml-auto size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" />
           </div>
           <p className="mt-0.5 truncate font-mono text-[10px] text-muted-foreground">
             {file.path} · {file.size} · {style.label}
@@ -144,6 +136,6 @@ export function FileCard({ file, onOpen }: { file: StudioFile; onOpen: (id: stri
       <div className="mt-2.5">
         <Peek file={file} />
       </div>
-    </div>
+    </Button>
   );
 }
