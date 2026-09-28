@@ -99,15 +99,6 @@ export function StoryReader() {
   const narration = [chapter.title, ...chapter.paragraphs].join("。 ");
   const duration = Math.max(1, Math.ceil(narration.length / (4 * speed)));
   useEffect(() => { return () => { speechRun.current += 1; if (typeof window !== "undefined") window.speechSynthesis?.cancel(); }; }, []);
-  useEffect(() => {
-    if (!playing) return;
-    const interval = window.setInterval(() => {
-      if (!window.speechSynthesis?.speaking) return;
-      offset.current = Math.min(narration.length - 1, offset.current + speed);
-      setProgress(offset.current / narration.length * 100);
-    }, 250);
-    return () => window.clearInterval(interval);
-  }, [playing, selected, speed, narration.length]);
   useLayoutEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = positions.current[selected] ?? 0;
   }, [selected]);
@@ -130,7 +121,7 @@ export function StoryReader() {
     utterance.lang = "zh-CN"; utterance.rate = rate;
     const voice = window.speechSynthesis.getVoices().find(v => v.lang.toLowerCase().startsWith("zh"));
     if (voice) utterance.voice = voice;
-    utterance.onboundary = event => { if (speechRun.current !== run) return; offset.current = Math.min(Math.max(offset.current, position + event.charIndex), narration.length); setProgress(offset.current / narration.length * 100); };
+    utterance.onboundary = event => { if (speechRun.current !== run) return; offset.current = Math.min(position + event.charIndex, narration.length); setProgress(offset.current / narration.length * 100); };
     utterance.onend = () => { if (speechRun.current !== run) return; offset.current = narration.length; setProgress(100); setPlaying(false); setPaused(false); };
     utterance.onerror = event => { if (speechRun.current !== run) return; setPlaying(false); setPaused(false); if (event.error !== "canceled" && event.error !== "interrupted") setVoiceError("朗读暂时不可用，请检查浏览器语音设置"); };
     window.speechSynthesis.speak(utterance); setPlaying(true); setPaused(false);
