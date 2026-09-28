@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Folder, FolderOpen, Globe2, PanelRightClose } from "lucide-react";
+import { ChevronDown, ChevronRight, Folder, FolderOpen, Globe2, Maximize2, PanelRightClose, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { fileById, kindStyles, workspaceTree, type TreeNode } from "./files";
 import { FileViewer } from "./FileViewer";
@@ -59,23 +59,47 @@ export function WorkspacePanel({ openFileId, onOpenFile, onClose }: { openFileId
   const file = openFileId ? fileById(openFileId) : undefined;
   return (
      <aside className="fixed inset-y-0 right-0 z-30 flex w-[min(100vw,440px)] min-w-0 flex-col bg-sidebar shadow-xl lg:static lg:w-auto lg:flex-1 lg:shadow-none">
-       <div className="flex h-12 shrink-0 items-center justify-end border-b px-4"><Button variant="ghost" size="icon-sm" aria-label="收起工作台" onClick={onClose}><PanelRightClose className="size-3.5" /></Button></div>
-       <div className="glass flex h-10 shrink-0 items-center gap-1 border-b px-4">
-         <div className="flex h-full items-center gap-4">
-          {(["文件", "浏览器"] as const).map((t) => (
-            <Button
-              key={t}
-              variant="ghost"
-              size="sm"
-              onClick={() => { setTab(t); if (t === "浏览器") onOpenFile(undefined); }}
-               className={`h-full rounded-none border-b-2 px-0 text-[11px] shadow-none hover:bg-transparent ${tab === t ? "border-primary font-semibold text-foreground" : "border-transparent text-muted-foreground"}`}
-            >
-              {t === "文件" ? <Folder className="mr-1 size-3" /> : <Globe2 className="mr-1 size-3" />}
-              {t}
-            </Button>
-          ))}
-        </div>
-      </div>
+       <div className="flex h-12 shrink-0 items-center gap-1 border-b pl-2 pr-2">
+         <div className="flex h-full items-center">
+           {(["文件", "浏览器"] as const).map((t) => (
+             <button
+               key={t}
+               type="button"
+               onClick={() => { setTab(t); if (t === "浏览器") onOpenFile(undefined); }}
+               className={`flex h-full items-center gap-1.5 border-b-2 px-2.5 text-[11px] ${tab === t ? "border-primary font-semibold text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+             >
+               {t === "文件" ? <Folder className="size-3" /> : <Globe2 className="size-3" />}
+               {t}
+               {tab === t && t === "文件" && (
+                 <span
+                   role="button"
+                   aria-label="关闭文件页签"
+                   onClick={(e) => { e.stopPropagation(); onOpenFile(undefined); }}
+                   className="ml-0.5 rounded-sm p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                 >
+                   <X className="size-2.5" />
+                 </span>
+               )}
+             </button>
+           ))}
+         </div>
+         <button
+           type="button"
+           onClick={() => onOpenFile(undefined)}
+           className="ml-1 flex h-6 items-center gap-1 rounded-sm px-1.5 text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground"
+         >
+           <RotateCcw className="size-3" />
+           工作区
+         </button>
+         <div className="ml-auto flex items-center gap-0.5">
+           <Button variant="ghost" size="icon-sm" aria-label="收起工作台" onClick={onClose}><PanelRightClose className="size-3.5" /></Button>
+           <Button variant="ghost" size="icon-sm" aria-label="最大化面板"><Maximize2 className="size-3.5" /></Button>
+           <Button variant="ghost" size="icon-sm" aria-label="关闭工作台" onClick={onClose}><X className="size-3.5" /></Button>
+         </div>
+       </div>
+       <div className="flex h-8 shrink-0 items-center border-b px-3">
+         <p className="truncate font-mono text-[10px] text-muted-foreground">~/workspace/relay-studio</p>
+       </div>
 
       {tab === "文件" && file && (
         <div className="min-h-0 flex-1"><FileViewer file={file} onClose={() => onOpenFile(undefined)} /></div>
