@@ -99,6 +99,15 @@ export function StoryReader() {
   const narration = [chapter.title, ...chapter.paragraphs].join("。 ");
   const duration = Math.max(1, Math.ceil(narration.length / (4 * speed)));
   useEffect(() => { return () => { speechRun.current += 1; if (typeof window !== "undefined") window.speechSynthesis?.cancel(); }; }, []);
+  useEffect(() => {
+    if (!playing) return;
+    const interval = window.setInterval(() => {
+      if (!window.speechSynthesis?.speaking) return;
+      offset.current = Math.min(narration.length - 1, offset.current + speed);
+      setProgress(offset.current / narration.length * 100);
+    }, 250);
+    return () => window.clearInterval(interval);
+  }, [playing, selected, speed, narration.length]);
   useLayoutEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = positions.current[selected] ?? 0;
   }, [selected]);
