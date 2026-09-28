@@ -59,23 +59,23 @@ export function WorkspacePanel({ openFileId, onOpenFile, onClose }: { openFileId
   const file = openFileId ? fileById(openFileId) : undefined;
   const changed = demoFiles.filter((f) => f.badge);
   return (
-    <aside className="hidden w-[344px] shrink-0 flex-col border-l bg-sidebar/60 xl:flex">
-      <div className="glass flex h-12 shrink-0 items-center gap-1 border-b px-3">
-        <div className="flex items-center gap-0.5 rounded-md border bg-muted/60 p-0.5">
+     <aside className="hidden min-w-0 flex-1 flex-col border-l bg-sidebar/50 lg:flex">
+       <div className="glass flex h-11 shrink-0 items-center gap-1 border-b px-4">
+         <div className="flex h-full items-center gap-4">
           {(["文件", "浏览器"] as const).map((t) => (
             <Button
               key={t}
               variant="ghost"
               size="sm"
               onClick={() => { setTab(t); if (t === "浏览器") onOpenFile(undefined); }}
-              className={`h-6 px-2 text-[11px] shadow-none ${tab === t ? "bg-background" : "text-muted-foreground"}`}
+               className={`h-full rounded-none border-b-2 px-0 text-[11px] shadow-none hover:bg-transparent ${tab === t ? "border-primary font-semibold text-foreground" : "border-transparent text-muted-foreground"}`}
             >
               {t === "文件" ? <Folder className="mr-1 size-3" /> : <Globe2 className="mr-1 size-3" />}
               {t}
             </Button>
           ))}
         </div>
-        <Button variant="ghost" size="icon-sm" aria-label="刷新工作区" className="ml-auto"><RefreshCw className="size-3.5" /></Button>
+         <Button variant="ghost" size="icon-sm" aria-label="刷新工作区" title="示例文件不会自动更新" className="ml-auto"><RefreshCw className="size-3.5" /></Button>
         <Button variant="ghost" size="icon-sm" aria-label="收起工作台" onClick={onClose}><PanelRightClose className="size-3.5" /></Button>
       </div>
 
@@ -84,7 +84,7 @@ export function WorkspacePanel({ openFileId, onOpenFile, onClose }: { openFileId
       )}
 
       {tab === "文件" && !file && (
-        <div className="soft-scroll min-h-0 flex-1 overflow-y-auto p-3">
+         <div className="soft-scroll min-h-0 flex-1 overflow-y-auto p-5">
           <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">工作区目录</p>
           <Tree nodes={workspaceTree} onOpen={(id) => onOpenFile(id)} activeId={openFileId} />
           <p className="mb-2 mt-5 px-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">本次会话变更 · {changed.length}</p>
@@ -97,7 +97,7 @@ export function WorkspacePanel({ openFileId, onOpenFile, onClose }: { openFileId
                   key={f.id}
                   type="button"
                   onClick={() => onOpenFile(f.id)}
-                  className="lift flex w-full items-center gap-2 rounded-md border bg-card px-2 py-1.5 text-left"
+                   className="lift flex w-full items-center gap-2 rounded-md border bg-card px-3 py-2 text-left"
                 >
                   <Icon className={`size-3.5 shrink-0 ${style.text}`} />
                   <span className="min-w-0 flex-1 truncate text-[11px]">{f.name}</span>
