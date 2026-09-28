@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, BookOpen, ChevronDown, ChevronRight, Headphones, Image as ImageIcon, Pause, Play, RotateCcw, Square, Volume2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, ChevronDown, ChevronRight, Headphones, Image as ImageIcon, Pause, Play, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import harbor from "@/assets/story-harbor.jpg";
 import lighthouse from "@/assets/story-lighthouse.jpg";
 import tide from "@/assets/story-tide.jpg";
@@ -65,41 +66,81 @@ const branches = [
   { root: "shore", children: ["harbor", "boat"] },
 ];
 
+const speeds = [0.75, 1, 1.25, 1.5];
+function formatTime(seconds: number) { return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`; }
+
+function NarrationControls({ title, progress, duration, speed, playing, paused, error, onPlay, onPause, onStop, onSeek, onSpeed }: {
+  title: string; progress: number; duration: number; speed: number; playing: boolean; paused: boolean; error: string;
+  onPlay: () => void; onPause: () => void; onStop: () => void; onSeek: (value: number) => void; onSpeed: (value: number) => void;
+}) {
+  const [scrubbing, setScrubbing] = useState<number | null>(null);
+  const shown = scrubbing ?? progress;
+  return <div className="min-w-0" aria-label="本章配音控制">
+    <div className="flex min-w-0 items-center justify-between gap-2"><span className="truncate text-[11px] font-medium">{title} · 中文朗读</span><span className="shrink-0 text-[10px] text-muted-foreground">语音合成</span></div>
+    <div className="mt-3 flex items-center gap-2.5"><Button variant="outline" size="icon-sm" className="size-8 shrink-0 rounded-full" aria-label={playing ? "暂停朗读" : paused ? "继续朗读" : "播放朗读"} onClick={playing ? onPause : onPlay}>{playing ? <Pause className="size-3.5"/> : <Play className="size-3.5"/>}</Button><Slider aria-label="朗读进度" value={[shown]} min={0} max={100} step={1} onValueChange={v => setScrubbing(v[0] ?? 0)} onValueCommit={v => { onSeek(v[0] ?? 0); setScrubbing(null); }} className="min-w-0 flex-1"/>{(playing || paused) && <Button variant="ghost" size="icon-sm" className="size-7 shrink-0" aria-label="停止朗读" onClick={onStop}><Square className="size-3"/></Button>}</div>
+    <div className="mt-1.5 flex items-center justify-between gap-2"><span className="font-mono text-[10px] tabular-nums text-muted-foreground">约 {formatTime(duration * shown / 100)} / {formatTime(duration)}</span><label className="flex items-center gap-1.5 text-[10px] text-muted-foreground">速度<select aria-label="播放速度" value={speed} onChange={e => onSpeed(Number(e.target.value))} className="rounded border bg-background px-1 py-0.5 text-[10px] text-foreground">{speeds.map(value => <option key={value} value={value}>{value}×</option>)}</select></label></div>
+    {error && <p role="status" className="mt-2 text-[11px] text-destructive">{error}</p>}
+  </div>;
+}
+
 export function StoryReader() {
   const [selected, setSelected] = useState("arrival");
   const [playing, setPlaying] = useState(false);
   const [paused, setPaused] = useState(false);
   const [voiceError, setVoiceError] = useState("");
+  const [progress, setProgress] = useState(0);
+  const [speed, setSpeed] = useState(1);
+  const speechRun = useRef(0);
+  const offset = useRef(0);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({ lighthouse: true, shore: true });
   const scrollRef = useRef<HTMLDivElement>(null);
   const positions = useRef<Record<string, number>>({});
   const chapter = byId[selected] ?? intro;
   const narration = [chapter.title, ...chapter.paragraphs].join("。 ");
-  useEffect(() => { return () => { if (typeof window !== "undefined") window.speechSynthesis?.cancel(); }; }, []);
+  const duration = Math.max(1, Math.ceil(narration.length / (4 * speed)));
+  useEffect(() => { return () => { speechRun.current += 1; if (typeof window !== "undefined") window.speechSynthesis?.cancel(); }; }, []);
   useLayoutEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = positions.current[selected] ?? 0;
   }, [selected]);
   function select(id: string) {
     if (!byId[id] || id === selected) return;
     positions.current[selected] = scrollRef.current?.scrollTop ?? 0;
-    window.speechSynthesis?.cancel(); setPlaying(false); setPaused(false); setVoiceError("");
+    speechRun.current += 1; window.speechSynthesis?.cancel(); offset.current = 0; setProgress(0); setPlaying(false); setPaused(false); setVoiceError("");
     setSelected(id);
   }
-  function play() {
-    if (!("speechSynthesis" in window)) { setVoiceError("当前浏览器不支持语音朗读"); return; }
-    if (paused) { window.speechSynthesis.resume(); setPaused(false); setPlaying(true); return; }
-    window.speechSynthesis.cancel(); setVoiceError("");
-    const utterance = new SpeechSynthesisUtterance(narration);
-    utterance.lang = "zh-CN"; utterance.rate = 0.88;
-    const voices = window.speechSynthesis.getVoices();
-    const voice = voices.find(v => v.lang.toLowerCase().startsWith("zh"));
+  function startAt(start: number, rate = speed) {
+    if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") { setVoiceError("当前浏览器不支持语音朗读"); return; }
+    speechRun.current += 1;
+    const run = speechRun.current;
+    window.speechSynthesis.cancel();
+    const position = Math.min(Math.max(0, Math.floor(start)), narration.length - 1);
+    offset.current = position;
+    setProgress(position / narration.length * 100);
+    setVoiceError("");
+    const utterance = new SpeechSynthesisUtterance(narration.slice(position));
+    utterance.lang = "zh-CN"; utterance.rate = rate;
+    const voice = window.speechSynthesis.getVoices().find(v => v.lang.toLowerCase().startsWith("zh"));
     if (voice) utterance.voice = voice;
-    utterance.onend = () => { setPlaying(false); setPaused(false); };
-    utterance.onerror = (event) => { setPlaying(false); setPaused(false); if (event.error !== "canceled" && event.error !== "interrupted") setVoiceError("朗读暂时不可用，请检查浏览器语音设置"); };
+    utterance.onboundary = event => { if (speechRun.current !== run) return; offset.current = Math.min(position + event.charIndex, narration.length); setProgress(offset.current / narration.length * 100); };
+    utterance.onend = () => { if (speechRun.current !== run) return; offset.current = narration.length; setProgress(100); setPlaying(false); setPaused(false); };
+    utterance.onerror = event => { if (speechRun.current !== run) return; setPlaying(false); setPaused(false); if (event.error !== "canceled" && event.error !== "interrupted") setVoiceError("朗读暂时不可用，请检查浏览器语音设置"); };
     window.speechSynthesis.speak(utterance); setPlaying(true); setPaused(false);
   }
-  function pause() { window.speechSynthesis.pause(); setPaused(true); setPlaying(false); }
-  function stop() { window.speechSynthesis.cancel(); setPaused(false); setPlaying(false); }
+  function play() {
+    if (paused && window.speechSynthesis?.paused) { window.speechSynthesis.resume(); setPaused(false); setPlaying(true); return; }
+    startAt(offset.current >= narration.length ? 0 : offset.current);
+  }
+  function pause() { window.speechSynthesis?.pause(); setPaused(true); setPlaying(false); }
+  function stop() { speechRun.current += 1; window.speechSynthesis?.cancel(); offset.current = 0; setProgress(0); setPaused(false); setPlaying(false); }
+  function seek(value: number) {
+    const next = Math.round(narration.length * value / 100);
+    const wasPlaying = playing;
+    speechRun.current += 1; window.speechSynthesis?.cancel();
+    offset.current = next; setProgress(value); setPaused(false); setPlaying(false);
+    if (wasPlaying && next < narration.length) startAt(next);
+  }
+  function changeSpeed(value: number) { setSpeed(value); if (playing) startAt(offset.current, value); else if (paused) { speechRun.current += 1; window.speechSynthesis?.cancel(); setPaused(false); } }
+  const controls = { title: chapter.title, progress, duration, speed, playing, paused, error: voiceError, onPlay: play, onPause: pause, onStop: stop, onSeek: seek, onSpeed: changeSpeed };
   return (
     <div className="flex min-h-0 flex-1 overflow-hidden bg-background">
       <nav aria-label="章节树" className="soft-scroll hidden w-[216px] shrink-0 overflow-y-auto border-r bg-sidebar/45 px-3 py-6 md:block xl:w-[238px]">
@@ -126,8 +167,8 @@ export function StoryReader() {
           </div>
         </div>
       </div>
-      <aside className="soft-scroll hidden w-[244px] shrink-0 overflow-y-auto border-l bg-sidebar/35 px-4 py-6 xl:block" aria-label="章节素材"><p className="mb-5 text-[10px] font-semibold uppercase text-muted-foreground">本章素材</p><p className="mb-2 flex items-center gap-2 text-xs font-medium"><ImageIcon className="size-3.5 text-file-image"/>插图</p><img src={chapter.image} alt={chapter.imageCaption} width={1280} height={832} className="aspect-[4/3] w-full rounded-md border object-cover"/><p className="mt-2 text-[10px] text-muted-foreground">{chapter.imageCaption}</p><div className="my-6 border-t"/><p className="mb-2 flex items-center gap-2 text-xs font-medium"><Headphones className="size-3.5 text-file-media"/>配音</p><p className="text-[11px] leading-5 text-muted-foreground">{chapter.title} · 中文朗读</p><p className="mt-1 text-[10px] text-muted-foreground">浏览器语音合成示范，非录制音频</p><div className="mt-4 flex items-center gap-2"><Button variant="outline" size="sm" onClick={playing ? pause : play} aria-label={playing ? "暂停朗读" : paused ? "继续朗读" : "播放朗读"} className="gap-1.5"><Volume2 className="size-3.5"/>{playing ? "暂停" : paused ? "继续" : "播放朗读"}</Button>{(playing || paused) && <Button variant="ghost" size="icon-sm" aria-label="停止朗读" onClick={stop}><Square className="size-3"/></Button>}</div>{voiceError && <p role="status" className="mt-2 text-[11px] text-destructive">{voiceError}</p>}</aside>
-      <div className="fixed bottom-3 right-3 z-10 flex items-center gap-2 rounded-md border bg-popover px-2 py-1.5 shadow-sm xl:hidden"><Headphones className="size-3.5 text-file-media"/><span className="hidden text-[10px] text-muted-foreground sm:inline">本章朗读</span><Button variant="ghost" size="icon-sm" aria-label={playing ? "暂停朗读" : paused ? "继续朗读" : "播放朗读"} onClick={playing ? pause : play} className="size-7">{playing ? <Pause className="size-3.5"/> : <Play className="size-3.5"/>}</Button>{(playing || paused) && <Button variant="ghost" size="icon-sm" aria-label="停止朗读" onClick={stop} className="size-7"><RotateCcw className="size-3.5"/></Button>}{voiceError && <span role="status" className="text-[10px] text-destructive">{voiceError}</span>}</div>
+       <aside className="soft-scroll hidden w-[244px] shrink-0 overflow-y-auto border-l bg-sidebar/35 px-4 py-6 xl:block" aria-label="章节素材"><p className="mb-5 text-[10px] font-semibold uppercase text-muted-foreground">本章素材</p><p className="mb-2 flex items-center gap-2 text-xs font-medium"><ImageIcon className="size-3.5 text-file-image"/>插图</p><img src={chapter.image} alt={chapter.imageCaption} width={1280} height={832} className="aspect-[4/3] w-full rounded-md border object-cover"/><p className="mt-2 text-[10px] text-muted-foreground">{chapter.imageCaption}</p><div className="my-6 border-t"/><p className="mb-3 flex items-center gap-2 text-xs font-medium"><Headphones className="size-3.5 text-file-media"/>配音</p><NarrationControls {...controls}/><p className="mt-3 text-[10px] leading-4 text-muted-foreground">浏览器语音合成示范，非录制音频；进度与时长为估算值</p></aside>
+       <div className="fixed bottom-3 left-3 right-3 z-10 mx-auto max-w-[350px] rounded-md border bg-popover px-3 py-2 shadow-sm xl:hidden"><NarrationControls {...controls}/></div>
     </div>
   );
 }
