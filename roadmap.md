@@ -3,5 +3,5 @@
 - [x] Verify story navigation and media states on desktop and mobile.
 - [x] Refine the existing three-column studio to the selected cool gray/teal, Sora/Manrope direction.
 - [x] Check conversation, file preview, dark theme, and narrow layout after visual changes.
-- [ ] Add a subtle chapter/branch transition and restore each chapter's reading position when revisited.
-- [ ] Verify chapter-tree, story-choice, and mobile switching behavior.
+- [x] Add a subtle chapter/branch transition and restore each chapter's reading position when revisited.
+- [x] Verify chapter-tree, story-choice, and mobile switching behavior.
