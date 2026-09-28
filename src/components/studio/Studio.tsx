@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { UIMessage } from "ai";
-import { Activity, ArrowUpRight, BookOpen, Bot, Check, ChevronDown, CircleAlert, Clock3, Command, Copy, Folder, Keyboard, LayoutPanelLeft, ListFilter, MessageSquare, MoreHorizontal, PanelRight, Paperclip, Search, Settings2, SlidersHorizontal, SquarePen, Sun, Tags, Trash2, X } from "lucide-react";
+import { Activity, ArrowUpRight, Bot, Check, ChevronDown, CircleAlert, Clock3, Command, Copy, Folder, Keyboard, LayoutPanelLeft, ListFilter, MessageSquare, MoreHorizontal, PanelRight, Paperclip, Search, Settings2, SlidersHorizontal, SquarePen, Sun, Tags, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -74,7 +74,6 @@ export function Studio({ threadId }: { threadId?: string }) {
   const [split, setSplit] = useState(65);
   const panesRef = useRef<HTMLDivElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
-  const [showSpecs, setShowSpecs] = useState(false);
   const [scenario, setScenario] = useState<"default" | "loading" | "streaming" | "running" | "error">("default");
   const [status, setStatus] = useState<"ready" | "submitted" | "streaming" | "error">("ready");
   const [draft, setDraft] = useState("");
