@@ -1,0 +1,3 @@
+- [ ] Add an interactive branching story reader with chapter tree and branch choices.
+- [ ] Show chapter-linked illustrations and playable narration preview.
+- [ ] Verify story navigation and media states on desktop and mobile.

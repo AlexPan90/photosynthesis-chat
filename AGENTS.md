@@ -9,3 +9,4 @@
 - Use AI Elements for transcript, messages, tools, and composer so the mockup follows real chat interaction primitives.
 - Keep conversation IDs in `/chat/$threadId` URLs so each local thread can be revisited and refreshed independently.
 - Extend the shared small icon button size and adapt installed AI Elements to the existing Select and strict motion types; these compatibility edits keep the UI primitives reusable.
+- Keep branching-story sample content and reader state client-side, with browser speech synthesis used only for narration preview; this avoids implying that demo assets include recorded audio.
