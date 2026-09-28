@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, BookOpen, ChevronDown, ChevronRight, Headphones, Image as ImageIcon, Pause, Play, RotateCcw, Square, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import harbor from "@/assets/story-harbor.jpg";
@@ -72,12 +72,18 @@ export function StoryReader() {
   const [voiceError, setVoiceError] = useState("");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({ lighthouse: true, shore: true });
   const scrollRef = useRef<HTMLDivElement>(null);
+  const positions = useRef<Record<string, number>>({});
   const chapter = byId[selected] ?? intro;
   const narration = [chapter.title, ...chapter.paragraphs].join("。 ");
   useEffect(() => { return () => { if (typeof window !== "undefined") window.speechSynthesis?.cancel(); }; }, []);
+  useLayoutEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = positions.current[selected] ?? 0;
+  }, [selected]);
   function select(id: string) {
+    if (!byId[id] || id === selected) return;
+    positions.current[selected] = scrollRef.current?.scrollTop ?? 0;
     window.speechSynthesis?.cancel(); setPlaying(false); setPaused(false); setVoiceError("");
-    setSelected(id); scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    setSelected(id);
   }
   function play() {
     if (!("speechSynthesis" in window)) { setVoiceError("当前浏览器不支持语音朗读"); return; }
@@ -99,18 +105,18 @@ export function StoryReader() {
       <nav aria-label="章节树" className="soft-scroll hidden w-[216px] shrink-0 overflow-y-auto border-r bg-sidebar/45 px-3 py-6 md:block xl:w-[238px]">
         <div className="mb-5 flex items-center justify-between px-2"><span className="text-[10px] font-semibold uppercase text-muted-foreground">故事目录</span><span className="font-mono text-[10px] text-muted-foreground">07 节</span></div>
         <p className="mb-2 px-2 text-[10px] text-muted-foreground">主线</p>
-        <Button variant="ghost" onClick={() => select("arrival")} className={`mb-5 h-auto w-full justify-start px-2 py-2 text-left text-xs ${selected === "arrival" ? "bg-accent font-semibold" : "text-muted-foreground"}`}><BookOpen className="mr-2 size-3.5 shrink-0"/>序章 · 潮声里的灯</Button>
+        <Button variant="ghost" aria-current={selected === "arrival" ? "page" : undefined} onClick={() => select("arrival")} className={`mb-5 h-auto w-full justify-start px-2 py-2 text-left text-xs ${selected === "arrival" ? "bg-accent font-semibold" : "text-muted-foreground"}`}><BookOpen className="mr-2 size-3.5 shrink-0"/>序章 · 潮声里的灯</Button>
         <p className="mb-2 px-2 text-[10px] text-muted-foreground">故事分支</p>
         {branches.map(branch => { const root = byId[branch.root] ?? intro; return <div key={root.id} className="mb-2">
-          <div className="flex items-center"><Button variant="ghost" size="icon-sm" className="size-6 shrink-0" aria-label={`${expanded[root.id] ? "收起" : "展开"}${root.title}分支`} onClick={() => setExpanded(p => ({ ...p, [root.id]: !p[root.id] }))}>{expanded[root.id] ? <ChevronDown className="size-3"/> : <ChevronRight className="size-3"/>}</Button><Button variant="ghost" onClick={() => select(root.id)} className={`h-auto min-w-0 flex-1 justify-start px-1 py-2 text-left text-xs ${selected === root.id ? "bg-accent font-semibold" : "text-muted-foreground"}`}><span className="truncate">{root.number} · {root.title}</span></Button></div>
-          {expanded[root.id] && <div className="ml-3 border-l pl-2">{branch.children.map(id => { const c = byId[id] ?? intro; return <Button key={id} variant="ghost" onClick={() => select(id)} className={`h-auto w-full justify-start px-2 py-2 text-left text-[11px] ${selected === id ? "bg-accent font-semibold" : "text-muted-foreground"}`}><span className="truncate">{c.number} · {c.title}</span></Button>; })}</div>}
+          <div className="flex items-center"><Button variant="ghost" size="icon-sm" className="size-6 shrink-0" aria-label={`${expanded[root.id] ? "收起" : "展开"}${root.title}分支`} onClick={() => setExpanded(p => ({ ...p, [root.id]: !p[root.id] }))}>{expanded[root.id] ? <ChevronDown className="size-3"/> : <ChevronRight className="size-3"/>}</Button><Button variant="ghost" aria-current={selected === root.id ? "page" : undefined} onClick={() => select(root.id)} className={`h-auto min-w-0 flex-1 justify-start px-1 py-2 text-left text-xs ${selected === root.id ? "bg-accent font-semibold" : "text-muted-foreground"}`}><span className="truncate">{root.number} · {root.title}</span></Button></div>
+          {expanded[root.id] && <div className="ml-3 border-l pl-2">{branch.children.map(id => { const c = byId[id] ?? intro; return <Button key={id} variant="ghost" aria-current={selected === id ? "page" : undefined} onClick={() => select(id)} className={`h-auto w-full justify-start px-2 py-2 text-left text-[11px] ${selected === id ? "bg-accent font-semibold" : "text-muted-foreground"}`}><span className="truncate">{c.number} · {c.title}</span></Button>; })}</div>}
         </div>; })}
       </nav>
-      <div ref={scrollRef} className="soft-scroll min-w-0 flex-1 overflow-y-auto scroll-smooth">
+       <div ref={scrollRef} onScroll={e => { positions.current[selected] = e.currentTarget.scrollTop; }} className="soft-scroll min-w-0 flex-1 overflow-y-auto">
         <div className="mx-auto max-w-[780px] px-5 pb-24 pt-7 sm:px-8 lg:px-12">
           <div className="mb-6 flex items-center justify-between gap-3 border-b pb-4"><div className="flex min-w-0 items-center gap-2 text-[11px] text-muted-foreground"><BookOpen className="size-3.5 text-file-doc"/><span className="truncate">潮汐来信</span><ChevronRight className="size-3 shrink-0"/><span className="truncate text-foreground">{chapter.number}</span></div><span className="shrink-0 font-mono text-[10px] text-muted-foreground">互动故事 · 示例</span></div>
           <div className="mb-5 md:hidden"><label htmlFor="story-chapter" className="mb-1.5 block text-[11px] text-muted-foreground">选择章节与分支</label><select id="story-chapter" value={selected} onChange={e => select(e.target.value)} className="h-9 w-full rounded-md border bg-background px-3 text-xs text-foreground">{chapters.map(c => <option key={c.id} value={c.id}>{c.number} · {c.title}</option>)}</select></div>
-          <div key={chapter.id} className="rise">
+           <div key={chapter.id} className="story-enter">
             <div className="mb-5 flex items-center gap-3"><span className="h-px w-7 bg-file-doc"/><span className="font-mono text-[10px] uppercase text-file-doc">{chapter.number}</span></div>
             <h1 className="text-[28px] font-semibold leading-tight text-foreground sm:text-[34px]">{chapter.title}</h1>
             <p className="mt-3 text-[13px] text-muted-foreground">{chapter.subtitle}</p>
