@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Download, Play, X } from "lucide-react";
+import { Play, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { kindStyles, type StudioFile } from "./files";
 
@@ -175,7 +175,6 @@ export function FileViewer({ file, onClose }: { file: StudioFile; onClose: () =>
           <p className="truncate text-[12px] font-medium">{file.name}</p>
           <p className="truncate font-mono text-[10px] text-muted-foreground">{file.path}</p>
         </div>
-        <Button variant="ghost" size="icon-sm" aria-label="下载文件"><Download className="size-3.5" /></Button>
         <Button variant="ghost" size="icon-sm" aria-label="关闭预览" onClick={onClose}><X className="size-3.5" /></Button>
       </div>
       <div className="flex shrink-0 gap-0.5 border-b px-3 py-1.5">

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Folder, FolderOpen, Globe2, PanelRightClose, RefreshCw } from "lucide-react";
+import { ChevronDown, ChevronRight, Folder, FolderOpen, Globe2, PanelRightClose } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { fileById, kindStyles, workspaceTree, type TreeNode } from "./files";
 import { FileViewer } from "./FileViewer";
@@ -58,7 +58,7 @@ export function WorkspacePanel({ openFileId, onOpenFile, onClose }: { openFileId
   const [tab, setTab] = useState<"文件" | "浏览器">("文件");
   const file = openFileId ? fileById(openFileId) : undefined;
   return (
-     <aside className="hidden min-w-0 flex-1 flex-col border-l bg-sidebar/50 lg:flex">
+     <aside className="fixed inset-y-0 right-0 z-30 flex w-[min(100vw,440px)] min-w-0 flex-col border-l bg-sidebar shadow-xl lg:static lg:w-auto lg:flex-1 lg:shadow-none">
        <div className="glass flex h-11 shrink-0 items-center gap-1 border-b px-4">
          <div className="flex h-full items-center gap-4">
           {(["文件", "浏览器"] as const).map((t) => (
@@ -74,8 +74,7 @@ export function WorkspacePanel({ openFileId, onOpenFile, onClose }: { openFileId
             </Button>
           ))}
         </div>
-         <Button variant="ghost" size="icon-sm" aria-label="刷新工作区" title="示例文件不会自动更新" className="ml-auto"><RefreshCw className="size-3.5" /></Button>
-        <Button variant="ghost" size="icon-sm" aria-label="收起工作台" onClick={onClose}><PanelRightClose className="size-3.5" /></Button>
+        <Button variant="ghost" size="icon-sm" aria-label="收起工作台" className="ml-auto" onClick={onClose}><PanelRightClose className="size-3.5" /></Button>
       </div>
 
       {tab === "文件" && file && (
