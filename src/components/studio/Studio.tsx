@@ -74,8 +74,8 @@ export function Studio({ threadId }: { threadId?: string }) {
   const [fontSize, setFontSize] = useState(14);
   const [language, setLanguage] = useState("简体中文");
   const [model, setModel] = useState(models[0]);
-  const [agent, setAgent] = useState(agents[0]);
-  const [mode, setMode] = useState<"agent" | "chat">("agent");
+  const [agent] = useState(agents[0]);
+  const mode: "agent" | "chat" = "agent";
   const [preview, setPreview] = useState(false);
   const [split, setSplit] = useState(65);
   const panesRef = useRef<HTMLDivElement>(null);
