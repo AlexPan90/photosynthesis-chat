@@ -10,3 +10,4 @@
 - Keep conversation IDs in `/chat/$threadId` URLs so each local thread can be revisited and refreshed independently.
 - Extend the shared small icon button size and adapt installed AI Elements to the existing Select and strict motion types; these compatibility edits keep the UI primitives reusable.
 - Keep branching-story sample content and reader state client-side, with browser speech synthesis used only for narration preview; this avoids implying that demo assets include recorded audio.
+- Use a graphite-neutral theme with Sora/Manrope and locate each chapter’s narration in the story context column; this keeps the chosen desktop reading workspace coherent and avoids duplicate media.
