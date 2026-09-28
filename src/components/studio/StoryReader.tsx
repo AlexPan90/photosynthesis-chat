@@ -17,15 +17,15 @@ type Chapter = {
   choices?: { label: string; description: string; target: string }[];
 };
 
-const chapters: Chapter[] = [
-  { id: "arrival", number: "序章", title: "潮声里的灯", subtitle: "所有故事，都从一封没有署名的信开始。", image: harbor, imageCaption: "插图 01 · 雨后的青屿港", paragraphs: [
+const intro: Chapter = { id: "arrival", number: "序章", title: "潮声里的灯", subtitle: "所有故事，都从一封没有署名的信开始。", image: harbor, imageCaption: "插图 01 · 雨后的青屿港", paragraphs: [
     "青屿港的雨是在傍晚停的。沈知遥沿着湿漉漉的石阶走向海边，信封在她的大衣口袋里被海风吹得微微发皱。信上只有一句话：今晚九点，灯塔会再次亮起。",
     "父亲失踪的那年，灯塔便熄灭了。此后十二年，她再没有回过这里。港口的旧钟敲过八下，远处的塔顶忽然闪了一次，像有人在浓雾里眨了眨眼。",
     "她停在岔路口。左边的山径通往灯塔；右边的石阶延伸到退潮后的海滩。潮水正在一点点退去，露出父亲曾经标记过的礁石。",
   ], choices: [
     { label: "前往灯塔", description: "追寻突然亮起的灯光", target: "lighthouse" },
     { label: "沿海滩寻找", description: "查看退潮后露出的礁石", target: "shore" },
-  ] },
+  ] };
+const chapters: Chapter[] = [intro,
   { id: "lighthouse", parent: "arrival", number: "第一章 · A", title: "灯塔的来客", subtitle: "有些秘密，藏在光照不到的地方。", image: lighthouse, imageCaption: "插图 02 · 灯塔中的旧航海日志", paragraphs: [
     "铁门没有上锁。沈知遥推门进去时，旋梯上还残留着潮湿的脚印。桌上的煤油灯烧得正旺，一本航海日志摊开在灯下，旁边放着一把她小时候见过的铜钥匙。",
     "日志最后一页写着今天的日期。笔迹熟悉得令她不敢呼吸：潮汐表不会说谎，但写潮汐表的人会。钥匙的齿纹里卡着一粒细小的白沙。",
@@ -72,7 +72,7 @@ export function StoryReader() {
   const [voiceError, setVoiceError] = useState("");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({ lighthouse: true, shore: true });
   const scrollRef = useRef<HTMLDivElement>(null);
-  const chapter = byId[selected] ?? chapters[0];
+  const chapter = byId[selected] ?? intro;
   const narration = [chapter.title, ...chapter.paragraphs].join("。 ");
   useEffect(() => { return () => { if (typeof window !== "undefined") window.speechSynthesis?.cancel(); }; }, []);
   function select(id: string) {
@@ -101,9 +101,9 @@ export function StoryReader() {
         <p className="mb-2 px-2 text-[10px] text-muted-foreground">主线</p>
         <Button variant="ghost" onClick={() => select("arrival")} className={`mb-5 h-auto w-full justify-start px-2 py-2 text-left text-xs ${selected === "arrival" ? "bg-accent font-semibold" : "text-muted-foreground"}`}><BookOpen className="mr-2 size-3.5 shrink-0"/>序章 · 潮声里的灯</Button>
         <p className="mb-2 px-2 text-[10px] text-muted-foreground">故事分支</p>
-        {branches.map(branch => { const root = byId[branch.root]; return <div key={root.id} className="mb-2">
+        {branches.map(branch => { const root = byId[branch.root] ?? intro; return <div key={root.id} className="mb-2">
           <div className="flex items-center"><Button variant="ghost" size="icon-sm" className="size-6 shrink-0" aria-label={`${expanded[root.id] ? "收起" : "展开"}${root.title}分支`} onClick={() => setExpanded(p => ({ ...p, [root.id]: !p[root.id] }))}>{expanded[root.id] ? <ChevronDown className="size-3"/> : <ChevronRight className="size-3"/>}</Button><Button variant="ghost" onClick={() => select(root.id)} className={`h-auto min-w-0 flex-1 justify-start px-1 py-2 text-left text-xs ${selected === root.id ? "bg-accent font-semibold" : "text-muted-foreground"}`}><span className="truncate">{root.number} · {root.title}</span></Button></div>
-          {expanded[root.id] && <div className="ml-3 border-l pl-2">{branch.children.map(id => { const c = byId[id]; return <Button key={id} variant="ghost" onClick={() => select(id)} className={`h-auto w-full justify-start px-2 py-2 text-left text-[11px] ${selected === id ? "bg-accent font-semibold" : "text-muted-foreground"}`}><span className="truncate">{c.number} · {c.title}</span></Button>; })}</div>}
+          {expanded[root.id] && <div className="ml-3 border-l pl-2">{branch.children.map(id => { const c = byId[id] ?? intro; return <Button key={id} variant="ghost" onClick={() => select(id)} className={`h-auto w-full justify-start px-2 py-2 text-left text-[11px] ${selected === id ? "bg-accent font-semibold" : "text-muted-foreground"}`}><span className="truncate">{c.number} · {c.title}</span></Button>; })}</div>}
         </div>; })}
       </nav>
       <div ref={scrollRef} className="soft-scroll min-w-0 flex-1 overflow-y-auto scroll-smooth">
