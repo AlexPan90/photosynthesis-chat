@@ -12,13 +12,83 @@ import {
   ChevronDownIcon,
   CircleIcon,
   ClockIcon,
+  CopyIcon,
+  CheckIcon,
   WrenchIcon,
   XCircleIcon,
 } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
-import { isValidElement } from "react";
+import { isValidElement, useState } from "react";
 
 import { CodeBlock } from "./code-block";
+
+const COLLAPSED_MAX_HEIGHT = 148;
+
+/** 长参数/结果块：默认折叠到固定高度，可展开，支持一键复制。 */
+const ToolPayload = ({
+  code,
+  language = "json",
+}: {
+  code: string;
+  language?: string;
+}) => {
+  const [expanded, setExpanded] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const lines = code.split("\n").length;
+  const collapsible = lines > 8 || code.length > 480;
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* clipboard unavailable */
+    }
+  };
+
+  return (
+    <div className="group/payload relative overflow-hidden rounded-md bg-muted/50 text-[11.5px] [&_pre]:!bg-transparent">
+      <div
+        className={cn(!expanded && collapsible && "overflow-hidden")}
+        style={
+          !expanded && collapsible
+            ? { maxHeight: COLLAPSED_MAX_HEIGHT }
+            : undefined
+        }
+      >
+        <CodeBlock code={code} language={language as "json"} />
+      </div>
+      {!expanded && collapsible && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-muted to-transparent" />
+      )}
+      <button
+        type="button"
+        onClick={copy}
+        aria-label="复制内容"
+        className="absolute right-1.5 top-1.5 flex size-6 items-center justify-center rounded-md text-muted-foreground/70 opacity-0 transition-opacity hover:bg-foreground/[0.06] hover:text-foreground focus-visible:opacity-100 group-hover/payload:opacity-100"
+      >
+        {copied ? (
+          <CheckIcon className="size-3 text-success" />
+        ) : (
+          <CopyIcon className="size-3" />
+        )}
+      </button>
+      {collapsible && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="relative flex w-full items-center justify-center gap-1 border-t border-border/40 py-1 text-[10.5px] text-muted-foreground/80 transition-colors hover:bg-foreground/[0.03] hover:text-foreground"
+        >
+          <ChevronDownIcon
+            className={cn("size-3 transition-transform", expanded && "rotate-180")}
+          />
+          {expanded ? "收起" : `展开全部 · ${lines} 行`}
+        </button>
+      )}
+    </div>
+  );
+};
 
 export type ToolProps = ComponentProps<typeof Collapsible>;
 
@@ -143,9 +213,7 @@ export const ToolInput = ({ className, input, ...props }: ToolInputProps) => (
     <span className="text-[9.5px] font-medium uppercase tracking-wider text-muted-foreground/60">
       In
     </span>
-    <div className="overflow-hidden rounded-md bg-muted/50 text-[11.5px] [&_pre]:!bg-transparent">
-      <CodeBlock code={JSON.stringify(input, null, 2)} language="json" />
-    </div>
+    <ToolPayload code={JSON.stringify(input, null, 2)} />
   </div>
 );
 
@@ -167,11 +235,9 @@ export const ToolOutput = ({
   let Output = <div>{output as ReactNode}</div>;
 
   if (typeof output === "object" && !isValidElement(output)) {
-    Output = (
-      <CodeBlock code={JSON.stringify(output, null, 2)} language="json" />
-    );
+    Output = <ToolPayload code={JSON.stringify(output, null, 2)} />;
   } else if (typeof output === "string") {
-    Output = <CodeBlock code={output} language="json" />;
+    Output = <ToolPayload code={output} />;
   }
 
   return (
