@@ -8,3 +8,4 @@
 - Keep the UI study as a client-side interactive prototype with local browser conversation history; there is no connected AI service or cloud persistence in this design deliverable.
 - Use AI Elements for transcript, messages, tools, and composer so the mockup follows real chat interaction primitives.
 - Keep conversation IDs in `/chat/$threadId` URLs so each local thread can be revisited and refreshed independently.
+- Extend the shared small icon button size and adapt installed AI Elements to the existing Select and strict motion types; these compatibility edits keep the UI primitives reusable.
