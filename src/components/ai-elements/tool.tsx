@@ -23,10 +23,7 @@ import { CodeBlock } from "./code-block";
 export type ToolProps = ComponentProps<typeof Collapsible>;
 
 export const Tool = ({ className, ...props }: ToolProps) => (
-  <Collapsible
-    className={cn("group not-prose w-full rounded-md", className)}
-    {...props}
-  />
+  <Collapsible className={cn("group not-prose w-full", className)} {...props} />
 );
 
 export type ToolPart = ToolUIPart | DynamicToolUIPart;
@@ -95,21 +92,32 @@ export const ToolHeader = ({
 }: ToolHeaderProps) => {
   const derivedName =
     type === "dynamic-tool" ? toolName : type.split("-").slice(1).join("-");
+  const quiet = state === "output-available";
 
   return (
     <CollapsibleTrigger
       className={cn(
-        "flex w-full items-center justify-between gap-4 px-3 py-2 transition-colors hover:bg-foreground/[0.025]",
+        "flex w-full items-center gap-1.5 rounded-sm py-1.5 text-left transition-colors hover:bg-foreground/[0.03]",
         className
       )}
       {...props}
     >
-      <div className="flex items-center gap-2">
-        <WrenchIcon className="size-3.5 text-muted-foreground/80" />
-        <span className="text-xs font-medium">{title ?? derivedName}</span>
-        {getStatusBadge(state)}
-      </div>
-      <ChevronDownIcon className="size-3.5 text-muted-foreground/70 transition-transform group-data-[state=open]:rotate-180" />
+      <ChevronDownIcon className="size-3 shrink-0 text-muted-foreground/60 transition-transform group-data-[state=closed]:-rotate-90" />
+      <WrenchIcon className="size-3 shrink-0 text-muted-foreground/70" />
+      <span className="min-w-0 truncate text-[12px] text-muted-foreground">
+        {title ?? derivedName}
+      </span>
+      {!quiet && (
+        <span
+          className={cn(
+            "ml-0.5 inline-flex shrink-0 items-center gap-1 text-[10.5px]",
+            statusColors[state]
+          )}
+        >
+          {statusIcons[state]}
+          {statusLabels[state]}
+        </span>
+      )}
     </CollapsibleTrigger>
   );
 };
@@ -119,7 +127,7 @@ export type ToolContentProps = ComponentProps<typeof CollapsibleContent>;
 export const ToolContent = ({ className, ...props }: ToolContentProps) => (
   <CollapsibleContent
     className={cn(
-      "data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 space-y-3 px-3 pb-3 text-popover-foreground outline-none data-[state=closed]:animate-out data-[state=open]:animate-in",
+      "data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-1 data-[state=open]:slide-in-from-top-1 space-y-2 pb-2 pl-[18px] pt-0.5 text-popover-foreground outline-none data-[state=closed]:animate-out data-[state=open]:animate-in",
       className
     )}
     {...props}
@@ -131,11 +139,11 @@ export type ToolInputProps = ComponentProps<"div"> & {
 };
 
 export const ToolInput = ({ className, input, ...props }: ToolInputProps) => (
-  <div className={cn("space-y-2 overflow-hidden", className)} {...props}>
-    <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-      Parameters
-    </h4>
-    <div className="rounded-md bg-muted/50">
+  <div className={cn("space-y-1 overflow-hidden", className)} {...props}>
+    <span className="text-[9.5px] font-medium uppercase tracking-wider text-muted-foreground/60">
+      In
+    </span>
+    <div className="overflow-hidden rounded-md bg-muted/50 text-[11.5px] [&_pre]:!bg-transparent">
       <CodeBlock code={JSON.stringify(input, null, 2)} language="json" />
     </div>
   </div>
@@ -167,16 +175,16 @@ export const ToolOutput = ({
   }
 
   return (
-    <div className={cn("space-y-2", className)} {...props}>
-      <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-        {errorText ? "Error" : "Result"}
-      </h4>
+    <div className={cn("space-y-1", className)} {...props}>
+      <span className="text-[9.5px] font-medium uppercase tracking-wider text-muted-foreground/60">
+        {errorText ? "Error" : "Out"}
+      </span>
       <div
         className={cn(
-          "overflow-x-auto rounded-md text-xs [&_table]:w-full",
+          "overflow-x-auto rounded-md text-[11.5px] [&_table]:w-full",
           errorText
-            ? "bg-destructive/10 text-destructive"
-            : "bg-muted/50 text-foreground"
+            ? "bg-destructive/[0.06] px-2.5 py-2 text-destructive"
+            : "bg-muted/50 text-foreground [&_pre]:!bg-transparent"
         )}
       >
         {errorText && <div>{errorText}</div>}
