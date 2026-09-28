@@ -29,6 +29,12 @@
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-info: var(--info);
+  --color-file-code: var(--file-code);
+  --color-file-data: var(--file-data);
+  --color-file-doc: var(--file-doc);
+  --color-file-image: var(--file-image);
+  --color-file-media: var(--file-media);
+  --color-file-archive: var(--file-archive);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --radius-sm: 4px;
