@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { demoFiles, fileById, kindStyles, workspaceTree, type TreeNode } from "./files";
 import { FileViewer } from "./FileViewer";
 
-function Tree({ nodes, depth = 0, onOpen, activeId }: { nodes: TreeNode[]; depth?: number; onOpen: (id: string) => void; activeId?: string }) {
+function Tree({ nodes, depth = 0, onOpen, activeId }: { nodes: TreeNode[]; depth?: number; onOpen: (id: string) => void; activeId?: string | undefined }) {
   const [open, setOpen] = useState<Record<string, boolean>>({ reports: true, data: true });
   return (
     <div className="space-y-px">
@@ -54,7 +54,7 @@ const activity: [string, string, "done" | "now"][] = [
   ["写入 pricing-summary.md", "文件 · 执行中", "now"],
 ];
 
-export function WorkspacePanel({ openFileId, onOpenFile, onClose }: { openFileId?: string; onOpenFile: (id?: string) => void; onClose: () => void }) {
+export function WorkspacePanel({ openFileId, onOpenFile, onClose }: { openFileId?: string | undefined; onOpenFile: (id?: string | undefined) => void; onClose: () => void }) {
   const [tab, setTab] = useState<"文件" | "浏览器">("文件");
   const file = openFileId ? fileById(openFileId) : undefined;
   const changed = demoFiles.filter((f) => f.badge);
