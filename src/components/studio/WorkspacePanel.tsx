@@ -58,8 +58,9 @@ export function WorkspacePanel({ openFileId, onOpenFile, onClose }: { openFileId
   const [tab, setTab] = useState<"文件" | "浏览器">("文件");
   const file = openFileId ? fileById(openFileId) : undefined;
   return (
-     <aside className="fixed inset-y-0 right-0 z-30 flex w-[min(100vw,440px)] min-w-0 flex-col border-l bg-sidebar shadow-xl lg:static lg:w-auto lg:flex-1 lg:shadow-none">
-       <div className="glass flex h-11 shrink-0 items-center gap-1 border-b px-4">
+     <aside className="fixed inset-y-0 right-0 z-30 flex w-[min(100vw,440px)] min-w-0 flex-col bg-sidebar shadow-xl lg:static lg:w-auto lg:flex-1 lg:shadow-none">
+       <div className="flex h-12 shrink-0 items-center justify-end border-b px-4"><Button variant="ghost" size="icon-sm" aria-label="收起工作台" onClick={onClose}><PanelRightClose className="size-3.5" /></Button></div>
+       <div className="glass flex h-10 shrink-0 items-center gap-1 border-b px-4">
          <div className="flex h-full items-center gap-4">
           {(["文件", "浏览器"] as const).map((t) => (
             <Button
@@ -74,7 +75,6 @@ export function WorkspacePanel({ openFileId, onOpenFile, onClose }: { openFileId
             </Button>
           ))}
         </div>
-        <Button variant="ghost" size="icon-sm" aria-label="收起工作台" className="ml-auto" onClick={onClose}><PanelRightClose className="size-3.5" /></Button>
       </div>
 
       {tab === "文件" && file && (
