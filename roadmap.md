@@ -14,4 +14,4 @@
 - [x] Verify light/dark desktop, file opening, story switching and mobile layout.
 - [x] Remove the redundant view strip and top-right settings control while preserving access to views and settings.
 - [x] Give conversation and workspace separate columns with a draggable desktop divider.
-- [ ] Verify desktop resizing, file opening, mobile layout, and current preview health.
+- [x] Verify desktop resizing, file opening, mobile layout, and current preview health.
