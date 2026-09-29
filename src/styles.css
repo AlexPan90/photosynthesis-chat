@@ -298,7 +298,7 @@ body { font-size: calc(16px * var(--relay-type-scale)); }
 /* Settings center: always renders fully white, even in dark mode */
 .relay-settings-light {
   color-scheme: light;
-  color: var(--color-foreground);
+  color: var(--foreground);
   --background: #FFFFFF;
   --foreground: #1C1C22;
   --card: #FFFFFF;
