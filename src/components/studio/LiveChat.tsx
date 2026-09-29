@@ -46,7 +46,6 @@ type Props = {
   initialVersions?: Record<string, UIMessage[]>;
   model: LiveModel;
   onModel: (m: LiveModel) => void;
-  fontSize: number;
   initials: string;
   onActivity: () => void;
   onNotice: (text: string) => void;

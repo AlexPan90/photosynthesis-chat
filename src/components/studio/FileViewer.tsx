@@ -120,7 +120,7 @@ export function FileViewer({ file, onClose }: { file: StudioFile; onClose: () =>
   const [tab, setTab] = useState<"预览" | "原始" | "信息">("预览");
   const style = kindStyles[file.kind];
   const Icon = style.icon;
-  const raw = file.code?.content ?? file.json ?? file.doc?.excerpt ?? file.audio?.transcript.map((t) => `[${t.at}] ${t.text}`).join("\n") ?? file.table?.rows.map((r) => r.join(",")).join("\n") ?? "该类型没有可展示的文本内容。";
+  const raw = file.code?.content ?? file.json ?? file.doc?.excerpt ?? file.audio?.transcript.map((t) => `[${t.at}] ${t.text}`).join("\n") ?? (file.table ? [file.table.columns, ...file.table.rows].map(row => row.map(cell => /[,"\n]/.test(cell) ? `"${cell.replaceAll('"', '""')}"` : cell).join(",")).join("\n") : undefined) ?? "该类型没有可展示的文本内容。";
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="glass flex h-12 shrink-0 items-center gap-2 border-b px-3">
@@ -149,7 +149,7 @@ export function FileViewer({ file, onClose }: { file: StudioFile; onClose: () =>
       <div className="soft-scroll min-h-0 flex-1 overflow-y-auto p-3">
         {tab === "预览" && <div className="rise"><Preview file={file} /></div>}
         {tab === "原始" && (
-          <CodeBlock code={raw} language={(file.code?.language ?? (file.json ? "json" : "text")) as BundledLanguage} showLineNumbers/>
+          <CodeBlock code={raw} language={(file.code?.language ?? (file.json ? "json" : file.table ? "csv" : "text")) as BundledLanguage} showLineNumbers/>
         )}
         {tab === "信息" && (
           <div className="space-y-1.5">
