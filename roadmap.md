@@ -21,4 +21,4 @@
 - [x] P1c：人工批准、网页搜索（Tavily）
 
 - [x] Refresh chat surfaces, typography, status accents, code blocks and composer in the selected dark technical direction; preserve existing flows and light theme.
-- [x] Recompose the actual conversation layout with a wider sidebar, structured header, ruled transcript lane, and larger composer; verify mobile and contextual file panel.
+- [x] Recompose the complete chat workspace into a narrower navigation rail, aligned transcript and composer, quieter header, and contextual file pane; verify desktop and mobile.
