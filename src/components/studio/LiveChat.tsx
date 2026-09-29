@@ -62,6 +62,8 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
   const [agentId, setAgentIdState] = useState<string | null>(initialAgentId);
   const [managing, setManaging] = useState(false);
   const agentRef = useRef(agentId);
+  const skillRef = useRef<string | null>(null);
+  const [dropHover, setDropHover] = useState(false);
   agentRef.current = agentId;
   const setAgentId = (id: string | null) => { setAgentIdState(id); onAgent?.(id); };
   const activeAgent = agents.find(a => a.id === agentId) ?? null;
@@ -237,7 +239,9 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
   }
   const style = { "--message-size": `${fontSize}px` } as React.CSSProperties;
 
-  return <>
+  const isSkillDrag = (e: React.DragEvent) => e.dataTransfer.types.includes("application/x-relay-skill");
+  return <div className="relative flex min-h-0 flex-1 flex-col" onDragOver={e => { if (!isSkillDrag(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = "copy"; setDropHover(true); }} onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropHover(false); }} onDrop={e => { if (!isSkillDrag(e)) return; e.preventDefault(); setDropHover(false); try { const d = JSON.parse(e.dataTransfer.getData("application/x-relay-skill")); invokeSkill(d.name, d.description ?? ""); } catch { /* ignore */ } }}>
+    {dropHover && <div className="pointer-events-none absolute inset-3 z-30 flex items-center justify-center rounded-2xl border-2 border-dashed border-primary/60 bg-primary/5 backdrop-blur-[1px]"><div className="rounded-lg border border-primary/40 bg-card px-4 py-2 text-[13px] font-medium text-primary shadow-lg">松开即调用该技能{draft.trim() ? "，输入框内容作为任务" : ""}</div></div>}
     <Conversation className="relay-conversation soft-scroll"><ConversationContent className="relay-transcript mx-auto w-full max-w-[860px] gap-0 px-5 pb-10 pt-9 md:px-9">
       {messages.length === 0 ? <ConversationEmptyState className="min-h-[45vh]"><div className="flex flex-col items-center gap-4"><Mark/><h1 className="font-display text-xl font-semibold">从一个想法开始</h1><p className="text-sm text-muted-foreground">对话会自动保存，刷新或换设备后仍可继续。</p><div className="mt-3 flex flex-wrap justify-center gap-2">{["整理一份竞品分析的框架", "解释什么是 MCP 协议", "帮我规划本周工作"].map(v => <Button key={v} variant="outline" size="sm" className="lift text-xs shadow-none" onClick={() => submit(v)}>{v}<ArrowUpRight className="size-3"/></Button>)}</div></div></ConversationEmptyState> : messages.map((m, i) => {
         const isAgent = m.role === "assistant";
