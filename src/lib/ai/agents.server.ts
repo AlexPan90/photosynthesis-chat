@@ -19,7 +19,7 @@ export const OPENAI_OPTIONS = {
 const BASE = "默认使用简体中文回答，表达简洁清晰，适当使用 Markdown（标题、列表、表格、代码块）。需要时主动调用工具，再基于结果回答。";
 
 export function pickTools(ids: string[]): ToolSet {
-  const all = chatTools as ToolSet;
+  const all = chatTools as unknown as ToolSet;
   return Object.fromEntries(ids.filter(id => id in all).map(id => [id, all[id]!]));
 }
 
