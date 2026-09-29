@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { createOpenAI } from "@ai-sdk/openai";
 import { convertToModelMessages, stepCountIs, streamText, type UIMessage } from "ai";
-import { allAgents, delegateTool, OPENAI_OPTIONS, pickTools, systemFor } from "./agents.server";
+import { allAgents, delegateActionTool, delegateTool, OPENAI_OPTIONS, pickTools, systemFor } from "./agents.server";
 import { needsApproval, TOOL_CATALOG, type AgentConfig } from "./agents.shared";
 import { z } from "zod";
 import { loadMcpTools, type McpRow } from "./mcp.server";
@@ -118,12 +118,17 @@ export async function handleChat(request: Request) {
     model: provider.responses(model),
     system: `${systemFor(active)}${skillsPrompt(skills)}${delegates.length ? "\n当子任务明显更适合某个专门 Agent 时，调用 delegate_to_agent 委派，然后整合结果回答。" : ""}`,
     messages: await convertToModelMessages(messages),
-    tools: { ...pickTools(toolIds), ...mcp.tools, ...skillTools(skills), ...(delegates.length ? { delegate_to_agent: delegateTool(provider, delegates, request.signal, { mcpRows: (mcpRows ?? []) as McpRow[], skillRows: (skillRows ?? []) as SkillRow[] }) } : {}) },
+    tools: { ...pickTools(toolIds), ...mcp.tools, ...skillTools(skills), ...(delegates.length ? { delegate_to_agent: delegateTool(provider, delegates, request.signal, { mcpRows: (mcpRows ?? []) as McpRow[], skillRows: (skillRows ?? []) as SkillRow[] }), delegate_action: delegateActionTool(delegates, { mcpRows: (mcpRows ?? []) as McpRow[], skillRows: [] }) } : {}) },
     stopWhen: stepCountIs(50),
     // 人工批准：MCP 写操作（删除、发送、创建、修改……）暂停，等待用户在卡片上确认。
     toolApproval: ({ toolCall }) => {
       if (!toolCall) return undefined;
       if (toolCall.toolName === "run_skill_script") return { type: "user-approval", reason: "将在云沙箱中运行 Skill 脚本，需要你确认" };
+      if (toolCall.toolName === "delegate_action") {
+        const i = toolCall.input as { agent_id?: string; tool?: string } | undefined;
+        const who = delegates.find(a => a.id === i?.agent_id)?.name ?? "子 Agent";
+        return { type: "user-approval", reason: `「${who}」请求执行「${(i?.tool ?? "").replace(/^m\d+_/, "")}」，会修改外部数据，需要你确认` };
+      }
       if (toolCall.toolName === "delegate_to_agent") {
         const target = delegates.find(a => a.id === (toolCall.input as { agent_id?: string } | undefined)?.agent_id);
         const runnable = target ? runnableSkills(((skillRows ?? []) as SkillRow[]).filter(s => (target.skill_ids ?? []).includes(s.id))) : [];
