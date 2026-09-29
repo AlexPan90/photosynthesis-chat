@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/auth")({
+  validateSearch: (s: Record<string, unknown>): { redirect?: string } => { const r = s["redirect"]; return typeof r === "string" && r.startsWith("/") && !r.startsWith("//") ? { redirect: r } : {}; },
   head: () => ({ meta: [
     { title: "登录 — Relay Studio" },
     { name: "description", content: "登录 Relay Studio，开始与 AI Agent 的真实对话。" },
@@ -18,6 +19,7 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
+  const { redirect } = Route.useSearch();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,7 +34,7 @@ function AuthPage() {
       const { error: err } = await supabase.auth.signInWithPassword({ email, password });
       setBusy(false);
       if (err) { setError(err.message.includes("Invalid") ? "邮箱或密码不正确" : err.message); return; }
-      navigate({ to: "/" });
+      navigate({ to: redirect ?? "/" });
     } else {
       const { error: err } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin } });
       setBusy(false);

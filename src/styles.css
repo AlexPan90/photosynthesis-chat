@@ -377,3 +377,14 @@ body { font-size: calc(16px * var(--relay-type-scale)); }
 :root:not(.dark) .relay-pill { background: #F4F4F7; border-color: rgba(15, 15, 30, 0.10); color: #27272A; }
 :root:not(.dark) .relay-file-card:hover { box-shadow: 0 12px 28px -18px rgba(15,15,40,.28); }
 :root:not(.dark) .relay-shell::after { opacity: .02; }
+
+/* ---- Skills source: VS Code Dark Plus surface (both themes) ---- */
+.relay-sunken:has([data-code-theme]), .relay-sunken { --skill-bg: #1E1E1E; }
+.relay-sunken { background: #1E1E1E !important; border-color: #2B2B2B !important; color: #D4D4D4; }
+.dark .relay-sunken { background: #16171B !important; border-color: rgba(255,255,255,.06) !important; }
+.relay-sunken pre, .relay-sunken code { background: transparent !important; }
+.relay-sunken [data-slot="code-block-header"], .relay-sunken > div:first-child:not(.relative) { background: #252526; color: #CCCCCC; border-bottom-color: #2B2B2B; }
+.dark .relay-sunken > div:first-child:not(.relative) { background: #1B1C21; }
+.relay-skill-editor { background: #1E1E1E; color: #D4D4D4; border-color: #2B2B2B; caret-color: #AEAFAD; }
+.relay-skill-editor::placeholder { color: #6A6A6A; }
+.relay-skill-editor:focus-visible { border-color: #007ACC; box-shadow: 0 0 0 2px rgba(0,122,204,.3); }

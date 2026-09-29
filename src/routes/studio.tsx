@@ -25,7 +25,11 @@ const tabs = [
 
 function StudioLayout() {
   const [state, setState] = useState<"loading" | "in" | "out">("loading");
-  useEffect(() => { supabase.auth.getUser().then(({ data }) => setState(data.user ? "in" : "out")); }, []);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setState(data.session ? "in" : "out"));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => setState(session ? "in" : "out"));
+    return () => sub.subscription.unsubscribe();
+  }, []);
   return <div className="flex h-screen flex-col bg-background text-foreground">
     <header className="flex h-12 shrink-0 items-center gap-1 border-b px-3">
       <Button asChild variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground"><Link to="/"><ArrowLeft className="size-3.5"/>返回对话</Link></Button>
@@ -35,7 +39,7 @@ function StudioLayout() {
     </header>
     <main className="min-h-0 flex-1">
       {state === "loading" ? null : state === "out"
-        ? <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-muted-foreground">登录后才能管理 Agent、MCP 和 Skills<Button asChild size="sm"><Link to="/auth">去登录</Link></Button></div>
+        ? <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-muted-foreground">登录后才能管理 Agent、MCP 和 Skills<Button asChild size="sm"><Link to="/auth" search={{ redirect: typeof window !== "undefined" ? window.location.pathname : "/studio/skills" }}>去登录</Link></Button></div>
         : <Outlet/>}
     </main>
   </div>;
