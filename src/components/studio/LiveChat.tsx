@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AgentManager, DelegateCard, useAgents } from "./Agents";
 import type { AgentConfig } from "@/lib/ai/agents.shared";
 import { metaOf } from "@/lib/branches";
+import { useSlashCommands, type SlashCommand } from "./slash-commands";
 
 
 export const liveModelGroups = [
@@ -57,6 +58,7 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
   const setAgentId = (id: string | null) => { setAgentIdState(id); onAgent?.(id); };
   const activeAgent = agents.find(a => a.id === agentId) ?? null;
   const [draft, setDraft] = useState("");
+  const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const [versions, setVersions] = useState<Record<string, UIMessage[]>>(initialVersions);
   const [error, setError] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -98,6 +100,34 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
     setDraft("");
     setTimeout(onActivity, 800);
   }
+
+  // ---- 快捷指令（输入 / 唤起）----
+  function exportMarkdown() {
+    const lines: string[] = [`# 对话导出`, "", `导出时间：${new Date().toLocaleString("zh-CN")}`, ""];
+    for (const m of messages) {
+      const t = m.parts.filter(p => p.type === "text").map(p => p.text).join("\n").trim();
+      if (!t) continue;
+      lines.push(m.role === "user" ? `## 你` : `## ${modelLabel(model)}`, "", t, "");
+    }
+    const blob = new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `relay-chat-${threadId.slice(0, 8)}.md`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    onNotice("已导出为 Markdown 文件");
+  }
+  const slashCommands: SlashCommand[] = [
+    { name: "model", desc: "选择本次对话的模型或 Agent", run: () => { setDraft(""); setModelMenuOpen(true); } },
+    { name: "export", desc: "把当前对话导出为 Markdown 文件", run: () => { setDraft(""); exportMarkdown(); } },
+    { name: "new", desc: "开始一个新对话", run: () => { setDraft(""); void navigate({ to: "/" }); } },
+    { name: "clear", desc: "清空输入框", run: () => setDraft("") },
+    { name: "summarize", desc: "让 AI 总结一段内容", run: () => setDraft("请总结以下内容：") },
+    { name: "research", desc: "让 AI 联网调研一个主题", run: () => setDraft("请联网调研：") },
+    { name: "code", desc: "让 AI 生成代码", run: () => setDraft("请帮我写代码：") },
+    { name: "feedback", desc: "记录对这次对话的反馈", run: () => setDraft("反馈：") },
+  ];
+  const slash = useSlashCommands(slashCommands, draft, setDraft, textareaRef);
   const parentOf = (i: number) => messages[i - 1]?.role === "user" ? messages[i - 1]!.id : metaOf(messages[i]!).parentId;
   function versionList(i: number) {
     const m = messages[i]!; const parent = parentOf(i);
@@ -155,12 +185,13 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
       {status === "submitted" && <div className="flex items-center gap-2 pb-8 text-sm"><Mark/><Shimmer>正在思考...</Shimmer></div>}
       {error && <div className="mb-5 flex items-start gap-2 rounded-md border border-destructive/25 bg-destructive/5 p-3 text-xs text-destructive"><CircleAlert className="mt-px size-4 shrink-0"/><span className="flex-1">{error}</span></div>}
     </ConversationContent><ConversationScrollButton/></Conversation>
-    <div className="shrink-0 px-4 pb-4 pt-2 md:px-5"><div className="mx-auto max-w-[760px]">
+    <div className="shrink-0 px-4 pb-4 pt-2 md:px-5"><div className="relative mx-auto max-w-[760px]">
+      {slash.popup}
       <PromptInput className="rounded-lg border bg-card shadow-[0_3px_16px_-12px_var(--color-foreground)] transition-[border-color,box-shadow] duration-150 focus-within:border-primary/50" onSubmit={({ text }) => submit(text)}>
-        <PromptInputTextarea ref={textareaRef} value={draft} onChange={e => setDraft(e.target.value)} placeholder="发送消息..." className="min-h-[58px] text-[13px] leading-6"/>
+        <PromptInputTextarea ref={textareaRef} value={draft} onChange={e => setDraft(e.target.value)} onKeyDown={slash.onKeyDown} placeholder="发送消息，输入 / 唤起快捷指令..." className="min-h-[58px] text-[13px] leading-6"/>
         <PromptInputFooter className="flex-wrap gap-1 px-2 py-1.5"><PromptInputTools/>
           <div className="ml-auto flex items-center gap-1">
-            <ModelMenu model={model} onModel={m => { setAgentId(null); onModel(m); }} agents={agents} agentId={agentId} onAgent={setAgentId} onManage={() => navigate({ to: "/studio/agents" })}/>
+            <ModelMenu model={model} onModel={m => { setAgentId(null); onModel(m); }} agents={agents} agentId={agentId} onAgent={setAgentId} onManage={() => navigate({ to: "/studio/agents" })} open={modelMenuOpen} onOpenChange={setModelMenuOpen}/>
             <PromptInputSubmit status={status} onStop={stop} disabled={!draft.trim() && !busy} className="size-8 rounded-full"/>
           </div>
         </PromptInputFooter>
@@ -170,10 +201,10 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
   </>;
 }
 
-export function ModelMenu({ model, onModel, agents, agentId, onAgent, onManage }: { model: string; onModel: (m: LiveModel) => void; agents?: AgentConfig[]; agentId?: string | null; onAgent?: (id: string) => void; onManage?: () => void }) {
+export function ModelMenu({ model, onModel, agents, agentId, onAgent, onManage, open, onOpenChange }: { model: string; onModel: (m: LiveModel) => void; agents?: AgentConfig[]; agentId?: string | null; onAgent?: (id: string) => void; onManage?: () => void; open?: boolean; onOpenChange?: (open: boolean) => void }) {
   const active = agents?.find(a => a.id === agentId);
   const head = (t: string) => <div className="px-2 pt-2.5 pb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70">{t}</div>;
-  return <DropdownMenu><DropdownMenuTrigger asChild><PromptInputButton tooltip="切换模型或 Agent" className="max-w-[160px] gap-1 truncate px-2 text-[11px] text-muted-foreground">{active && <Bot className="size-3 shrink-0"/>}{active?.name ?? modelLabel(model)}<ChevronDown className="size-3 shrink-0"/></PromptInputButton></DropdownMenuTrigger><DropdownMenuContent align="end" className="max-h-[70vh] min-w-[240px] overflow-y-auto">
+  return <DropdownMenu {...(open === undefined ? {} : { open, onOpenChange })}><DropdownMenuTrigger asChild><PromptInputButton tooltip="切换模型或 Agent" className="max-w-[160px] gap-1 truncate px-2 text-[11px] text-muted-foreground">{active && <Bot className="size-3 shrink-0"/>}{active?.name ?? modelLabel(model)}<ChevronDown className="size-3 shrink-0"/></PromptInputButton></DropdownMenuTrigger><DropdownMenuContent align="end" className="max-h-[70vh] min-w-[240px] overflow-y-auto">
     {agents && <>{head("Agent")}{agents.map(a => <DropdownMenuItem key={a.id} onClick={() => onAgent?.(a.id)} className="items-start"><Bot className="mt-0.5 size-3.5"/><span className="min-w-0 flex-1"><span className="block">{a.name}</span><span className="block truncate text-[10.5px] text-muted-foreground">{a.description}</span></span>{agentId === a.id && <Check className="size-3.5"/>}</DropdownMenuItem>)}<DropdownMenuItem onClick={onManage} className="text-[11px] text-muted-foreground"><Settings2 className="size-3.5"/>管理 Agent…</DropdownMenuItem></>}
     {liveModelGroups.map(g => <div key={g.provider}>{head(g.provider)}{g.models.map(m => <DropdownMenuItem key={m.id} onClick={() => onModel(m.id)}>{m.label}{!active && model === m.id && <Check className="ml-auto size-3.5"/>}</DropdownMenuItem>)}</div>)}
     {upcomingProviders.map(p => <div key={p}>{head(p)}<DropdownMenuItem disabled className="text-[11px]">即将接入</DropdownMenuItem></div>)}
