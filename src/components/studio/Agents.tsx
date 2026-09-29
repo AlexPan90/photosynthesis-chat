@@ -69,14 +69,14 @@ export function AgentManager({ open, onOpenChange, custom, reload, models }: { o
   </DialogContent></Dialog>;
 }
 
-type Progress = { agentName: string; status: "running" | "done" | "error"; steps: { tool: string; state: "running" | "done" | "error"; detail?: string }[]; text: string };
+type Progress = { agentName: string; status: "running" | "done" | "error" | "awaiting-approval"; steps: { tool: string; state: "running" | "done" | "error"; detail?: string }[]; text: string };
 
 /** 委派执行记录：子 Agent 的每一步工具调用 + 流式结果。 */
 export function DelegateCard({ task, output, errorText, preliminary }: { task?: string | undefined; output?: Progress | undefined; errorText?: string | undefined; preliminary?: boolean }) {
   const running = !errorText && (!output || preliminary || output.status === "running");
   return <div className="my-2 rounded-lg border bg-card/60 px-3.5 py-3 text-xs">
     <div className="flex items-center gap-2"><Bot className="size-3.5 text-primary"/><span className="font-medium">委派给 {output?.agentName ?? "Agent"}</span>
-      <span className={`ml-auto flex items-center gap-1 text-[11px] ${errorText ? "text-destructive" : running ? "text-primary" : "text-success"}`}>{errorText ? <><CircleAlert className="size-3"/>失败</> : running ? <><LoaderCircle className="size-3 animate-spin"/>执行中</> : <><Check className="size-3"/>完成</>}</span></div>
+      <span className={`ml-auto flex items-center gap-1 text-[11px] ${errorText ? "text-destructive" : running || output?.status === "awaiting-approval" ? "text-primary" : "text-success"}`}>{errorText ? <><CircleAlert className="size-3"/>失败</> : running ? <><LoaderCircle className="size-3 animate-spin"/>执行中</> : output?.status === "awaiting-approval" ? <><ShieldAlert className="size-3"/>等待批准</> : <><Check className="size-3"/>完成</>}</span></div>
     {task && <p className="mt-1.5 text-muted-foreground">{task}</p>}
     {!!output?.steps.length && <ol className="mt-2.5 space-y-1 border-l pl-3">{output.steps.map((s, i) => <li key={i} className="flex items-center gap-2"><span className={`size-1.5 shrink-0 rounded-full ${s.state === "done" ? "bg-success" : s.state === "error" ? "bg-destructive" : "animate-pulse bg-primary"}`}/><span className={s.state === "error" ? "text-destructive" : ""}>{toolLabel(s.tool)}</span><span className="truncate font-mono text-[10.5px] text-muted-foreground">{s.detail}</span></li>)}</ol>}
     {output?.text && <div className="mt-2.5 border-t pt-2.5 text-[12.5px] leading-6"><MessageResponse>{output.text}</MessageResponse></div>}

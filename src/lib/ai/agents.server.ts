@@ -105,7 +105,7 @@ export function delegateActionTool(agents: AgentConfig[], res: DelegateResources
       try {
         const t = mcp.tools[name];
         if (!t?.execute) throw new Error(`「${agent.name}」没有绑定该操作：${name}`);
-        return await t.execute(input, { toolCallId: opts.toolCallId, messages: [], abortSignal: opts.abortSignal });
+        return await (t.execute as (i: unknown, o: unknown) => unknown)(input, { toolCallId: opts.toolCallId, messages: [], abortSignal: opts.abortSignal });
       } finally { await mcp.close(); }
     },
   });
