@@ -231,6 +231,8 @@
 .relay-shell .relay-message [data-streamdown="table"] :is(th, td) { padding: 10px 16px; }
 .relay-shell .relay-message img { max-width: 100%; height: auto; border-radius: 6px; border: 1px solid var(--color-border); }
 .relay-file-card { min-width: 0; }
+.relay-file-card table { width: 100%; max-width: 100%; }
+.relay-file-card :is(th, td) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .relay-file-card:hover { border-color: color-mix(in oklab, var(--color-primary) 32%, var(--color-border)); }
 .relay-data-preview thead th { box-shadow: 0 1px 0 var(--color-border); }
 .relay-data-preview tbody td:first-child { background: color-mix(in oklab, var(--color-muted) 60%, var(--color-card)); }

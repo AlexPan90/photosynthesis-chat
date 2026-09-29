@@ -16,7 +16,7 @@ function Badge({ badge }: { badge?: StudioFile["badge"] }) {
 function Peek({ file }: { file: StudioFile }) {
   if (file.table) {
     return (
-      <div className="overflow-hidden rounded-sm border border-border/70">
+      <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border/70">
         <table className="w-full table-fixed border-collapse text-[10px]">
           <thead>
             <tr className="bg-muted/70 text-muted-foreground">
@@ -111,7 +111,7 @@ export function FileCard({ file, onOpen }: { file: StudioFile; onOpen: (id: stri
   const style = kindStyles[file.kind];
   const Icon = style.icon;
   return (
-    <div className="relay-file-card lift group w-full rounded-lg border bg-card p-3 transition-colors hover:bg-accent/30">
+    <div className="relay-file-card lift group w-full min-w-0 overflow-hidden rounded-lg border bg-card p-3 transition-colors hover:bg-accent/30">
       <Button type="button" variant="ghost" onClick={() => onOpen(file.id)} aria-label={`在工作台打开 ${file.name}`} className="h-auto w-full min-w-0 justify-start overflow-hidden whitespace-normal p-0 text-left font-normal hover:bg-transparent">
       <div className="flex w-full min-w-0 items-start gap-2.5">
         <span className={`flex size-8 shrink-0 items-center justify-center rounded-md ring-1 ring-inset ${style.tint} ${style.text} ${style.ring}`}>
