@@ -1,0 +1,96 @@
+import { useState } from "react";
+import { Link } from "@tanstack/react-router";
+import { ArrowUpRight, Blocks, Bot, Keyboard, Moon, Plug, Settings2, SlidersHorizontal, Sparkles, Sun, X, Cpu, ChevronDown } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { SkillsDock } from "./SkillsDock";
+
+type Props = {
+  open: boolean; onOpenChange: (v: boolean) => void;
+  dark: boolean; setDark: (v: boolean) => void;
+  fontSize: number; setFontSize: (v: number) => void;
+  language: string; setLanguage: (v: string) => void;
+  userEmail?: string | undefined; userId?: string | undefined; canInvoke: boolean;
+  onSignOut: () => void;
+};
+
+const tabs = [
+  { id: "general", label: "通用", icon: SlidersHorizontal },
+  { id: "appearance", label: "外观", icon: Sun },
+  { id: "models", label: "模型", icon: Cpu },
+  { id: "skills", label: "技能", icon: Sparkles },
+  { id: "orchestra", label: "编排中心", icon: Blocks },
+  { id: "keys", label: "快捷键", icon: Keyboard },
+] as const;
+
+function Row({ title, desc, children }: { title: string; desc?: string; children: React.ReactNode }) {
+  return <div className="flex items-center justify-between gap-6 border-b border-border/60 py-4 last:border-0">
+    <div className="min-w-0"><p className="text-[13px] font-medium">{title}</p>{desc && <p className="mt-1 text-[11.5px] text-muted-foreground">{desc}</p>}</div>
+    <div className="shrink-0">{children}</div>
+  </div>;
+}
+
+export function SettingsCenter(p: Props) {
+  const [tab, setTab] = useState<(typeof tabs)[number]["id"]>("general");
+  const current = tabs.find(t => t.id === tab)!;
+  return <Dialog open={p.open} onOpenChange={p.onOpenChange}>
+    <DialogContent className="flex h-[min(720px,88vh)] w-[min(1040px,94vw)] max-w-none gap-0 overflow-hidden rounded-2xl p-0 [&>button:last-child]:hidden">
+      <nav className="flex w-56 shrink-0 flex-col border-r border-border/60 bg-sidebar/60 p-3">
+        <DialogTitle className="flex items-center gap-2 px-2.5 pb-4 pt-2 text-[15px] font-semibold"><Settings2 className="size-4"/>设置中心</DialogTitle>
+        {tabs.map(t => <button key={t.id} onClick={() => setTab(t.id)} className={`mb-0.5 flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-[13px] transition-colors ${tab === t.id ? "bg-accent font-medium text-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"}`}><t.icon className="size-4"/>{t.label}</button>)}
+        <div className="mt-auto rounded-lg border border-border/60 bg-background/60 p-3 text-[11.5px]">
+          <p className="truncate font-medium">{p.userEmail ?? "未登录"}</p>
+          <p className="mt-0.5 text-muted-foreground">{p.userEmail ? "云端同步" : "示例对话仅本地展示"}</p>
+        </div>
+      </nav>
+      <section className="flex min-w-0 flex-1 flex-col">
+        <header className="flex h-14 shrink-0 items-center justify-between border-b border-border/60 px-7">
+          <h3 className="text-[14px] font-semibold">{current.label}</h3>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline" size="sm" className="h-8 text-xs"><Link to="/studio/agents" onClick={() => p.onOpenChange(false)}>打开编排中心<ArrowUpRight className="size-3.5"/></Link></Button>
+            <Button variant="ghost" size="icon" className="size-8" onClick={() => p.onOpenChange(false)} aria-label="关闭"><X className="size-4"/></Button>
+          </div>
+        </header>
+        <div className="min-h-0 flex-1 overflow-y-auto px-7 py-3">
+          {tab === "general" && <>
+            <Row title="界面语言"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="h-8 gap-1.5">{p.language}<ChevronDown className="size-3"/></Button></DropdownMenuTrigger><DropdownMenuContent>{["简体中文", "English"].map(l => <DropdownMenuItem key={l} onClick={() => p.setLanguage(l)}>{l}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu></Row>
+            <Row title="账号" desc={p.userEmail ? `对话已保存到云端（${p.userEmail}）` : "登录后对话会保存到云端"}>{p.userEmail ? <Button variant="outline" size="sm" className="h-8" onClick={p.onSignOut}>退出登录</Button> : <Button asChild size="sm" className="h-8"><Link to="/auth">去登录</Link></Button>}</Row>
+            <Row title="默认权限" desc="新对话的默认操作权限，可在对话中用 /permission 调整"><span className="rounded-md border px-2.5 py-1 text-xs text-muted-foreground">操作前确认</span></Row>
+          </>}
+          {tab === "appearance" && <>
+            <div className="border-b border-border/60 py-4">
+              <p className="mb-3 text-[13px] font-medium">主题</p>
+              <div className="grid grid-cols-2 gap-3">
+                {[{ v: false, l: "浅色", I: Sun }, { v: true, l: "深色", I: Moon }].map(o => <button key={o.l} onClick={() => p.setDark(o.v)} className={`flex h-24 flex-col items-center justify-center gap-2 rounded-xl border text-[13px] transition-colors ${p.dark === o.v ? "border-primary bg-primary/5 text-foreground ring-1 ring-primary/40" : "border-border/60 text-muted-foreground hover:bg-accent/40"}`}><o.I className="size-5"/>{o.l}</button>)}
+              </div>
+            </div>
+            <div className="py-4">
+              <div className="mb-4 flex justify-between"><div><p className="text-[13px] font-medium">界面字体大小</p><p className="mt-1 text-[11.5px] text-muted-foreground">缩放全部页面、表格与弹窗文字</p></div><span className="font-mono text-xs text-muted-foreground">{p.fontSize}px</span></div>
+              <Slider value={[p.fontSize]} min={12} max={18} step={1} onValueChange={v => p.setFontSize(v[0] ?? 14)}/>
+            </div>
+          </>}
+          {tab === "models" && <div className="py-4">
+            <p className="mb-4 text-[11.5px] text-muted-foreground">仅显示已配置并验证可用的厂商与模型。</p>
+            <div className="rounded-xl border border-border/60 p-4">
+              <div className="flex items-center gap-2"><span className="text-[13px] font-medium">OpenAI</span><span className="relay-status-dot size-1.5 rounded-full bg-emerald-500"/><span className="ml-auto text-[11px] text-muted-foreground">已连接</span></div>
+              <div className="mt-3 flex flex-wrap gap-2">{["GPT-6 Astra", "GPT-6 Sol", "GPT-6 Luna"].map(m => <span key={m} className="rounded-md bg-muted px-2 py-1 font-mono text-[11px]">{m}</span>)}</div>
+            </div>
+          </div>}
+          {tab === "skills" && <div className="py-3">
+            <p className="mb-2 text-[11.5px] text-muted-foreground">已启用的技能。点击 ▶ 在当前对话中调用；安装和管理请前往 Skills 页面。</p>
+            <div className="-mx-3 rounded-xl"><SkillsDock userId={p.userId} canInvoke={p.canInvoke}/></div>
+            <Button asChild variant="outline" size="sm" className="mt-3 h-8"><Link to="/studio/skills" onClick={() => p.onOpenChange(false)}>管理技能<ArrowUpRight className="size-3.5"/></Link></Button>
+          </div>}
+          {tab === "orchestra" && <div className="grid gap-3 py-4 sm:grid-cols-3">
+            {[{ to: "/studio/agents", t: "Agent", d: "提示词、模型与工具编排", I: Bot }, { to: "/studio/mcp", t: "MCP 连接", d: "远程服务地址、密钥与代理", I: Plug }, { to: "/studio/skills", t: "Skills", d: "安装、启用与预览技能", I: Sparkles }].map(c => <Link key={c.to} to={c.to} onClick={() => p.onOpenChange(false)} className="group rounded-xl border border-border/60 p-4 transition-colors hover:border-primary/50 hover:bg-accent/40">
+              <c.I className="size-5 text-primary"/><p className="mt-3 flex items-center text-[13px] font-medium">{c.t}<ArrowUpRight className="ml-auto size-3.5 opacity-0 transition-opacity group-hover:opacity-100"/></p><p className="mt-1 text-[11.5px] text-muted-foreground">{c.d}</p>
+            </Link>)}
+          </div>}
+          {tab === "keys" && [["发送消息", "Enter"], ["换行", "Shift + Enter"], ["新建对话", "⌘ K"], ["搜索对话", "⌘ F"], ["快捷指令", "/"]].map(([l, k]) => <Row key={l} title={l!}><kbd className="rounded-md border bg-muted px-2 py-0.5 font-mono text-[11px]">{k}</kbd></Row>)}
+        </div>
+      </section>
+    </DialogContent>
+  </Dialog>;
+}
