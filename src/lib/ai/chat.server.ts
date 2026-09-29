@@ -105,7 +105,7 @@ export async function handleChat(request: Request) {
     tools: { ...pickTools(toolIds), ...mcp.tools, ...skillTools(skills), ...(delegates.length ? { delegate_to_agent: delegateTool(provider, delegates, request.signal) } : {}) },
     stopWhen: stepCountIs(50),
     // 人工批准：MCP 写操作（删除、发送、创建、修改……）暂停，等待用户在卡片上确认。
-    toolApproval: ({ toolCall }) => toolCall.toolName in mcp.tools && needsApproval(toolCall.toolName)
+    toolApproval: ({ toolCall }) => toolCall && toolCall.toolName in mcp.tools && needsApproval(toolCall.toolName)
       ? { type: "user-approval", reason: `「${mcp.labels[toolCall.toolName] ?? toolCall.toolName}」会修改外部数据，需要你确认` }
       : undefined,
     ...(process.env["MCP_ENC_KEY"] ? { experimental_toolApprovalSecret: `approval:${process.env["MCP_ENC_KEY"]}` } : {}),
