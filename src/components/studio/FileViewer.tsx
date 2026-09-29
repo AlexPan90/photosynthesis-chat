@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Play, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { kindStyles, type StudioFile } from "./files";
+import { ArtifactVisual } from "./ArtifactVisual";
 
 function Preview({ file }: { file: StudioFile }) {
   if (file.doc) {
@@ -98,20 +99,7 @@ function Preview({ file }: { file: StudioFile }) {
     );
   }
   if (file.image) {
-    return (
-      <div className="space-y-3">
-        <div className="checker flex h-56 items-end gap-3 rounded-md border px-6 py-6">
-          {[38, 62, 30, 78, 48, 56].map((h, i) => (
-            <div key={i} className={`flex-1 rounded-t-md ${file.image!.palette[i % file.image!.palette.length]} opacity-85`} style={{ height: `${h}%` }} />
-          ))}
-        </div>
-        <div className="flex items-center justify-between rounded-md border bg-muted/30 px-3 py-2 font-mono text-[10px] text-muted-foreground">
-          <span>{file.image.width} × {file.image.height}</span>
-          <span>{file.size}</span>
-        </div>
-        <p className="text-[11px] text-muted-foreground">{file.image.caption}</p>
-      </div>
-    );
+    return <ArtifactVisual file={file} />;
   }
   if (file.audio) {
     return (
