@@ -108,8 +108,8 @@ export function WorkspacePanel({ openFileId, onOpenFile, onClose }: { openFileId
   };
   const file = openFileId ? fileById(openFileId) : undefined;
   return (
-     <aside className="fixed inset-y-0 right-0 z-30 flex w-[min(100vw,440px)] min-w-0 flex-col bg-sidebar shadow-xl lg:static lg:w-auto lg:flex-1 lg:shadow-none">
-       <div className="flex h-12 shrink-0 items-center gap-1 px-2">
+     <aside className="relay-workspace fixed inset-y-0 right-0 z-30 flex w-[min(100vw,440px)] min-w-0 flex-col bg-sidebar shadow-xl lg:static lg:w-auto lg:flex-1 lg:shadow-none">
+       <div className="flex h-14 shrink-0 items-center gap-1 border-b border-border/50 px-3">
          <div className="flex min-w-0 items-center gap-1 overflow-x-auto" role="tablist" aria-label="工作台页签">
            {tabs.map((t) => {
              const active = t.id === activeTab;
@@ -128,7 +128,7 @@ export function WorkspacePanel({ openFileId, onOpenFile, onClose }: { openFileId
                  onDragEnd={() => { setDragId(null); setOverId(null); }}
                  onClick={() => select(t)}
                  onKeyDown={(e) => { if (e.key === "Enter") select(t); }}
-                 className={`group flex h-7 shrink-0 cursor-default select-none items-center gap-1.5 rounded-md pl-2 pr-1 text-[11px] transition-colors ${active ? "bg-accent font-medium text-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"} ${dragId === t.id ? "opacity-40" : ""} ${overId === t.id && dragId !== t.id ? "ring-1 ring-primary/40" : ""}`}
+                 className={`group flex h-8 shrink-0 cursor-default select-none items-center gap-1.5 rounded-lg border pl-2.5 pr-1 text-[11px] transition-colors ${active ? "border-border/70 bg-card/70 font-medium text-foreground" : "border-transparent text-muted-foreground hover:bg-accent/40 hover:text-foreground"} ${dragId === t.id ? "opacity-40" : ""} ${overId === t.id && dragId !== t.id ? "ring-1 ring-primary/40" : ""}`}
                >
                  {t.type === "files" ? <Folder className="size-3 text-warning" /> : <Globe2 className="size-3 text-primary" />}
                  {label}
@@ -159,8 +159,8 @@ export function WorkspacePanel({ openFileId, onOpenFile, onClose }: { openFileId
            <Button variant="ghost" size="icon-sm" aria-label="关闭工作台" onClick={onClose}><X className="size-3.5" /></Button>
          </div>
        </div>
-       <div className="flex h-8 shrink-0 items-center border-b pl-3 pr-2">
-         <p className="truncate font-mono text-[10px] text-muted-foreground">~/workspace/<span className="text-foreground">relay-studio</span></p>
+       <div className="flex h-9 shrink-0 items-center border-b border-border/50 pl-4 pr-2">
+         <p className="truncate font-mono text-[10px] text-muted-foreground">CONTEXT / <span className="text-foreground">relay-studio</span></p>
          <Button variant="ghost" size="icon-sm" className="ml-auto" aria-label="刷新" onClick={() => onOpenFile(undefined)}><RotateCcw className="size-3" /></Button>
        </div>
 
