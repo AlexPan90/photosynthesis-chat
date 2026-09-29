@@ -400,11 +400,12 @@ export const CodeBlockContent = ({
   useEffect(() => {
     let cancelled = false;
 
-    highlightCode(code, language, (result) => {
+    const cachedResult = highlightCode(code, language, (result) => {
       if (!cancelled) {
         setAsyncTokens(result);
       }
     });
+    if (cachedResult) setAsyncTokens(cachedResult);
 
     return () => {
       cancelled = true;
