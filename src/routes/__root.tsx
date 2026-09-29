@@ -122,7 +122,12 @@ function RootComponent() {
 
   // Apply the saved theme app-wide so studio pages match the chat page.
   useEffect(() => {
-    const apply = () => document.documentElement.classList.toggle("dark", localStorage.getItem("relay-dark") !== "false");
+    const apply = () => {
+      const root = document.documentElement, size = Number(localStorage.getItem("relay-font")) || 14;
+      root.classList.toggle("dark", localStorage.getItem("relay-dark") !== "false");
+      root.style.setProperty("--message-size", `${size}px`);
+      root.style.setProperty("--relay-type-scale", String(size / 14));
+    };
     apply();
     window.addEventListener("storage", apply);
     return () => window.removeEventListener("storage", apply);

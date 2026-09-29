@@ -133,7 +133,7 @@ export function Studio({ threadId }: { threadId?: string }) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => { setReady(true); setDark(localStorage.getItem("relay-dark") !== "false"); setFontSize(Number(localStorage.getItem("relay-font")) || 14); }, []);
   useEffect(() => { document.documentElement.classList.toggle("dark", dark); if (ready) localStorage.setItem("relay-dark", String(dark)); }, [dark, ready]);
-  useEffect(() => { if (ready) localStorage.setItem("relay-font", String(fontSize)); }, [fontSize, ready]);
+  useEffect(() => { if (ready) { localStorage.setItem("relay-font", String(fontSize)); document.documentElement.style.setProperty("--message-size", `${fontSize}px`); document.documentElement.style.setProperty("--relay-type-scale", String(fontSize / 14)); } }, [fontSize, ready]);
   useEffect(() => { textareaRef.current?.focus(); }, [threadId, status]);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
   async function refreshThreads() {
