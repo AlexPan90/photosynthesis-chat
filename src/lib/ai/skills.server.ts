@@ -1,5 +1,6 @@
 import { tool, type ToolSet } from "ai";
 import { z } from "zod";
+import { runnerFor, runInSandbox } from "./sandbox.server";
 
 export type SkillRow = { id: string; name: string; description: string; source_type: string; source_url: string | null; ref: string | null; path: string | null; content: string; files: unknown };
 export type RemoteSkill = { name: string; description: string; path: string; files: string[] };
