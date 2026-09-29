@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/auth")({
-  validateSearch: (s: Record<string, unknown>) => ({ redirect: typeof s.redirect === "string" && s.redirect.startsWith("/") && !s.redirect.startsWith("//") ? s.redirect : undefined }),
+  validateSearch: (s: Record<string, unknown>): { redirect?: string } => { const r = s["redirect"]; return typeof r === "string" && r.startsWith("/") && !r.startsWith("//") ? { redirect: r } : {}; },
   head: () => ({ meta: [
     { title: "登录 — Relay Studio" },
     { name: "description", content: "登录 Relay Studio，开始与 AI Agent 的真实对话。" },

@@ -379,7 +379,7 @@ export const CodeBlockContent = ({
   code: string;
   language: BundledLanguage;
   showLineNumbers?: boolean;
-  theme?: CodeTheme;
+  theme?: CodeTheme | undefined;
 }) => {
   // Memoized raw tokens for immediate display
   const rawTokens = useMemo(() => createRawTokens(code), [code]);
