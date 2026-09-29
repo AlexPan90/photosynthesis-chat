@@ -22,9 +22,9 @@ export function runJsInSandbox(code: string, input: unknown, timeoutMs = 10_000)
   const worker = new Worker(url);
   const started = performance.now();
   return new Promise<JsRunResult>((resolve) => {
-    const done = (r: Omit<JsRunResult, "durationMs">) => {
+    const done = (r: { ok: boolean; result?: unknown; error?: string; logs: string[] }) => {
       clearTimeout(timer); worker.terminate(); URL.revokeObjectURL(url);
-      resolve({ ...r, durationMs: Math.round(performance.now() - started) } as JsRunResult);
+      resolve({ ...r, durationMs: Math.round(performance.now() - started) } as unknown as JsRunResult);
     };
     const timer = setTimeout(() => done({ ok: false, error: `运行超时（${timeoutMs / 1000} 秒）`, logs: [] }), timeoutMs);
     worker.onmessage = (e) => done(e.data);
