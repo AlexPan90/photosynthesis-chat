@@ -18,17 +18,12 @@ import { AgentManager, DelegateCard, useAgents } from "./Agents";
 import type { AgentConfig } from "@/lib/ai/agents.shared";
 import { metaOf } from "@/lib/branches";
 import { useSlashCommands, type SlashCommand } from "./slash-commands";
+import { useModels } from "./useModels";
+import { modelLabel, type LiveModel } from "@/lib/ai/model-catalog";
+import { useAuth } from "@/hooks/use-auth";
 
 
-export const liveModelGroups = [
-  { provider: "OpenAI", models: [
-    { id: "openai/gpt-6-astra", label: "GPT-6 Astra" },
-    { id: "openai/gpt-6-sol", label: "GPT-6 Sol" },
-    { id: "openai/gpt-6-luna", label: "GPT-6 Luna" },
-  ] },
-] as const;
-export type LiveModel = (typeof liveModelGroups)[number]["models"][number]["id"];
-export const modelLabel = (id: string) => liveModelGroups.flatMap(g => g.models).find(m => m.id === id)?.label ?? id;
+export { modelLabel, type LiveModel } from "@/lib/ai/model-catalog";
 
 type Permission = "ask" | "auto" | "readonly";
 const permLabels: Record<Permission, { name: string; desc: string }> = {
@@ -57,6 +52,8 @@ type Props = {
 const toolTitles: Record<string, string> = { web_search: "网页搜索", read_webpage: "读取网页", get_current_time: "获取当前时间", calculate: "计算", run_js: "运行 JS（浏览器沙箱）", run_skill_script: "运行 Skill 脚本（云沙箱）", delegate_to_agent: "委派 Agent", delegate_action: "子任务请求的操作", load_skill: "加载 Skill", read_skill_file: "读取 Skill 文件" };
 
 export function LiveChat({ threadId, initialMessages, initialVersions = {}, model, onModel, initials, onActivity, onNotice, initialAgentId = null, onAgent, onUsage }: Props) {
+  const { user } = useAuth();
+  const { available } = useModels(user?.id);
   const { agents, custom, reload } = useAgents();
   const navigate = useNavigate();
   const [agentId, setAgentIdState] = useState<string | null>(initialAgentId);
@@ -310,15 +307,18 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
         </PromptInputFooter>
       </PromptInput>
     </div></div>
-    <AgentManager open={managing} onOpenChange={setManaging} custom={custom} reload={reload} models={liveModelGroups.flatMap(g => g.models.map(m => ({ id: m.id, label: m.label })))}/>
+    <AgentManager open={managing} onOpenChange={setManaging} custom={custom} reload={reload} models={available.map(m => ({ id: m.model_id, label: m.label }))}/>
   </div>;
 }
 
 export function ModelMenu({ model, onModel, agents, agentId, onAgent, onManage, open, onOpenChange }: { model: string; onModel: (m: LiveModel) => void; agents?: AgentConfig[]; agentId?: string | null; onAgent?: (id: string) => void; onManage?: () => void; open?: boolean; onOpenChange?: (open: boolean) => void }) {
+  const { user } = useAuth();
+  const { available } = useModels(user?.id);
   const active = agents?.find(a => a.id === agentId);
   const head = (t: string) => <div className="px-2 pt-2.5 pb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70">{t}</div>;
-  return <DropdownMenu {...(open === undefined ? {} : { open, onOpenChange })}><DropdownMenuTrigger asChild><PromptInputButton tooltip="切换模型或 Agent" className="max-w-[160px] gap-1 truncate px-2 text-[11px] text-muted-foreground">{active && <Bot className="size-3 shrink-0"/>}{active?.name ?? modelLabel(model)}<ChevronDown className="size-3 shrink-0"/></PromptInputButton></DropdownMenuTrigger><DropdownMenuContent align="end" className="max-h-[70vh] min-w-[240px] overflow-y-auto">
-    {liveModelGroups.map(g => <div key={g.provider}>{head(g.provider)}{g.models.map(m => <DropdownMenuItem key={m.id} onClick={() => onModel(m.id)}>{m.label}{!active && model === m.id && <Check className="ml-auto size-3.5"/>}</DropdownMenuItem>)}</div>)}
+  return <DropdownMenu {...(open === undefined ? {} : { open, onOpenChange })}><DropdownMenuTrigger asChild><PromptInputButton tooltip="切换模型" className="max-w-[160px] gap-1 truncate px-2 text-[11px] text-muted-foreground">{active && <Bot className="size-3 shrink-0"/>}{active?.name ?? available.find(m => m.model_id === model)?.label ?? modelLabel(model)}<ChevronDown className="size-3 shrink-0"/></PromptInputButton></DropdownMenuTrigger><DropdownMenuContent align="end" className="max-h-[70vh] min-w-[240px] overflow-y-auto">
+    {[...new Set(available.map(m => m.provider))].map(provider => <div key={provider}>{head(provider)}{available.filter(m => m.provider === provider).map(m => <DropdownMenuItem key={m.id} onClick={() => onModel(m.model_id)}>{m.label}{!active && model === m.model_id && <Check className="ml-auto size-3.5"/>}</DropdownMenuItem>)}</div>)}
+    {!available.length && <div className="px-3 py-2 text-xs text-muted-foreground">暂无已验证模型，请在设置中心添加</div>}
   </DropdownMenuContent></DropdownMenu>;
 }
 

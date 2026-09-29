@@ -7,7 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { BUILTIN_AGENTS, TOOL_CATALOG, type AgentConfig } from "@/lib/ai/agents.shared";
 import { useAgents } from "@/components/studio/Agents";
-import { liveModelGroups } from "@/components/studio/LiveChat";
+import { useModels } from "@/components/studio/useModels";
+import { useAuth } from "@/hooks/use-auth";
 import { useMcpConnections, useSkills } from "./data";
 
 type Kind = "tool" | "mcp" | "skill" | "agent";
@@ -17,10 +18,12 @@ const FIELD: Record<Kind, keyof Form> = { tool: "tool_ids", mcp: "mcp_tool_ids",
 const ICON = { tool: Wrench, mcp: Plug, skill: BookOpen, agent: Bot };
 const KIND_LABEL: Record<Kind, string> = { tool: "内置工具", mcp: "MCP 工具", skill: "Skills", agent: "可委派 Agent" };
 const MIME = "application/x-relay-cap";
-const models = liveModelGroups.flatMap(g => g.models.map(m => ({ id: m.id, label: m.label })));
 const toForm = (a?: AgentConfig): Form => ({ name: a?.name ?? "", description: a?.description ?? "", system_prompt: a?.system_prompt ?? "", model: a?.model ?? "openai/gpt-6-astra", tool_ids: a?.tool_ids ?? [], mcp_tool_ids: a?.mcp_tool_ids ?? [], skill_ids: a?.skill_ids ?? [], delegate_ids: a?.delegate_ids ?? [] });
 
 export function AgentsPage() {
+  const { user } = useAuth();
+  const { available } = useModels(user?.id);
+  const models = available.map(m => ({ id: m.model_id, label: m.label }));
   const navigate = useNavigate();
   const { custom, reload } = useAgents();
   const mcp = useMcpConnections();

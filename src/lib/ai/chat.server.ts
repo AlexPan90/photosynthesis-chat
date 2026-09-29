@@ -7,6 +7,7 @@ import { z } from "zod";
 import { loadMcpTools, type McpRow } from "./mcp.server";
 import { runnableSkills, skillsPrompt, skillTools, type SkillRow } from "./skills.server";
 import type { Database, Json } from "@/integrations/supabase/types";
+import { isSupportedModel } from "./model-catalog";
 import {
   createLovableAiGatewayRunIdFetch,
   getLovableAiGatewayRunId,
@@ -18,7 +19,7 @@ const GATEWAY = "https://ai.gateway.lovable.dev/v1";
 
 const bodySchema = z.object({
   threadId: z.string().uuid(),
-  model: z.enum(CHAT_MODELS).default("openai/gpt-6-astra"),
+  model: z.string().trim().min(3).max(120).default("openai/gpt-6-astra"),
   agentId: z.string().max(80).nullish(),
   messages: z.array(z.any()).min(1).max(200),
   regeneratedFrom: z.string().max(120).nullish(),
@@ -102,6 +103,7 @@ export async function handleChat(request: Request) {
   if (!parsed.success) return json(400, "请求格式不正确");
   const { threadId, agentId } = parsed.data;
   let model: string = parsed.data.model;
+  if (!isSupportedModel(model)) return json(400, "模型尚未接入当前服务");
   const messages = parsed.data.messages as UIMessage[];
 
   const { data: thread } = await supabase.from("threads").select("id,title,summary,summary_upto,permission,plan_mode,goal").eq("id", threadId).maybeSingle();
@@ -111,7 +113,9 @@ export async function handleChat(request: Request) {
   const agents = allAgents((rows ?? []) as AgentConfig[]);
   const active = agentId ? agents.find(a => a.id === agentId) ?? null : null;
   if (agentId && !active) return json(404, "Agent 不存在或已被删除");
-  if (active && (CHAT_MODELS as readonly string[]).includes(active.model)) model = active.model;
+  if (active && isSupportedModel(active.model)) model = active.model;
+  const { data: configured } = await supabase.from("ai_models").select("model_id").eq("model_id", model).eq("enabled", true).not("verified_at", "is", null).maybeSingle();
+  if (!configured) return json(400, "模型未配置或尚未通过验证");
 
   const last = messages[messages.length - 1];
   // 消息分支：每个回复挂在它回答的提问下（parent_id），同一提问下多个回复即多个版本。

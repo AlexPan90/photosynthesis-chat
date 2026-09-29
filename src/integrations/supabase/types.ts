@@ -62,6 +62,42 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_models: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          label: string
+          model_id: string
+          provider: string
+          updated_at: string
+          user_id: string
+          verified_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          label: string
+          model_id: string
+          provider: string
+          updated_at?: string
+          user_id: string
+          verified_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          label?: string
+          model_id?: string
+          provider?: string
+          updated_at?: string
+          user_id?: string
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
       delegate_sessions: {
         Row: {
           agent_id: string

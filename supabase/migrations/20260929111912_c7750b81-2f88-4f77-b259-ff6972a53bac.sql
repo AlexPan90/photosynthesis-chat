@@ -1,0 +1,1 @@
+ALTER TABLE public.ai_models ADD COLUMN enabled boolean NOT NULL DEFAULT true;
