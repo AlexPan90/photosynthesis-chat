@@ -295,6 +295,34 @@ body { font-size: calc(16px * var(--relay-type-scale)); }
 [data-slot="dropdown-menu-content"], [data-slot="popover-content"] { border-radius: 12px; }
 [data-slot="dialog-overlay"] { backdrop-filter: blur(4px); }
 
+/* Settings center: always renders fully white, even in dark mode */
+.relay-settings-light {
+  color-scheme: light;
+  color: var(--foreground);
+  --background: #FFFFFF;
+  --foreground: #1C1C22;
+  --card: #FFFFFF;
+  --popover: #FFFFFF;
+  --popover-foreground: #1C1C22;
+  --primary: #4F46E5;
+  --primary-foreground: #FFFFFF;
+  --muted: #F4F4F6;
+  --muted-foreground: #6B6B75;
+  --accent: #F0F0F4;
+  --accent-foreground: #1C1C22;
+  --border: rgba(15, 15, 30, 0.09);
+  --input: rgba(15, 15, 30, 0.12);
+  --ring: #4F46E5;
+  --sidebar: #F7F7F9;
+  --sidebar-foreground: #1C1C22;
+}
+[role="dialog"].relay-settings-light, .relay-settings-light {
+  background: #FFFFFF !important;
+  border-color: rgba(15, 15, 30, 0.08) !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 24px 60px -18px rgba(15, 15, 40, 0.22), 0 10px 40px -10px rgba(79, 70, 229, 0.16) !important;
+  backdrop-filter: none !important;
+}
+
 /* Capsule composer with gradient edge glow */
 .relay-composer { border-radius: 20px !important; position: relative; overflow: visible !important; background: color-mix(in oklab, var(--color-card) 86%, transparent) !important; backdrop-filter: blur(16px) saturate(140%); }
 .relay-composer::before { content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; pointer-events: none; opacity: 0; transition: opacity .25s ease;
