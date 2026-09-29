@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { UIMessage } from "ai";
-import { Activity, ArrowUpRight, Bot, Check, ChevronDown, CircleAlert, Clock3, Command, Copy, Folder, Keyboard, LayoutPanelLeft, ListFilter, MessageSquare, MoreHorizontal, PanelRight, Paperclip, Search, Settings2, SlidersHorizontal, SquarePen, Sun, Tags, Trash2, X } from "lucide-react";
+import { Activity, ArrowUpRight, Bot, Check, ChevronDown, ChevronRight, CircleAlert, Clock3, Command, Copy, Keyboard, LayoutPanelLeft, ListFilter, MessageSquare, MoreHorizontal, PanelRight, Paperclip, Plus, Search, Settings2, SlidersHorizontal, Square, SquarePen, Sun, Trash2, X, Zap } from "lucide-react";
+import { ContextRail } from "./ContextRail";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -90,7 +91,9 @@ const seed: Thread[] = [
 ];
 const agents = ["Research Agent", "Browser Agent", "Code Agent", "通用助手"];
 function IconTip({ label, children, onClick, className = "" }: { label: string; children: React.ReactNode; onClick?: () => void; className?: string }) { return <Tooltip><TooltipTrigger asChild><Button type="button" variant="ghost" size="icon-sm" aria-label={label} onClick={onClick} className={className}>{children}</Button></TooltipTrigger><TooltipContent>{label}</TooltipContent></Tooltip>; }
-function Mark({ compact = false }: { compact?: boolean }) { return <div className={`flex shrink-0 items-center justify-center rounded bg-primary text-primary-foreground shadow-[0_0_16px_-8px_var(--color-primary)] ${compact ? "size-7" : "size-8"}`} aria-label="Relay"><span className="font-mono text-base font-semibold leading-none">R<span className="text-primary-foreground/60">.</span></span></div>; }
+function Mark({ compact = false }: { compact?: boolean }) { return <div className={`flex shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-[0_6px_18px_-8px_var(--color-primary)] ${compact ? "size-7" : "size-9"}`} aria-label="Agent"><Zap className={compact ? "size-3.5" : "size-4"}/></div>; }
+function Brand() { return <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground" aria-label="Relay"><Square className="size-4" strokeWidth={2.2}/></div>; }
+function UserAvatar({ initials }: { initials: string }) { return <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-card text-[11px] font-semibold text-muted-foreground">{initials}</div>; }
 function AttachedFiles() { const { files, remove, openFileDialog } = usePromptInputAttachments(); return <>{files.length > 0 && <div className="flex flex-wrap gap-2 px-3 pt-2">{files.map(f => <div key={f.id} className="flex items-center gap-1.5 rounded-md border bg-muted px-2 py-1 text-xs"><Paperclip className="size-3"/><span className="max-w-32 truncate">{f.filename || "附件"}</span><Button type="button" variant="ghost" size="icon-sm" className="size-5" aria-label="移除附件" onClick={() => remove(f.id)}><X className="size-3"/></Button></div>)}</div>}<PromptInputButton tooltip="添加附件" onClick={openFileDialog}><Paperclip className="size-4" /></PromptInputButton></>; }
 export function Studio({ threadId }: { threadId?: string }) {
   const navigate = useNavigate();
