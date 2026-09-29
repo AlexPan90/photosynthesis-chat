@@ -72,28 +72,6 @@ const toolScenarios: Record<string, ToolScenario> = {
   ], ms: ["5.0s", "0.1s", "1.9s"] },
 };
 const scenarioKeys = Object.keys(toolScenarios);
-  { title: "浏览器 · 访问页面", icon: "browser", state: "output-available", input: { url: "https://example.com/pricing" }, output: "页面加载完成 · 已提取 3 个方案" },
-  { title: "网页搜索 · 竞品定价", icon: "search", state: "output-available", input: { query: "AI workspace pricing comparison", region: "global", limit: "8", freshness: "30d" }, output: [
-      "找到 8 条相关结果 · 已筛选 3 条高相关内容",
-      "",
-      "1. Relay Studio — 免费版 200 次/月，团队版 $18/席，含共享工作区与用量看板",
-      "2. Harness Desk — 免费版仅本地模型，团队版 $25/席，含审计日志与 SSO",
-      "3. Agent Console — 按量计费 $0.02/次，团队包 1 万次 $150，含优先队列",
-      "4. FlowPilot — 免费版 50 次/月，团队版 $12/席，功能较基础",
-      "5. TaskGrid — 免费版带水印，团队版 $20/席，含 API 访问",
-      "6. CoWork AI — 免费版 3 个项目，团队版 $15/席，含权限分组",
-      "7. Pilot Hub — 免费版社区支持，团队版 $22/席，含 SLA",
-      "8. Northwind Agents — 免费版限速，团队版 $19/席，含私有部署选项",
-      "",
-      "筛选依据：近 30 天更新、官方来源、含明确团队版定价。",
-    ].join("\n") },
-  { title: "浏览器 · 抓取 Notion 定价", icon: "browser", state: "output-error", input: { url: "https://notion.so/pricing", timeout: "10s" }, errorText: "请求超时（10s）：目标站点返回 403 Forbidden，已触发反爬限制" },
-  { title: "浏览器 · 重试（备用代理）", icon: "browser", state: "output-available", input: { url: "https://notion.so/pricing", proxy: "us-west" }, output: "重试成功 · 提取 4 个方案" },
-  { title: "代码 · 计算价格区间", icon: "file", state: "output-error", input: { cmd: "python analyze.py --currency USD" }, errorText: "Traceback (most recent call last):\n  File \"analyze.py\", line 42, in <module>\n    rate = rates[\"CNY\"]\nKeyError: 'CNY'" },
-  { title: "文件 · 生成分析摘要", icon: "file", state: "input-available", input: { path: "reports/pricing-summary.md" } },
-  { title: "邮件 · 发送报告给团队", icon: "file", state: "input-streaming" as ToolStep["state"], input: { to: "team@relay.dev" } },
-];
-const stepMs = ["1.2s", "2.3s", "10.0s", "3.1s", "0.8s", "", ""];
 const seed: Thread[] = [
   { id: "product-research", title: "竞品定价策略调研", group: "产品研究", updatedAt: 10, messages: [
     { id: "u1", role: "user", parts: [{ type: "text", text: "帮我调研几款 AI 工作台的定价策略，整理成一个简明的对比分析。重点关注免费版和团队版的差异。" }] },
