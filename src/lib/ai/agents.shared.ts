@@ -24,8 +24,8 @@ export const BUILTIN_AGENTS: AgentConfig[] = [
   {
     id: "builtin:researcher", name: "调研员", builtin: true, model: "openai/gpt-6-astra",
     description: "阅读网页资料并整理成有出处的要点",
-    system_prompt: "你负责资料调研：优先用 read_webpage 读取给定链接，提炼关键事实，标注来源链接，不编造信息。",
-    tool_ids: ["read_webpage", "get_current_time"],
+    system_prompt: "你负责资料调研：先用 web_search 搜索获取最新真实结果，再用 read_webpage 读取关键链接的正文核对细节；提炼关键事实，用 [标题](链接) 标注来源，不编造信息。",
+    tool_ids: ["web_search", "read_webpage", "get_current_time"],
   },
   {
     id: "builtin:analyst", name: "数据分析师", builtin: true, model: "openai/gpt-6-astra",
