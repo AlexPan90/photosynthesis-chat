@@ -5,6 +5,7 @@ import { Play, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { kindStyles, type StudioFile } from "./files";
 import { ArtifactVisual } from "./ArtifactVisual";
+import { DataPreview } from "./DataPreview";
 
 function Preview({ file }: { file: StudioFile }) {
   if (file.doc) {
@@ -36,35 +37,7 @@ function Preview({ file }: { file: StudioFile }) {
     );
   }
   if (file.table) {
-    return (
-      <div className="overflow-hidden rounded-md border">
-        <div className="soft-scroll max-h-[420px] overflow-auto">
-          <table className="w-full border-collapse text-[11px]">
-            <thead className="sticky top-0 bg-muted">
-              <tr>
-                <th className="w-9 border-b px-2 py-2 text-right font-mono text-[10px] text-muted-foreground">#</th>
-                {file.table.columns.map((c) => (
-                  <th key={c} className="whitespace-nowrap border-b px-3 py-2 text-left font-medium">{c}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {file.table.rows.map((row, i) => (
-                <tr key={i} className={`hover:bg-accent/60 ${i % 2 ? "bg-muted/25" : ""}`}>
-                  <td className="px-2 py-1.5 text-right font-mono text-[10px] text-muted-foreground">{i + 1}</td>
-                  {row.map((cell, j) => (
-                    <td key={j} className={`whitespace-nowrap px-3 py-1.5 ${j >= 2 ? "font-mono text-muted-foreground" : ""}`}>{cell}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="border-t bg-muted/40 px-3 py-1.5 font-mono text-[10px] text-muted-foreground">
-          显示 {file.table.rows.length} / {file.table.totalRows.toLocaleString()} 行 · {file.table.columns.length} 列
-        </div>
-      </div>
-    );
+    return <DataPreview file={file} />;
   }
   if (file.diff) {
     return (
