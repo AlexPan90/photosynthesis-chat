@@ -178,6 +178,8 @@
 /* Active/running status text: brighter indigo with a soft glow on dark surfaces. */
 .relay-active-text { color: var(--color-primary); }
 .dark .relay-active-text { color: #9D95FF; text-shadow: 0 0 9px color-mix(in oklab, #9D95FF 42%, transparent); }
+.dark .relay-status-label { color: #C9C9D6; }
+@keyframes relay-ping { 0% { transform: scale(.6); opacity: .5; } 100% { transform: scale(2.2); opacity: 0; } }
 .relay-message { animation: rise-in 260ms cubic-bezier(.22,1,.36,1) both; }
 .relay-message .prose, .relay-message [data-streamdown] { color: var(--color-foreground); }
 .relay-sidebar a { transition: color .15s ease; }
