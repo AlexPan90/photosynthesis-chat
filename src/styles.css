@@ -183,3 +183,13 @@
 .dark .relay-message table th { color: var(--color-foreground); background: color-mix(in oklab, var(--color-primary) 8%, transparent); }
 .dark .relay-message strong { color: #FFFFFF; }
 .dark .relay-message :not(pre) > code { color: #C4BFFF; background: color-mix(in oklab, var(--color-primary) 16%, transparent); padding: 1px 5px; border-radius: 4px; }
+
+/* Skills — Glass paned command center */
+.skills-glass { background: var(--color-background); }
+.glass-pane {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--color-card) 88%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in oklab, var(--color-foreground) 5%, transparent), 0 16px 40px -32px color-mix(in oklab, var(--color-foreground) 60%, transparent);
+  backdrop-filter: blur(12px);
+}
