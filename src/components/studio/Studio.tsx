@@ -30,7 +30,48 @@ const STORAGE = "relay-studio-threads-v1";
 type Thread = { id: string; title: string; group: string; updatedAt: number; messages: UIMessage[] };
 type ToolStep = { title: string; input: Record<string, string>; output?: string; errorText?: string; state: "output-available" | "input-available" | "output-error" | "input-streaming"; icon: "browser" | "search" | "file" };
 type DemoMessage = UIMessage & { steps?: ToolStep[] };
-const sampleSteps: ToolStep[] = [
+type ToolScenario = { label: string; desc: string; steps: ToolStep[]; ms: string[] };
+const toolScenarios: Record<string, ToolScenario> = {
+  mixed: { label: "混合任务", desc: "成功 + 失败 + 重试 + 进行中", steps: [
+    { title: "浏览器 · 访问页面", icon: "browser", state: "output-available", input: { url: "https://example.com/pricing" }, output: "页面加载完成 · 已提取 3 个方案" },
+    { title: "网页搜索 · 竞品定价", icon: "search", state: "output-available", input: { query: "AI workspace pricing comparison", region: "global", limit: "8", freshness: "30d" }, output: [
+        "找到 8 条相关结果 · 已筛选 3 条高相关内容",
+        "",
+        "1. Relay Studio — 免费版 200 次/月，团队版 $18/席，含共享工作区与用量看板",
+        "2. Harness Desk — 免费版仅本地模型，团队版 $25/席，含审计日志与 SSO",
+        "3. Agent Console — 按量计费 $0.02/次，团队包 1 万次 $150，含优先队列",
+        "4. FlowPilot — 免费版 50 次/月，团队版 $12/席，功能较基础",
+        "5. TaskGrid — 免费版带水印，团队版 $20/席，含 API 访问",
+        "6. CoWork AI — 免费版 3 个项目，团队版 $15/席，含权限分组",
+        "7. Pilot Hub — 免费版社区支持，团队版 $22/席，含 SLA",
+        "8. Northwind Agents — 免费版限速，团队版 $19/席，含私有部署选项",
+        "",
+        "筛选依据：近 30 天更新、官方来源、含明确团队版定价。",
+      ].join("\n") },
+    { title: "浏览器 · 抓取 Notion 定价", icon: "browser", state: "output-error", input: { url: "https://notion.so/pricing", timeout: "10s" }, errorText: "请求超时（10s）：目标站点返回 403 Forbidden，已触发反爬限制" },
+    { title: "浏览器 · 重试（备用代理）", icon: "browser", state: "output-available", input: { url: "https://notion.so/pricing", proxy: "us-west" }, output: "重试成功 · 提取 4 个方案" },
+    { title: "代码 · 计算价格区间", icon: "file", state: "output-error", input: { cmd: "python analyze.py --currency USD" }, errorText: "Traceback (most recent call last):\n  File \"analyze.py\", line 42, in <module>\n    rate = rates[\"CNY\"]\nKeyError: 'CNY'" },
+    { title: "文件 · 生成分析摘要", icon: "file", state: "input-available", input: { path: "reports/pricing-summary.md" } },
+    { title: "邮件 · 发送报告给团队", icon: "file", state: "input-streaming", input: { to: "team@relay.dev" } },
+  ], ms: ["1.2s", "2.3s", "10.0s", "3.1s", "0.8s", "", ""] },
+  smooth: { label: "顺利完成", desc: "全部成功 · 耗时较短", steps: [
+    { title: "网页搜索 · 行业报告", icon: "search", state: "output-available", input: { query: "AI agent market report 2026" }, output: "找到 5 条结果 · 保留 2 条权威来源" },
+    { title: "浏览器 · 阅读报告全文", icon: "browser", state: "output-available", input: { url: "https://reports.example.com/ai-2026" }, output: "已提取 12 个章节 · 4,820 字" },
+    { title: "文件 · 保存摘要", icon: "file", state: "output-available", input: { path: "notes/market-summary.md" }, output: "已写入 1.2 KB" },
+  ], ms: ["1.8s", "4.6s", "0.3s"] },
+  long: { label: "长耗时任务", desc: "多步骤 · 大文件处理", steps: [
+    { title: "文件 · 读取数据集", icon: "file", state: "output-available", input: { path: "data/usage-2026.csv", rows: "128,400" }, output: "已加载 128,400 行 · 18 列" },
+    { title: "代码 · 清洗与聚合", icon: "file", state: "output-available", input: { cmd: "python clean.py --dedupe --aggregate daily" }, output: "去除重复 3,212 行 · 聚合为 365 条日级记录" },
+    { title: "代码 · 生成图表", icon: "file", state: "output-available", input: { cmd: "python chart.py --type line --out charts/usage.svg" }, output: "已生成 charts/usage.svg · 96 KB" },
+    { title: "浏览器 · 截图存档", icon: "browser", state: "input-available", input: { url: "file:///charts/usage.svg", viewport: "1440x900" } },
+  ], ms: ["12.4s", "48.2s", "21.7s", ""] },
+  broken: { label: "异常排查", desc: "连续失败 · 权限与网络", steps: [
+    { title: "浏览器 · 访问内网面板", icon: "browser", state: "output-error", input: { url: "https://internal.example.com/admin" }, errorText: "ECONNREFUSED · 无法连接到 internal.example.com:443，请检查网络或 VPN" },
+    { title: "文件 · 写入日志", icon: "file", state: "output-error", input: { path: "/var/log/agent/run.log" }, errorText: "EACCES: permission denied, open '/var/log/agent/run.log'" },
+    { title: "网页搜索 · 错误码检索", icon: "search", state: "output-available", input: { query: "ECONNREFUSED 443 troubleshooting" }, output: "找到 3 条排查建议" },
+  ], ms: ["5.0s", "0.1s", "1.9s"] },
+};
+const scenarioKeys = Object.keys(toolScenarios);
   { title: "浏览器 · 访问页面", icon: "browser", state: "output-available", input: { url: "https://example.com/pricing" }, output: "页面加载完成 · 已提取 3 个方案" },
   { title: "网页搜索 · 竞品定价", icon: "search", state: "output-available", input: { query: "AI workspace pricing comparison", region: "global", limit: "8", freshness: "30d" }, output: [
       "找到 8 条相关结果 · 已筛选 3 条高相关内容",
