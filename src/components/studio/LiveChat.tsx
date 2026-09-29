@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { useNavigate } from "@tanstack/react-router";
-import { DefaultChatTransport, type UIMessage } from "ai";
-import { ArrowUpRight, Bot, Check, ChevronDown, Settings2, CircleAlert, Copy, RotateCcw } from "lucide-react";
+import { DefaultChatTransport, lastAssistantMessageIsCompleteWithApprovalResponses, type UIMessage } from "ai";
+import { ArrowUpRight, Bot, Check, ChevronDown, Settings2, CircleAlert, Copy, RotateCcw, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Conversation, ConversationContent, ConversationEmptyState, ConversationScrollButton } from "@/components/ai-elements/conversation";
@@ -66,8 +66,9 @@ export function LiveChat({ threadId, initialMessages, model, onModel, fontSize, 
     },
     prepareSendMessagesRequest: ({ messages, headers }) => ({ ...(headers ? { headers } : {}), body: { threadId, model: modelRef.current, agentId: agentRef.current, messages } }),
   }), [threadId]);
-  const { messages, sendMessage, status, stop, regenerate } = useChat({
+  const { messages, sendMessage, status, stop, regenerate, addToolApprovalResponse } = useChat({
     id: threadId,
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
     messages: initialMessages,
     transport,
     onError: (err) => {
@@ -102,7 +103,7 @@ export function LiveChat({ threadId, initialMessages, model, onModel, fontSize, 
             if (p.type.startsWith("tool-") || p.type === "dynamic-tool") {
               const t = p as ToolPart;
               if (t.type === "tool-delegate_to_agent") return <DelegateCard key={idx} task={(t.input as { task?: string } | undefined)?.task} output={t.state === "output-available" ? t.output as never : undefined} preliminary={t.state === "output-available" && !!(t as { preliminary?: boolean }).preliminary} errorText={t.state === "output-error" ? t.errorText : undefined}/>;
-              return <Tool key={idx} className="mb-1" defaultOpen={t.state === "output-error"}>{t.type === "dynamic-tool" ? <ToolHeader type={t.type} state={t.state} toolName={t.toolName} title={toolTitles[t.toolName] ?? t.toolName.replace(/^m\d+_/, "MCP · ")}/> : <ToolHeader type={t.type} state={t.state} title={toolTitles[t.type.slice(5)] ?? t.type.slice(5).replace(/^m\d+_/, "MCP · ")}/>}<ToolContent><ToolInput input={t.input}/><ToolOutput output={t.state === "output-available" ? t.output : undefined} errorText={t.state === "output-error" ? t.errorText : undefined}/></ToolContent></Tool>;
+              return <Tool key={idx} className="mb-1" defaultOpen={t.state === "output-error" || t.state === "approval-requested"}>{t.type === "dynamic-tool" ? <ToolHeader type={t.type} state={t.state} toolName={t.toolName} title={toolTitles[t.toolName] ?? t.toolName.replace(/^m\d+_/, "MCP · ")}/> : <ToolHeader type={t.type} state={t.state} title={toolTitles[t.type.slice(5)] ?? t.type.slice(5).replace(/^m\d+_/, "MCP · ")}/>}<ToolContent><ToolInput input={t.input}/>{t.state === "approval-requested" && <ApprovalBar reason={t.approval.requestReason} onRespond={(approved) => addToolApprovalResponse(approved ? { id: t.approval.id, approved } : { id: t.approval.id, approved, reason: "用户拒绝执行" })}/>}<ToolOutput output={t.state === "output-available" ? t.output : undefined} errorText={t.state === "output-error" ? t.errorText : undefined}/></ToolContent></Tool>;
             }
             return null;
           })}
@@ -136,4 +137,19 @@ export function ModelMenu({ model, onModel, agents, agentId, onAgent, onManage }
     {liveModelGroups.map(g => <div key={g.provider}>{head(g.provider)}{g.models.map(m => <DropdownMenuItem key={m.id} onClick={() => onModel(m.id)}>{m.label}{!active && model === m.id && <Check className="ml-auto size-3.5"/>}</DropdownMenuItem>)}</div>)}
     {upcomingProviders.map(p => <div key={p}>{head(p)}<DropdownMenuItem disabled className="text-[11px]">即将接入</DropdownMenuItem></div>)}
   </DropdownMenuContent></DropdownMenu>;
+}
+
+function ApprovalBar({ reason, onRespond }: { reason?: string | undefined; onRespond: (approved: boolean) => void }) {
+  const [done, setDone] = useState(false);
+  const respond = (ok: boolean) => { if (done) return; setDone(true); onRespond(ok); };
+  return (
+    <div className="mx-3 mb-3 flex flex-wrap items-center gap-3 rounded-md border border-primary/30 bg-primary/5 px-3 py-2.5">
+      <ShieldAlert className="size-4 shrink-0 text-primary"/>
+      <p className="min-w-0 flex-1 text-[13px] text-foreground">{reason ?? "这个操作会修改外部数据，需要你确认"}<span className="block text-xs text-muted-foreground">请核对上方参数，确认后才会执行。</span></p>
+      <div className="flex gap-2">
+        <Button size="sm" variant="outline" disabled={done} onClick={() => respond(false)}>拒绝</Button>
+        <Button size="sm" disabled={done} onClick={() => respond(true)}>批准执行</Button>
+      </div>
+    </div>
+  );
 }

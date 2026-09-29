@@ -33,3 +33,12 @@ export const BUILTIN_AGENTS: AgentConfig[] = [
     tool_ids: ["calculate", "get_current_time"],
   },
 ];
+
+// 需人工批准的写操作：MCP 工具名中含删除/发送/创建/修改等动词（读类前缀 get/list/read/search 除外）。
+const WRITE_VERBS = new Set("delete remove destroy drop purge send post publish reply comment create add update edit write patch put merge close archive move rename assign invite transfer pay execute run upload set".split(" "));
+const READ_VERBS = new Set("get list read search fetch find query describe show view lookup resolve ask".split(" "));
+export function needsApproval(toolName: string) {
+  const words = toolName.replace(/^m\d+_/, "").replace(/([a-z])([A-Z])/g, "$1_$2").toLowerCase().split(/[^a-z]+/).filter(Boolean);
+  if (!words.length || READ_VERBS.has(words[0]!)) return false;
+  return words.some(w => WRITE_VERBS.has(w));
+}

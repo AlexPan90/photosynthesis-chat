@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { createOpenAI } from "@ai-sdk/openai";
 import { convertToModelMessages, stepCountIs, streamText, type UIMessage } from "ai";
 import { allAgents, delegateTool, OPENAI_OPTIONS, pickTools, systemFor } from "./agents.server";
-import { TOOL_CATALOG, type AgentConfig } from "./agents.shared";
+import { needsApproval, TOOL_CATALOG, type AgentConfig } from "./agents.shared";
 import { z } from "zod";
 import { loadMcpTools, type McpRow } from "./mcp.server";
 import { skillsPrompt, skillTools, type SkillRow } from "./skills.server";
@@ -104,6 +104,11 @@ export async function handleChat(request: Request) {
     messages: await convertToModelMessages(messages),
     tools: { ...pickTools(toolIds), ...mcp.tools, ...skillTools(skills), ...(delegates.length ? { delegate_to_agent: delegateTool(provider, delegates, request.signal) } : {}) },
     stopWhen: stepCountIs(50),
+    // 人工批准：MCP 写操作（删除、发送、创建、修改……）暂停，等待用户在卡片上确认。
+    toolApproval: ({ toolCall }) => toolCall && toolCall.toolName in mcp.tools && needsApproval(toolCall.toolName)
+      ? { type: "user-approval", reason: `「${mcp.labels[toolCall.toolName] ?? toolCall.toolName}」会修改外部数据，需要你确认` }
+      : undefined,
+    ...(process.env["MCP_ENC_KEY"] ? { experimental_toolApprovalSecret: `approval:${process.env["MCP_ENC_KEY"]}` } : {}),
     abortSignal: request.signal,
     providerOptions: OPENAI_OPTIONS,
     onFinish: closeMcp,
