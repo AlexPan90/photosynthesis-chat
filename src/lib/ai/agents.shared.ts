@@ -13,6 +13,7 @@ export type AgentConfig = {
 };
 
 export const TOOL_CATALOG = [
+  { id: "web_search", label: "网页搜索" },
   { id: "read_webpage", label: "读取网页" },
   { id: "get_current_time", label: "获取当前时间" },
   { id: "calculate", label: "计算" },

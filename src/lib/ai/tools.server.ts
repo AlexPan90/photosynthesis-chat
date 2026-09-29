@@ -20,6 +20,31 @@ function isPublicUrl(raw: string) {
 }
 
 export const chatTools = {
+  web_search: tool({
+    description: "联网搜索实时信息（新闻、最新数据、不确定的事实）。返回标题、链接和正文摘要；回答时请用 [标题](链接) 标注来源。",
+    inputSchema: z.object({
+      query: z.string().min(1).max(400).describe("搜索关键词"),
+      max_results: z.number().int().min(1).max(10).default(5),
+      topic: z.enum(["general", "news"]).default("general"),
+    }),
+    execute: async ({ query, max_results, topic }) => {
+      const key = process.env.TAVILY_API_KEY;
+      if (!key) throw new Error("未配置 Tavily 密钥，网页搜索不可用");
+      const res = await fetch("https://api.tavily.com/search", {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
+        body: JSON.stringify({ query, max_results, topic, search_depth: "basic", include_answer: true }),
+        signal: AbortSignal.timeout(20000),
+      });
+      if (!res.ok) throw new Error(`搜索服务返回 ${res.status}${res.status === 401 ? "（密钥无效）" : res.status === 429 || res.status === 432 ? "（额度用尽或请求过快）" : ""}`);
+      const data = (await res.json()) as { answer?: string; results?: { title: string; url: string; content: string; score?: number; published_date?: string }[] };
+      return {
+        query,
+        answer: data.answer ?? null,
+        results: (data.results ?? []).map((r) => ({ title: r.title, url: r.url, snippet: r.content?.slice(0, 1200) ?? "", published: r.published_date ?? null })),
+      };
+    },
+  }),
   read_webpage: tool({
     description: "读取一个公开网页的正文内容（纯文本）。当用户给出链接或需要查看网页内容时使用。",
     inputSchema: z.object({ url: z.string().url().describe("完整的 http(s) 网址") }),
