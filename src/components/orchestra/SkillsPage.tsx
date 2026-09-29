@@ -28,6 +28,7 @@ export function SkillsPage() {
   const [mode, setMode] = useState<"repo" | "hub" | "manual">("repo");
   const [repo, setRepo] = useState("");
   const [found, setFound] = useState<{ source: string; ref: string; skills: Remote[] } | null>(null);
+  useEffect(() => { if (sel === null && !loading && items.length) setSel(items[0].id); }, [sel, loading, items]);
   const [picked, setPicked] = useState<string[]>([]);
   const [indexUrl, setIndexUrl] = useState("");
   const [hub, setHub] = useState<SkillDef[] | null>(null);
