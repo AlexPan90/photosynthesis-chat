@@ -338,6 +338,54 @@ export type MessageResponseProps = ComponentProps<typeof Streamdown>;
 
 const streamdownPlugins = { cjk, code, math, mermaid };
 
+// Recursively extract plain text from a React node (code element children)
+const extractText = (node: ReactNode): string => {
+  if (node == null || typeof node === "boolean") {
+    return "";
+  }
+  if (typeof node === "string" || typeof node === "number") {
+    return String(node);
+  }
+  if (Array.isArray(node)) {
+    return node.map(extractText).join("");
+  }
+  if (isValidElement<{ children?: ReactNode }>(node)) {
+    return extractText(node.props.children);
+  }
+  return "";
+};
+
+// Refined code block: single border, slim header, shiki syntax highlighting
+const CodeBlockPre = ({
+  children,
+  ...props
+}: HTMLAttributes<HTMLPreElement>) => {
+  if (isValidElement<{ className?: string; children?: ReactNode }>(children)) {
+    const match = /language-([\w+-]+)/.exec(children.props.className ?? "");
+    if (match) {
+      const language = match[1] as BundledLanguage;
+      const codeText = extractText(children.props.children).replace(/\n$/, "");
+      return (
+        <CodeBlock className="my-3" code={codeText} language={language}>
+          <CodeBlockHeader>
+            <CodeBlockTitle>
+              <CodeBlockFilename className="text-muted-foreground">
+                {match[1]}
+              </CodeBlockFilename>
+            </CodeBlockTitle>
+            <CodeBlockActions>
+              <CodeBlockCopyButton className="size-6 text-muted-foreground hover:text-foreground" />
+            </CodeBlockActions>
+          </CodeBlockHeader>
+        </CodeBlock>
+      );
+    }
+  }
+  return <pre {...props}>{children}</pre>;
+};
+
+const streamdownComponents = { pre: CodeBlockPre };
+
 export const MessageResponse = memo(
   ({ className, ...props }: MessageResponseProps) => (
     <Streamdown
@@ -345,6 +393,7 @@ export const MessageResponse = memo(
         "size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
         className
       )}
+      components={streamdownComponents}
       plugins={streamdownPlugins}
       {...props}
     />
