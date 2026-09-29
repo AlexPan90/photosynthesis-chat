@@ -47,7 +47,7 @@ export function LiveChat({ threadId, initialMessages, model, onModel, fontSize, 
       const { data } = await supabase.auth.getSession();
       return data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {};
     },
-    prepareSendMessagesRequest: ({ messages, headers }) => ({ headers, body: { threadId, model: modelRef.current, messages } }),
+    prepareSendMessagesRequest: ({ messages, headers }) => ({ ...(headers ? { headers } : {}), body: { threadId, model: modelRef.current, messages } }),
   }), [threadId]);
   const { messages, sendMessage, status, stop, regenerate } = useChat({
     id: threadId,

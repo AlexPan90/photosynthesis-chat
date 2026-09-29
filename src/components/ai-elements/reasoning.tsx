@@ -55,7 +55,7 @@ export const Reasoning = memo(
     const [isOpen, setIsOpen] = useControllableState({
       prop: open,
       defaultProp: defaultOpen,
-      onChange: onOpenChange,
+      onChange: onOpenChange ?? (() => {}),
     });
     const [duration, setDuration] = useControllableState({
       prop: durationProp,
@@ -88,6 +88,7 @@ export const Reasoning = memo(
 
         return () => clearTimeout(timer);
       }
+      return undefined;
     }, [isStreaming, isOpen, defaultOpen, setIsOpen, hasAutoClosed]);
 
     const handleOpenChange = (newOpen: boolean) => {
@@ -170,7 +171,7 @@ export const ReasoningContent = memo(
       )}
       {...props}
     >
-      <Streamdown {...props}>{children}</Streamdown>
+      <Streamdown>{children}</Streamdown>
     </CollapsibleContent>
   )
 );
