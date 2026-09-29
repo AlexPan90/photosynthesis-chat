@@ -98,7 +98,7 @@ export function AgentsPage() {
   }
   async function tryRun() {
     if (!sel || sel === "new") return;
-    const { data, error } = await supabase.from("threads").insert({ title: `试运行 · ${form.name}`, agent_id: sel, model: form.model }).select("id").single();
+    const { data, error } = await supabase.from("threads").insert({ title: `试运行 · ${form.name}`, agent_id: sel, model: form.model, permission: localStorage.getItem("relay-default-permission") ?? "ask" }).select("id").single();
     if (error || !data) return setMsg("创建试运行对话失败");
     navigate({ to: "/chat/$threadId", params: { threadId: data.id } });
   }
