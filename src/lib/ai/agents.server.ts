@@ -49,7 +49,7 @@ export function delegateTool(provider: Provider, agents: AgentConfig[], signal: 
         model: provider.responses(agent.model),
         system: systemFor(agent),
         prompt: task,
-        tools: pickTools(agent.tool_ids),
+        tools: pickTools(agent.tool_ids.filter(id => id !== "run_js")), // 浏览器端工具无法在子 Agent 中执行
         stopWhen: stepCountIs(50),
         abortSignal: signal,
         providerOptions: OPENAI_OPTIONS,

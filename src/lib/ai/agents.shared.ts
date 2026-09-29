@@ -17,6 +17,7 @@ export const TOOL_CATALOG = [
   { id: "read_webpage", label: "读取网页" },
   { id: "get_current_time", label: "获取当前时间" },
   { id: "calculate", label: "计算" },
+  { id: "run_js", label: "运行 JS（浏览器沙箱）" },
 ] as const;
 
 export const BUILTIN_AGENTS: AgentConfig[] = [
