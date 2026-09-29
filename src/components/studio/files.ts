@@ -16,7 +16,7 @@ export type StudioFile = {
   diff?: { added: number; removed: number; lines: { type: "add" | "del" | "ctx"; text: string }[] };
   table?: { columns: string[]; rows: string[][]; totalRows: number };
   doc?: { pages: number; toc: string[]; excerpt: string };
-  image?: { width: number; height: number; caption: string; palette: string[]; src?: string };
+  image?: { width: number; height: number; caption: string; palette: string[]; src?: string; text?: string[] };
   audio?: { duration: string; transcript: { at: string; text: string }[]; wave: number[] };
   json?: string;
 };
@@ -51,7 +51,7 @@ export const demoFiles: StudioFile[] = [
       pages: 6,
       toc: ["研究背景", "定价结构总览", "免费版额度对比", "团队版协作能力", "关键洞察", "建议"],
       excerpt:
-        "## 定价结构总览\n\n五款产品均采用 **免费 / 个人 Pro / 团队 / 企业** 四层结构。差异主要落在额度计量方式上：三款按消息条数计量，两款按 token 与工具调用次数计量。\n\n> 团队版的溢价并非来自额度，而是来自 **共享工作空间、成员权限与用量看板**。",
+        "## 研究背景\n\n本报告对比 Atlas、Nova、Loop、Kite、Mira 五款 AI 工作台的公开定价页，采集时间为 2026 年 9 月，价格统一换算为美元 / 席位 / 月。\n\n- 数据来源：各产品官网定价页与帮助文档\n- 口径：按年付折算的月单价\n\n## 定价结构总览\n\n五款产品均采用 **免费 / 个人 Pro / 团队 / 企业** 四层结构。差异主要落在额度计量方式上：三款按消息条数计量，两款按 token 与工具调用次数计量。\n\n> 团队版的溢价并非来自额度，而是来自 **共享工作空间、成员权限与用量看板**。\n\n## 免费版额度对比\n\n免费版普遍提供每日 20–50 条消息或等价 token 额度，均不含团队空间。\n\n- Atlas：每日 30 条\n- Nova：每月 50 万 token\n- Loop：每日 20 条，含 3 次工具调用\n\n## 团队版协作能力\n\n团队版单价集中在 $22–$32 之间，核心卖点为共享知识库、角色权限与集中账单。\n\n- 最低 3 席起售的有两款\n- 全部支持 SSO 作为企业版加购\n\n## 关键洞察\n\n按 token 计量的产品在重度用户场景下更具价格弹性，但对普通团队而言更难预估成本。\n\n> 用量看板是团队版转化率最高的功能。\n\n## 建议\n\n建议采用按消息计量的免费版降低试用门槛，团队版以协作能力而非额度作为主要差异点，并默认提供用量看板。",
     },
   },
   {
@@ -148,7 +148,7 @@ export function perSeat(plans: ReturnType<typeof normalize>) {
     badge: "new",
     summary: "按席位单价绘制的分层对比图，矢量输出可直接嵌入研报。",
     meta: { 尺寸: "1920 × 1080", 色彩: "sRGB", 图层: "12" },
-    image: { width: 1920, height: 1080, caption: "每席位月费对比 · 免费版 / 团队版", palette: ["bg-file-data", "bg-info", "bg-warning", "bg-file-image"] },
+    image: { width: 1920, height: 1080, caption: "每席位月费对比 · 免费版 / 团队版", palette: ["var(--color-file-data)", "var(--color-info)", "var(--color-warning)", "var(--color-file-image)"], text: ["每席位月费对比 · 免费版 / 团队版", "Atlas  $25", "Nova  $32", "Loop  $22", "纵轴：$0 – $40 / 席位 / 月"] },
   },
   {
     id: "call-notes",
