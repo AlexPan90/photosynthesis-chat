@@ -33,3 +33,9 @@ export const BUILTIN_AGENTS: AgentConfig[] = [
     tool_ids: ["calculate", "get_current_time"],
   },
 ];
+
+// 需人工批准的写操作：名称含删除/发送/创建/修改等动词的 MCP 工具。
+export const WRITE_TOOL_RE = /(^|[_\-.]|(?<=[a-z]))(delete|remove|destroy|drop|purge|send|post|publish|reply|comment|create|update|edit|write|patch|put|merge|close|archive|move|rename|assign|invite|transfer|pay|execute|run)/i;
+export function needsApproval(toolName: string) {
+  return WRITE_TOOL_RE.test(toolName.replace(/^m\d+_/, ""));
+}
