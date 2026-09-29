@@ -137,7 +137,7 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
       const { data } = await supabase.auth.getSession();
       return data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {};
     },
-    prepareSendMessagesRequest: ({ messages, headers, trigger, messageId }) => ({ ...(headers ? { headers } : {}), body: { threadId, model: modelRef.current, agentId: agentRef.current, messages, regeneratedFrom: trigger === "regenerate-message" ? messageId : undefined } }),
+    prepareSendMessagesRequest: ({ messages, headers, trigger, messageId }) => ({ ...(headers ? { headers } : {}), body: { threadId, model: modelRef.current, agentId: agentRef.current, messages, regeneratedFrom: trigger === "regenerate-message" ? messageId : undefined, invokeSkill: skillRef.current } }),
   }), [threadId]);
   const { messages, setMessages, sendMessage, status, stop, regenerate, addToolApprovalResponse, addToolOutput } = useChat({
     id: threadId,
@@ -159,6 +159,19 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
     const t = setTimeout(() => { const el = document.getElementById(id); if (!el) return; el.scrollIntoView({ block: "start" }); el.dataset["flash"] = "true"; setTimeout(() => { el.dataset["flash"] = "false"; }, 1600); }, 150);
     return () => clearTimeout(t);
   }, [threadId]);
+
+  function invokeSkill(name: string, description: string) {
+    if (busy) { onNotice("请等待当前回复结束"); return; }
+    const task = draft.trim();
+    skillRef.current = name;
+    submit(`调用技能「${name}」${task ? `完成：${task}` : `（${description.slice(0, 60)}）`}。请先用 load_skill 读取说明，按手册执行并直接给出结果。`);
+    setTimeout(() => { skillRef.current = null; }, 4000);
+  }
+  useEffect(() => {
+    const h = (e: Event) => { const d = (e as CustomEvent<{ name: string; description: string }>).detail; invokeSkill(d.name, d.description); };
+    window.addEventListener("relay:invoke-skill", h);
+    return () => window.removeEventListener("relay:invoke-skill", h);
+  });
 
   function submit(text: string) {
     if (!text.trim() || busy) return;
