@@ -1,6 +1,7 @@
 import { ArrowUpRight, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { kindStyles, type StudioFile } from "./files";
+import { ArtifactVisual } from "./ArtifactVisual";
 
 function Badge({ badge }: { badge?: StudioFile["badge"] }) {
   if (!badge) return null;
@@ -15,7 +16,7 @@ function Badge({ badge }: { badge?: StudioFile["badge"] }) {
 function Peek({ file }: { file: StudioFile }) {
   if (file.table) {
     return (
-      <div className="overflow-hidden rounded-sm border border-border/70">
+      <div className="w-full min-w-0 overflow-hidden rounded-sm border border-border/70">
         <table className="w-full table-fixed border-collapse text-[10px]">
           <thead>
             <tr className="bg-muted/70 text-muted-foreground">
@@ -65,13 +66,7 @@ function Peek({ file }: { file: StudioFile }) {
     );
   }
   if (file.image) {
-    return (
-      <div className="checker flex h-20 items-end gap-1.5 overflow-hidden rounded-sm border border-border/70 px-3 py-3">
-        {[38, 60, 30, 72, 46].map((h, i) => (
-          <div key={i} className={`flex-1 rounded-t-sm ${file.image!.palette[i % file.image!.palette.length]} opacity-80`} style={{ height: `${h}%` }} />
-        ))}
-      </div>
-    );
+    return <ArtifactVisual file={file} compact />;
   }
   if (file.audio) {
     return (
@@ -116,8 +111,9 @@ export function FileCard({ file, onOpen }: { file: StudioFile; onOpen: (id: stri
   const style = kindStyles[file.kind];
   const Icon = style.icon;
   return (
-    <Button type="button" variant="ghost" onClick={() => onOpen(file.id)} aria-label={`在工作台打开 ${file.name}`} className="lift group h-auto w-full flex-col items-stretch whitespace-normal rounded-lg border bg-card p-3 text-left font-normal hover:bg-card focus-visible:ring-2 focus-visible:ring-ring/40">
-      <div className="flex items-start gap-2.5">
+    <div className="relay-file-card lift group w-full min-w-0 overflow-hidden rounded-lg border bg-card p-3 transition-colors hover:bg-accent/30">
+      <Button type="button" variant="ghost" onClick={() => onOpen(file.id)} aria-label={`在工作台打开 ${file.name}`} className="h-auto w-full min-w-0 justify-start overflow-hidden whitespace-normal p-0 text-left font-normal hover:bg-transparent">
+      <div className="flex w-full min-w-0 items-start gap-2.5">
         <span className={`flex size-8 shrink-0 items-center justify-center rounded-md ring-1 ring-inset ${style.tint} ${style.text} ${style.ring}`}>
           <Icon className="size-4" />
         </span>
@@ -132,10 +128,11 @@ export function FileCard({ file, onOpen }: { file: StudioFile; onOpen: (id: stri
           </p>
         </div>
       </div>
+      </Button>
       <p className="mt-2 line-clamp-2 text-[11px] leading-5 text-muted-foreground">{file.summary}</p>
       <div className="mt-2.5">
         <Peek file={file} />
       </div>
-    </Button>
+    </div>
   );
 }

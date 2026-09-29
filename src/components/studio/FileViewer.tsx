@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Play, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { kindStyles, type StudioFile } from "./files";
+import { ArtifactVisual } from "./ArtifactVisual";
+import { DataPreview } from "./DataPreview";
 
 function Preview({ file }: { file: StudioFile }) {
   if (file.doc) {
@@ -35,35 +37,7 @@ function Preview({ file }: { file: StudioFile }) {
     );
   }
   if (file.table) {
-    return (
-      <div className="overflow-hidden rounded-md border">
-        <div className="soft-scroll max-h-[420px] overflow-auto">
-          <table className="w-full border-collapse text-[11px]">
-            <thead className="sticky top-0 bg-muted">
-              <tr>
-                <th className="w-9 border-b px-2 py-2 text-right font-mono text-[10px] text-muted-foreground">#</th>
-                {file.table.columns.map((c) => (
-                  <th key={c} className="whitespace-nowrap border-b px-3 py-2 text-left font-medium">{c}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {file.table.rows.map((row, i) => (
-                <tr key={i} className={`hover:bg-accent/60 ${i % 2 ? "bg-muted/25" : ""}`}>
-                  <td className="px-2 py-1.5 text-right font-mono text-[10px] text-muted-foreground">{i + 1}</td>
-                  {row.map((cell, j) => (
-                    <td key={j} className={`whitespace-nowrap px-3 py-1.5 ${j >= 2 ? "font-mono text-muted-foreground" : ""}`}>{cell}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="border-t bg-muted/40 px-3 py-1.5 font-mono text-[10px] text-muted-foreground">
-          显示 {file.table.rows.length} / {file.table.totalRows.toLocaleString()} 行 · {file.table.columns.length} 列
-        </div>
-      </div>
-    );
+    return <DataPreview file={file} />;
   }
   if (file.diff) {
     return (
@@ -98,20 +72,7 @@ function Preview({ file }: { file: StudioFile }) {
     );
   }
   if (file.image) {
-    return (
-      <div className="space-y-3">
-        <div className="checker flex h-56 items-end gap-3 rounded-md border px-6 py-6">
-          {[38, 62, 30, 78, 48, 56].map((h, i) => (
-            <div key={i} className={`flex-1 rounded-t-md ${file.image!.palette[i % file.image!.palette.length]} opacity-85`} style={{ height: `${h}%` }} />
-          ))}
-        </div>
-        <div className="flex items-center justify-between rounded-md border bg-muted/30 px-3 py-2 font-mono text-[10px] text-muted-foreground">
-          <span>{file.image.width} × {file.image.height}</span>
-          <span>{file.size}</span>
-        </div>
-        <p className="text-[11px] text-muted-foreground">{file.image.caption}</p>
-      </div>
-    );
+    return <ArtifactVisual file={file} />;
   }
   if (file.audio) {
     return (
@@ -159,7 +120,7 @@ export function FileViewer({ file, onClose }: { file: StudioFile; onClose: () =>
   const [tab, setTab] = useState<"预览" | "原始" | "信息">("预览");
   const style = kindStyles[file.kind];
   const Icon = style.icon;
-  const raw = file.code?.content ?? file.json ?? file.doc?.excerpt ?? file.audio?.transcript.map((t) => `[${t.at}] ${t.text}`).join("\n") ?? file.table?.rows.map((r) => r.join(",")).join("\n") ?? "该类型没有可展示的文本内容。";
+  const raw = file.code?.content ?? file.json ?? file.doc?.excerpt ?? file.audio?.transcript.map((t) => `[${t.at}] ${t.text}`).join("\n") ?? (file.table ? [file.table.columns, ...file.table.rows].map(row => row.map(cell => /[,"\n]/.test(cell) ? `"${cell.replaceAll('"', '""')}"` : cell).join(",")).join("\n") : undefined) ?? "该类型没有可展示的文本内容。";
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="glass flex h-12 shrink-0 items-center gap-2 border-b px-3">
@@ -188,7 +149,7 @@ export function FileViewer({ file, onClose }: { file: StudioFile; onClose: () =>
       <div className="soft-scroll min-h-0 flex-1 overflow-y-auto p-3">
         {tab === "预览" && <div className="rise"><Preview file={file} /></div>}
         {tab === "原始" && (
-          <CodeBlock code={raw} language={(file.code?.language ?? (file.json ? "json" : "text")) as BundledLanguage} showLineNumbers/>
+          <CodeBlock code={raw} language={(file.code?.language ?? (file.json ? "json" : file.table ? "csv" : "text")) as BundledLanguage} showLineNumbers/>
         )}
         {tab === "信息" && (
           <div className="space-y-1.5">
