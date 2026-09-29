@@ -156,6 +156,15 @@ export function Studio({ threadId }: { threadId?: string }) {
     if (target?.live) { const next = updater(target); setLiveThreads(prev => prev.map(t => t.id === id ? next : t)); supabase.from("threads").update({ group_name: next.group, title: next.title }).eq("id", id).then(({ error }) => error && setNotice("保存失败")); return; }
     setDemoThreads(prev => prev.map(t => t.id === id ? updater(t) : t));
   }
+  function changeModel(m: LiveModel) {
+    setModel(m);
+    setNotice(`已切换到 ${modelLabel(m)}`);
+    setTimeout(() => setNotice(""), 2200);
+    if (isLive && threadId) {
+      setLiveThreads(prev => prev.map(t => t.id === threadId ? { ...t, model: m, agentId: null } : t));
+      updateThreadModel({ data: { threadId, model: m, agentId: null } }).catch(() => setNotice("模型保存失败"));
+    }
+  }
   async function createThread() {
     setMobileSidebar(false);
     if (!user) { navigate({ to: "/auth" }); return; }
