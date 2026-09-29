@@ -65,16 +65,53 @@ export const scanSkillSource = createServerFn({ method: "POST" })
     return scanRepo(data.repo);
   });
 
+const skillDef = z.object({
+  name: z.string().trim().min(1).max(60),
+  description: z.string().max(500).default(""),
+  repo: z.string().max(300).optional(),
+  path: z.string().max(300).default(""),
+  url: z.string().url().max(500).optional(),
+  content: z.string().max(60000).optional(),
+}).refine(d => d.repo || d.url || d.content, "每项需要 repo、url 或 content 之一");
+export type SkillDef = z.infer<typeof skillDef>;
+
+async function loadIndex(url: string) {
+  if (!url.startsWith("https://")) throw new Error("只支持 https 地址");
+  const { fetchText } = await import("@/lib/ai/skills.server");
+  let raw: unknown;
+  try { raw = JSON.parse(await fetchText(url, 400000)); } catch { throw new Error("地址返回的不是有效 JSON"); }
+  const list = Array.isArray(raw) ? raw : (raw as { skills?: unknown })?.skills;
+  const parsed = z.array(skillDef).max(500).safeParse(list);
+  if (!parsed.success) throw new Error("JSON 格式不正确：需要 [{name, description, repo+path | url | content}] 或 {skills:[…]}");
+  return parsed.data;
+}
+
+/** 读取远程 JSON 定义（数组或 {skills:[]}），每项可指向 GitHub 仓库、SKILL.md 链接或直接内联正文。 */
 export const readSkillIndex = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ url: z.string().url().max(500) }).parse(d))
-  .handler(async ({ data }) => {
-    if (!data.url.startsWith("https://")) throw new Error("只支持 https 地址");
-    const { fetchText } = await import("@/lib/ai/skills.server");
-    const parsed = z.array(z.object({ name: z.string(), description: z.string().default(""), repo: z.string(), path: z.string().default("") })).max(500)
-      .safeParse(JSON.parse(await fetchText(data.url, 400000)));
-    if (!parsed.success) throw new Error("订阅源格式不正确：需要 [{name, description, repo, path}] 数组");
-    return parsed.data;
+  .handler(async ({ data }) => loadIndex(data.url));
+
+/** 安装/更新 JSON 定义中非 GitHub 的条目（url 或内联 content），以索引地址 + 名称作为来源键。 */
+export const installSkillDefs = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ url: z.string().url().max(500), names: z.array(z.string().max(60)).min(1).max(50) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { fetchText, parseFrontmatter } = await import("@/lib/ai/skills.server");
+    const defs = (await loadIndex(data.url)).filter(d => !d.repo && data.names.includes(d.name));
+    const { data: existing } = await context.supabase.from("skills").select("id,path").eq("source_url", data.url);
+    let installed = 0;
+    for (const d of defs) {
+      let content = d.content ?? "";
+      if (!content && d.url) { if (!d.url.startsWith("https://")) continue; content = await fetchText(d.url, 200000); }
+      const meta = parseFrontmatter(content);
+      const row = { name: (meta.name || d.name).slice(0, 60), description: (meta.description || d.description).slice(0, 500), source_type: "url", source_url: data.url, path: d.name, content, files: [] as unknown as Json };
+      const prev = existing?.find(e => e.path === d.name);
+      const { error } = prev ? await context.supabase.from("skills").update(row).eq("id", prev.id) : await context.supabase.from("skills").insert(row);
+      if (error) throw new Error("保存失败：" + error.message);
+      installed++;
+    }
+    return { installed };
   });
 
 /** 从 GitHub 安装（或重新拉取）一组 Skill。 */
