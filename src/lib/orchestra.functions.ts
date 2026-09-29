@@ -142,6 +142,33 @@ export const installSkills = createServerFn({ method: "POST" })
     return { installed };
   });
 
+/** 轻量检查某个远程 Skill 是否有更新：只拉取 SKILL.md 正文比对，不重写数据。 */
+export const checkSkillUpdate = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: s } = await context.supabase.from("skills").select("id,name,source_type,source_url,ref,path,content").eq("id", data.id).maybeSingle();
+    if (!s || !s.source_url || s.source_type === "manual") return { changed: false };
+    const { parseRepo, fetchText } = await import("@/lib/ai/skills.server");
+    try {
+      if (s.source_type === "github") {
+        const { owner, repo } = parseRepo(s.source_url);
+        const ref = s.ref ?? "main";
+        const path = s.path ? `${s.path}/SKILL.md` : "SKILL.md";
+        const remote = await fetchText(`https://raw.githubusercontent.com/${owner}/${repo}/${ref}/${path.split("/").map(encodeURIComponent).join("/")}`, 200000);
+        return { changed: remote.trim() !== s.content.trim() };
+      }
+      // url 类型：从订阅源 JSON 找到同名条目，比对正文
+      const defs = await loadIndex(s.source_url);
+      const def = defs.find(d => !d.repo && d.name === (s.path ?? s.name));
+      if (!def) return { changed: false };
+      const remote = def.content ?? (def.url ? await fetchText(def.url, 200000) : "");
+      return { changed: remote.trim() !== s.content.trim() };
+    } catch {
+      return { changed: false }; // 网络抖动时静默跳过，不打扰界面
+    }
+  });
+
 /** 切换对话的模型 / Agent：立即保存到 threads，刷新后不丢。 */
 export const updateThreadModel = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
