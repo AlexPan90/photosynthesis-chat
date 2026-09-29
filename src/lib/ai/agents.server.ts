@@ -50,13 +50,13 @@ export function delegateTool(provider: Provider, agents: AgentConfig[], signal: 
       if (!agent) throw new Error(`未找到 Agent：${agent_id}`);
       const p: DelegateProgress = { agentId: agent.id, agentName: agent.name, status: "running", steps: [], text: "" };
       yield { ...p };
-      // 按绑定加载 MCP 与 Skills；需要人工批准的写操作/脚本不交给子 Agent（子流程无法暂停等待确认）。
+      // 按绑定加载 MCP 与 Skills。Skill 脚本可运行：委派本身已在主对话中经用户批准（见 chat.server toolApproval）。
+      // MCP 写操作仍不交给子 Agent（无法逐次暂停确认）。
       const mcp = await loadMcpTools(res.mcpRows, agent.mcp_tool_ids ?? []);
       const skills = res.skillRows.filter(s => (agent.skill_ids ?? []).includes(s.id));
-      const { run_skill_script: _skip, ...skillSet } = skillTools(skills);
+      const skillSet = skillTools(skills);
       const mcpTools = Object.fromEntries(Object.entries(mcp.tools).filter(([name]) => !needsApproval(name)));
       const withheld = Object.keys(mcp.tools).filter(n => !(n in mcpTools)).map(n => mcp.labels[n] ?? n);
-      if (_skip) withheld.push("运行 Skill 脚本");
       const label = (name: string) => mcp.labels[name] ?? name;
       try {
         const result = streamText({

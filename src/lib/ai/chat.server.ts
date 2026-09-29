@@ -124,6 +124,11 @@ export async function handleChat(request: Request) {
     toolApproval: ({ toolCall }) => {
       if (!toolCall) return undefined;
       if (toolCall.toolName === "run_skill_script") return { type: "user-approval", reason: "将在云沙箱中运行 Skill 脚本，需要你确认" };
+      if (toolCall.toolName === "delegate_to_agent") {
+        const target = delegates.find(a => a.id === (toolCall.input as { agent_id?: string } | undefined)?.agent_id);
+        const runnable = target ? runnableSkills(((skillRows ?? []) as SkillRow[]).filter(s => (target.skill_ids ?? []).includes(s.id))) : [];
+        if (target && runnable.length) return { type: "user-approval", reason: `「${target.name}」可能在云沙箱中运行 Skill 脚本（${runnable.map(s => s.name).join("、")}），批准后本次子任务内可直接运行` };
+      }
       if (toolCall.toolName in mcp.tools && needsApproval(toolCall.toolName)) return { type: "user-approval", reason: `「${mcp.labels[toolCall.toolName] ?? toolCall.toolName}」会修改外部数据，需要你确认` };
       return undefined;
     },
