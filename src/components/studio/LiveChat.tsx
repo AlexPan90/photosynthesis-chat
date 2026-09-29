@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AgentManager, DelegateCard, useAgents } from "./Agents";
 import type { AgentConfig } from "@/lib/ai/agents.shared";
 import { metaOf } from "@/lib/branches";
+import { useSlashCommands, type SlashCommand } from "./slash-commands";
 
 
 export const liveModelGroups = [
@@ -57,7 +58,6 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
   const setAgentId = (id: string | null) => { setAgentIdState(id); onAgent?.(id); };
   const activeAgent = agents.find(a => a.id === agentId) ?? null;
   const [draft, setDraft] = useState("");
-  const [slashIdx, setSlashIdx] = useState(0);
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const [versions, setVersions] = useState<Record<string, UIMessage[]>>(initialVersions);
   const [error, setError] = useState("");
