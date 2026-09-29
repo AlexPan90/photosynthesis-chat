@@ -72,6 +72,11 @@ export function skillsPrompt(skills: SkillRow[]) {
   return `\n\n你可以使用以下 Skills（方法手册）。当任务匹配时，先调用 load_skill 读取完整说明再执行；需要其中的参考文件时调用 read_skill_file。\n${skills.map(s => `- ${s.name}：${s.description}`).join("\n")}`;
 }
 
+/** 该组 Skills 中是否存在可在云沙箱运行的脚本（仅 GitHub 来源带附带文件）。 */
+export function runnableSkills(skills: SkillRow[]) {
+  return skills.filter(s => s.source_type === "github" && Array.isArray(s.files) && (s.files as string[]).some(f => !!runnerFor(f)));
+}
+
 export function skillTools(skills: SkillRow[]): ToolSet {
   if (!skills.length) return {};
   const find = (name: string) => skills.find(s => s.name === name);
