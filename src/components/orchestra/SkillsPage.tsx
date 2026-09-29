@@ -149,7 +149,7 @@ function SkillDetail({ s, busy, msg, onToggle, onRefresh, onRemove, onSave }: { 
         <p className="text-[13px] leading-6 text-muted-foreground">{s.description}</p>
         {msg && <p className={`rounded-md border px-3 py-2 text-xs ${msg.startsWith("已") ? "border-success/30 bg-success/10 text-success" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>{msg}</p>}
         {editing ? <Textarea value={content} onChange={e => setContent(e.target.value)} rows={22} className="border-[color:var(--code-border)] bg-[color:var(--code-bg)] font-mono text-xs leading-5 text-[color:var(--code-fg)]"/>
-        : view === "source" ? <CodeBlock code={s.content} language="markdown" showLineNumbers>
+        : view === "source" ? <CodeBlock code={s.content} language="markdown" showLineNumbers className="relay-sunken">
             <CodeBlockHeader><CodeBlockTitle><FileCode2 className="size-3.5"/><CodeBlockFilename>SKILL.md</CodeBlockFilename><span className="font-mono text-[10px] opacity-60">{lines} lines</span></CodeBlockTitle>
               <CodeBlockActions><ViewToggle view={view} setView={setView}/><CodeBlockCopyButton/></CodeBlockActions></CodeBlockHeader></CodeBlock>
         : <div className="overflow-hidden rounded-lg border bg-card"><div className="flex items-center justify-between border-b bg-secondary/40 px-3 py-2 text-[11px] text-muted-foreground"><span className="flex items-center gap-2"><Eye className="size-3.5"/>SKILL.md · 渲染</span><ViewToggle view={view} setView={setView}/></div><div className="px-5 py-4 text-[13px] leading-6"><MessageResponse>{s.content.replace(/^---[\s\S]*?---\s*/, "")}</MessageResponse></div></div>}

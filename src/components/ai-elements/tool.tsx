@@ -211,10 +211,8 @@ export type ToolInputProps = ComponentProps<"div"> & {
 };
 
 export const ToolInput = ({ className, input, ...props }: ToolInputProps) => (
-  <div className={cn("space-y-1 overflow-hidden", className)} {...props}>
-    <span className="text-[9.5px] font-medium uppercase tracking-wider text-muted-foreground/60">
-      In
-    </span>
+  <div className={cn("relay-term overflow-hidden", className)} {...props}>
+    <span className="relay-term-head"><i className="relay-term-dot"/>input</span>
     <ToolPayload code={JSON.stringify(input, null, 2)} />
   </div>
 );
@@ -243,10 +241,8 @@ export const ToolOutput = ({
   }
 
   return (
-    <div className={cn("space-y-1", className)} {...props}>
-      <span className="text-[9.5px] font-medium uppercase tracking-wider text-muted-foreground/60">
-        {errorText ? "Error" : "Out"}
-      </span>
+    <div className={cn("relay-term", errorText && "relay-term-error", className)} {...props}>
+      <span className="relay-term-head"><i className="relay-term-dot"/>{errorText ? "error" : "output"}</span>
       <div
         className={cn(
           "overflow-x-auto rounded-md text-[11.5px] [&_table]:w-full",
