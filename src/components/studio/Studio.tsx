@@ -113,7 +113,6 @@ export function Studio({ threadId }: { threadId?: string }) {
   const [group, setGroup] = useState("全部会话");
   const [dark, setDark] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsTab, setSettingsTab] = useState("外观");
   const [fontSize, setFontSize] = useState(14);
   const [language, setLanguage] = useState("简体中文");
   const [model, setModel] = useState<LiveModel>("openai/gpt-6-astra");
