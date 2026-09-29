@@ -28,7 +28,7 @@ export const chatTools = {
       topic: z.enum(["general", "news"]).default("general"),
     }),
     execute: async ({ query, max_results, topic }) => {
-      const key = process.env.TAVILY_API_KEY;
+      const key = process.env['TAVILY_API_KEY'];
       if (!key) throw new Error("未配置 Tavily 密钥，网页搜索不可用");
       const res = await fetch("https://api.tavily.com/search", {
         method: "POST",
