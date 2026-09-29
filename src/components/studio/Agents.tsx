@@ -72,7 +72,7 @@ export function AgentManager({ open, onOpenChange, custom, reload, models }: { o
 type Progress = { agentName: string; status: "running" | "done" | "error"; steps: { tool: string; state: "running" | "done" | "error"; detail?: string }[]; text: string };
 
 /** 委派执行记录：子 Agent 的每一步工具调用 + 流式结果。 */
-export function DelegateCard({ task, output, errorText, preliminary }: { task?: string; output?: Progress; errorText?: string; preliminary?: boolean }) {
+export function DelegateCard({ task, output, errorText, preliminary }: { task?: string | undefined; output?: Progress | undefined; errorText?: string | undefined; preliminary?: boolean }) {
   const running = !errorText && (!output || preliminary || output.status === "running");
   return <div className="my-2 rounded-lg border bg-card/60 px-3.5 py-3 text-xs">
     <div className="flex items-center gap-2"><Bot className="size-3.5 text-primary"/><span className="font-medium">委派给 {output?.agentName ?? "Agent"}</span>
