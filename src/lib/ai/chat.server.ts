@@ -61,6 +61,7 @@ export async function handleChat(request: Request) {
   const agents = allAgents((rows ?? []) as AgentConfig[]);
   const active = agentId ? agents.find(a => a.id === agentId) ?? null : null;
   if (agentId && !active) return json(404, "Agent 不存在或已被删除");
+  if (active && (CHAT_MODELS as readonly string[]).includes(active.model)) model = active.model;
 
   const last = messages[messages.length - 1];
   if (last?.role === "user") {
