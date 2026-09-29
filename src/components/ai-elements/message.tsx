@@ -18,9 +18,15 @@ import { math } from "@streamdown/math";
 import { mermaid } from "@streamdown/mermaid";
 import type { UIMessage } from "ai";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
-import type { ComponentProps, HTMLAttributes, ReactElement } from "react";
+import type {
+  ComponentProps,
+  HTMLAttributes,
+  ReactElement,
+  ReactNode,
+} from "react";
 import {
   createContext,
+  isValidElement,
   memo,
   useCallback,
   useContext,
@@ -28,7 +34,16 @@ import {
   useMemo,
   useState,
 } from "react";
+import type { BundledLanguage } from "shiki";
 import { Streamdown } from "streamdown";
+import {
+  CodeBlock,
+  CodeBlockActions,
+  CodeBlockCopyButton,
+  CodeBlockFilename,
+  CodeBlockHeader,
+  CodeBlockTitle,
+} from "./code-block";
 
 export type MessageProps = HTMLAttributes<HTMLDivElement> & {
   from: UIMessage["role"];
