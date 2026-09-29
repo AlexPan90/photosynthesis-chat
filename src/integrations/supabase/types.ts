@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      agents: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          model: string
+          name: string
+          system_prompt: string
+          tool_ids: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          id?: string
+          model?: string
+          name: string
+          system_prompt?: string
+          tool_ids?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          model?: string
+          name?: string
+          system_prompt?: string
+          tool_ids?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           created_at: string
@@ -51,6 +87,7 @@ export type Database = {
       }
       threads: {
         Row: {
+          agent_id: string | null
           created_at: string
           group_name: string
           id: string
@@ -60,6 +97,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          agent_id?: string | null
           created_at?: string
           group_name?: string
           id?: string
@@ -69,6 +107,7 @@ export type Database = {
           user_id?: string
         }
         Update: {
+          agent_id?: string | null
           created_at?: string
           group_name?: string
           id?: string
