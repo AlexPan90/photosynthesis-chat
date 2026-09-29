@@ -18,6 +18,9 @@ import { FileCard } from "./FileCard";
 import { StoryReader } from "./StoryReader";
 import { WorkspacePanel } from "./WorkspacePanel";
 import { demoFiles, kindStyles } from "./files";
+import { LiveChat, ModelMenu, type LiveModel } from "./LiveChat";
+import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
 
 const trajectory: { title: string; tool: string; ms: string; detail: string; state: "done" | "running" | "error" }[] = [
   { title: "解析任务意图", tool: "planner", ms: "412ms", detail: "拆解为三步：采集定价页面、检索竞品资料、生成对比摘要。", state: "done" },
@@ -26,8 +29,7 @@ const trajectory: { title: string; tool: string; ms: string; detail: string; sta
   { title: "写入分析文件", tool: "fs.write", ms: "running", detail: "reports/pricing-summary.md · 正在写入结构化摘要与对比表格。", state: "running" },
 ];
 
-const STORAGE = "relay-studio-threads-v1";
-type Thread = { id: string; title: string; group: string; updatedAt: number; messages: UIMessage[] };
+type Thread = { id: string; title: string; group: string; updatedAt: number; messages: UIMessage[]; live?: boolean; model?: string };
 type ToolStep = { title: string; input: Record<string, string>; output?: string; errorText?: string; state: "output-available" | "input-available" | "output-error" | "input-streaming"; icon: "browser" | "search" | "file" };
 type DemoMessage = UIMessage & { steps?: ToolStep[] };
 type ToolScenario = { label: string; desc: string; steps: ToolStep[]; ms: string[] };
@@ -83,16 +85,7 @@ const seed: Thread[] = [
   { id: "landing-copy", title: "Landing Page 文案", group: "工作流", updatedAt: 7, messages: [] },
   { id: "python-example", title: "Python 数据清洗示例", group: "未分组", updatedAt: 6, messages: [{ id: "a5", role: "assistant", parts: [{ type: "text", text: "使用 pandas 可以快速处理缺失值：\n\n```python\nimport pandas as pd\ndf = pd.read_csv('data.csv')\ndf = df.dropna(subset=['email'])\n```" }] }] },
 ];
-const modelGroups = [
-  { provider: "Anthropic", models: ["Claude 3.7 Sonnet", "Claude 3.5 Haiku"] },
-  { provider: "OpenAI", models: ["GPT-4o", "GPT-4o mini"] },
-  { provider: "DeepSeek", models: ["DeepSeek V3", "DeepSeek R1"] },
-  { provider: "本地模型", models: ["Llama 3"] },
-];
-const models = modelGroups.flatMap(g => g.models);
 const agents = ["Research Agent", "Browser Agent", "Code Agent", "通用助手"];
-const makeId = () => crypto.randomUUID();
-function loadThreads(): Thread[] { try { const value = localStorage.getItem(STORAGE); if (value) { const parsed = JSON.parse(value); if (Array.isArray(parsed)) return parsed; } } catch { /* reset corrupt local data */ } localStorage.setItem(STORAGE, JSON.stringify(seed)); return seed; }
 function IconTip({ label, children, onClick, className = "" }: { label: string; children: React.ReactNode; onClick?: () => void; className?: string }) { return <Tooltip><TooltipTrigger asChild><Button type="button" variant="ghost" size="icon-sm" aria-label={label} onClick={onClick} className={className}>{children}</Button></TooltipTrigger><TooltipContent>{label}</TooltipContent></Tooltip>; }
 function Mark({ compact = false }: { compact?: boolean }) { return <div className={`flex shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground ${compact ? "size-7" : "size-8"}`} aria-label="Relay"><span className="font-mono text-base font-semibold leading-none">R<span className="text-success">.</span></span></div>; }
 function AttachedFiles() { const { files, remove, openFileDialog } = usePromptInputAttachments(); return <>{files.length > 0 && <div className="flex flex-wrap gap-2 px-3 pt-2">{files.map(f => <div key={f.id} className="flex items-center gap-1.5 rounded-md border bg-muted px-2 py-1 text-xs"><Paperclip className="size-3"/><span className="max-w-32 truncate">{f.filename || "附件"}</span><Button type="button" variant="ghost" size="icon-sm" className="size-5" aria-label="移除附件" onClick={() => remove(f.id)}><X className="size-3"/></Button></div>)}</div>}<PromptInputButton tooltip="添加附件" onClick={openFileDialog}><Paperclip className="size-4" /></PromptInputButton></>; }
