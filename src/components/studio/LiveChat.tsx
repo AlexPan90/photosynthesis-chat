@@ -87,7 +87,7 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
   useEffect(() => {
     const id = window.location.hash.slice(1);
     if (!id.startsWith("msg-")) return;
-    const t = setTimeout(() => { const el = document.getElementById(id); if (!el) return; el.scrollIntoView({ block: "start" }); el.dataset.flash = "true"; setTimeout(() => { el.dataset.flash = "false"; }, 1600); }, 150);
+    const t = setTimeout(() => { const el = document.getElementById(id); if (!el) return; el.scrollIntoView({ block: "start" }); el.dataset["flash"] = "true"; setTimeout(() => { el.dataset["flash"] = "false"; }, 1600); }, 150);
     return () => clearTimeout(t);
   }, [threadId]);
 
