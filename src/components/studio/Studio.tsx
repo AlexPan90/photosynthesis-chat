@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { UIMessage } from "ai";
-import { Activity, ArrowUpRight, Bot, Check, ChevronDown, ChevronRight, CircleAlert, Clock3, Command, Copy, Keyboard, LayoutPanelLeft, ListFilter, MessageSquare, MoreHorizontal, PanelRight, Paperclip, Plus, Search, Settings2, SlidersHorizontal, Square, SquarePen, Sun, Trash2, X, Zap } from "lucide-react";
+import { FileCode2, Activity, ArrowUpRight, Bot, Check, ChevronDown, ChevronRight, CircleAlert, Clock3, Command, Copy, Keyboard, LayoutPanelLeft, ListFilter, MessageSquare, MoreHorizontal, PanelRight, Paperclip, Plus, Search, Settings2, SlidersHorizontal, Square, SquarePen, Sun, Trash2, X, Zap } from "lucide-react";
 import { ContextRail } from "./ContextRail";
 import { SkillsDock } from "./SkillsDock";
 import { Button } from "@/components/ui/button";

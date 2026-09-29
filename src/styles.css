@@ -39,8 +39,8 @@
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
 }
 :root {
   --code-bg: #272822;
@@ -80,29 +80,29 @@
   --file-archive: oklch(0.55 0.025 255);
 }
 .dark {
-  --background: #0B0B0D;
-  --foreground: #EDEDF2;
-  --card: #141418;
+  --background: #09090B;
+  --foreground: #E4E4E7;
+  --card: #14151A;
   --card-foreground: var(--foreground);
-  --popover: #17171B;
+  --popover: #16171D;
   --popover-foreground: var(--foreground);
   --primary: #5B50F0;
   --primary-foreground: #FFFFFF;
-  --secondary: #1A1A1F;
+  --secondary: #16171C;
   --secondary-foreground: var(--foreground);
-  --muted: #16161A;
-  --muted-foreground: #A1A1AD;
-  --accent: #1C1C22;
+  --muted: #121317;
+  --muted-foreground: #A1A1AA;
+  --accent: #1A1B22;
   --accent-foreground: var(--foreground);
   --destructive: oklch(0.7 0.17 25);
   --destructive-foreground: oklch(0.19 0 0);
-  --border: #26262E;
-  --input: #2E2E36;
+  --border: rgba(255, 255, 255, 0.07);
+  --input: rgba(255, 255, 255, 0.10);
   --ring: #6D63FF;
   --success: #34D399;
   --warning: oklch(0.78 0.13 75);
   --info: oklch(0.72 0.13 230);
-  --sidebar: #0D0D10;
+  --sidebar: #09090B;
   --sidebar-foreground: var(--foreground);
   --file-code: oklch(0.73 0.075 245);
   --file-data: oklch(0.73 0.07 165);
@@ -280,3 +280,75 @@ body { font-size: calc(16px * var(--relay-type-scale)); }
 .relay-stage-grid { background-color: var(--color-muted); background-image: conic-gradient(color-mix(in oklab, var(--color-foreground) 7%, transparent) 25%, transparent 0 50%, color-mix(in oklab, var(--color-foreground) 7%, transparent) 0 75%, transparent 0); background-size: 16px 16px; }
 .relay-stage-dark { background: #0b0b0d; }
 .relay-stage-light { background: #fafafa; }
+
+/* ---- Refinement pass: elevation, glass, terminal tools, timeline ---- */
+.dark .relay-conversation, .dark .relay-transcript { background-color: #0D0E12; }
+.relay-shell { font-weight: 400; }
+.relay-shell :is(h1,h2,h3,.font-semibold) { letter-spacing: -0.01em; }
+[role="dialog"], [data-radix-popper-content-wrapper] > *, [data-slot="dropdown-menu-content"], [data-slot="popover-content"] {
+  border-color: color-mix(in oklab, var(--color-foreground) 8%, transparent) !important;
+  border-radius: 16px;
+  background: color-mix(in oklab, var(--color-popover) 82%, transparent) !important;
+  backdrop-filter: blur(20px) saturate(150%);
+  box-shadow: 0 1px 0 color-mix(in oklab, var(--color-foreground) 6%, transparent) inset, 0 24px 60px -18px rgba(0,0,0,.55), 0 10px 40px -10px color-mix(in oklab, var(--color-primary) 22%, transparent) !important;
+}
+[data-slot="dropdown-menu-content"], [data-slot="popover-content"] { border-radius: 12px; }
+[data-slot="dialog-overlay"] { backdrop-filter: blur(4px); }
+
+/* Capsule composer with gradient edge glow */
+.relay-composer { border-radius: 20px !important; position: relative; overflow: visible !important; background: color-mix(in oklab, var(--color-card) 86%, transparent) !important; backdrop-filter: blur(16px) saturate(140%); }
+.relay-composer::before { content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; pointer-events: none; opacity: 0; transition: opacity .25s ease;
+  background: linear-gradient(120deg, var(--color-primary), color-mix(in oklab, var(--color-info) 80%, transparent), color-mix(in oklab, var(--color-primary) 40%, transparent));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+.relay-composer:focus-within::before { opacity: 1; }
+.relay-pill { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 4px 0 9px; border-radius: 9999px; font-family: var(--font-mono, ui-monospace); font-size: calc(10.5px * var(--relay-type-scale)); color: var(--color-foreground);
+  background: color-mix(in oklab, var(--color-foreground) 5%, transparent); border: 1px solid color-mix(in oklab, var(--color-foreground) 9%, transparent); transition: border-color .2s; }
+.relay-pill:hover { border-color: color-mix(in oklab, var(--color-primary) 45%, transparent); }
+
+/* Markdown tables: calm, no header fill, dashed rows */
+.relay-shell .relay-message [data-streamdown="table"] thead { background: transparent !important; }
+.relay-shell .relay-message [data-streamdown="table"] th { font-weight: 500; color: var(--color-muted-foreground); border-bottom: 1px solid color-mix(in oklab, var(--color-foreground) 10%, transparent) !important; }
+.relay-shell .relay-message [data-streamdown="table"] tbody tr { background: transparent !important; transition: background-color .2s ease; }
+.relay-shell .relay-message [data-streamdown="table"] tbody tr + tr td { border-top: 1px dashed color-mix(in oklab, var(--color-foreground) 7%, transparent); }
+.relay-shell .relay-message [data-streamdown="table"] tbody tr:hover { background: color-mix(in oklab, var(--color-primary) 7%, transparent) !important; }
+.relay-shell .relay-message [data-streamdown="table-wrapper"] { border-radius: 12px; border-color: color-mix(in oklab, var(--color-foreground) 8%, transparent); }
+
+/* Terminal-style tool IN/OUT */
+.relay-term { margin-top: 6px; border-radius: 10px; overflow: hidden; border: 1px solid color-mix(in oklab, var(--color-foreground) 7%, transparent); background: color-mix(in oklab, var(--color-background) 70%, #000 30%); }
+.relay-term > div { border-radius: 0 !important; background: transparent !important; }
+.relay-term-head { display: flex; align-items: center; gap: 6px; padding: 5px 10px; font-family: var(--font-mono, ui-monospace); font-size: calc(9.5px * var(--relay-type-scale)); letter-spacing: .08em; text-transform: uppercase; color: var(--color-muted-foreground);
+  border-bottom: 1px solid color-mix(in oklab, var(--color-foreground) 6%, transparent); background: color-mix(in oklab, var(--color-foreground) 3%, transparent); }
+.relay-term-dot { width: 6px; height: 6px; border-radius: 9999px; background: var(--color-success); box-shadow: 0 0 8px var(--color-success); }
+.relay-term-error .relay-term-dot { background: var(--color-destructive); box-shadow: 0 0 8px var(--color-destructive); animation: relay-blink 1.2s ease-in-out infinite; }
+@keyframes relay-blink { 50% { opacity: .35; } }
+
+/* Timeline guide line linking the turns */
+.relay-message { position: relative; }
+.relay-message:not(:last-child)::before { content: ""; position: absolute; left: 17.5px; top: 44px; bottom: -28px; width: 1px; pointer-events: none;
+  background: linear-gradient(to bottom, color-mix(in oklab, var(--color-primary) 35%, transparent), color-mix(in oklab, var(--color-foreground) 6%, transparent) 60%, transparent); }
+.relay-message:has(.relay-streaming-cursor) .relay-agent-avatar { animation: relay-breathe 2.4s ease-in-out infinite; }
+@keyframes relay-breathe { 0%,100% { box-shadow: 0 0 0 1px color-mix(in oklab, var(--color-primary) 60%, transparent), 0 0 10px -2px var(--color-primary); } 50% { box-shadow: 0 0 0 4px color-mix(in oklab, var(--color-primary) 25%, transparent), 0 0 26px 2px var(--color-primary); } }
+
+/* Sidebar active: rounded + glowing edge bar */
+.relay-nav-active { background: linear-gradient(90deg, color-mix(in oklab, var(--color-primary) 14%, transparent), color-mix(in oklab, var(--color-primary) 3%, transparent)) !important; }
+.relay-nav-active::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 3px; background: var(--color-primary); box-shadow: 0 0 10px var(--color-primary), 0 0 2px var(--color-primary); }
+
+/* Empty state: faint grid + particles */
+.relay-empty { position: relative; isolation: isolate; }
+.relay-empty::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background-image: linear-gradient(color-mix(in oklab, var(--color-foreground) 5%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in oklab, var(--color-foreground) 5%, transparent) 1px, transparent 1px);
+  background-size: 32px 32px; mask-image: radial-gradient(ellipse 50% 55% at 50% 45%, #000 20%, transparent 75%); }
+.relay-empty::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(circle at 42% 38%, var(--color-primary) 0 1.5px, transparent 2px), radial-gradient(circle at 60% 30%, var(--color-info) 0 1px, transparent 1.5px), radial-gradient(circle at 56% 58%, var(--color-primary) 0 1px, transparent 1.5px), radial-gradient(circle at 38% 60%, var(--color-info) 0 1.2px, transparent 1.7px), radial-gradient(circle 180px at 50% 42%, color-mix(in oklab, var(--color-primary) 16%, transparent), transparent);
+  animation: relay-float 6s ease-in-out infinite; }
+@keyframes relay-float { 50% { transform: translateY(-6px); opacity: .75; } }
+
+/* Skills source: sunken editor */
+.dark .relay-sunken, .dark .relay-sunken pre { background: #050505 !important; }
+.relay-sunken { box-shadow: inset 0 2px 12px rgba(0,0,0,.35); }
+.relay-sunken [class*="line-number"], .relay-sunken .line::before { opacity: .45; }
+
+/* Micro-interactions */
+.relay-file-card:hover { transform: translateY(-2px); }
+.relay-shell button { transition-property: color, background-color, border-color, box-shadow, transform, opacity; transition-duration: .2s; transition-timing-function: ease; }
+@media (prefers-reduced-motion: reduce) { .relay-empty::after, .relay-message:has(.relay-streaming-cursor) .relay-agent-avatar, .relay-term-error .relay-term-dot { animation: none; } }
