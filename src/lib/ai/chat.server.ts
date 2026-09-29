@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { createOpenAI } from "@ai-sdk/openai";
-import { convertToModelMessages, stepCountIs, streamText, type UIMessage } from "ai";
+import { convertToModelMessages, stepCountIs, streamText, type ToolSet, type UIMessage } from "ai";
 import { allAgents, delegateActionTool, delegateTool, OPENAI_OPTIONS, pickTools, systemFor } from "./agents.server";
 import { needsApproval, TOOL_CATALOG, type AgentConfig } from "./agents.shared";
 import { z } from "zod";
@@ -165,7 +165,7 @@ export async function handleChat(request: Request) {
   const permission = thread.permission === "auto" || thread.permission === "readonly" ? thread.permission : "ask";
   const readOnly = permission === "readonly" || thread.plan_mode;
   const isWrite = (name: string) => name === "run_skill_script" || name === "run_js" || name === "delegate_action" || (name in mcp.tools && needsApproval(name));
-  const allTools: Record<string, unknown> = { ...pickTools(toolIds), ...mcp.tools, ...skillTools(skills), ...(delegates.length ? { delegate_to_agent: delegateTool(provider, delegates, request.signal, subRes), delegate_action: delegateActionTool(provider, delegates, request.signal, subRes) } : {}) };
+  const allTools: ToolSet = { ...pickTools(toolIds), ...mcp.tools, ...skillTools(skills), ...(delegates.length ? { delegate_to_agent: delegateTool(provider, delegates, request.signal, subRes), delegate_action: delegateActionTool(provider, delegates, request.signal, subRes) } : {}) };
   const tools = readOnly ? Object.fromEntries(Object.entries(allTools).filter(([n]) => !isWrite(n))) : allTools;
   const cut = thread.summary && thread.summary_upto ? messages.findIndex(m => m.id === thread.summary_upto) : -1;
   const history = cut >= 0 ? messages.slice(cut + 1) : messages;
@@ -174,7 +174,7 @@ export async function handleChat(request: Request) {
     model: provider.responses(model),
     system: `${systemFor(active)}${skillsPrompt(skills)}${delegates.length ? "\n当子任务明显更适合某个专门 Agent 时，调用 delegate_to_agent 委派，然后整合结果回答。" : ""}${stateNote}`,
     messages: await convertToModelMessages(history.length ? history : messages),
-    tools: tools as never,
+    tools: tools as ToolSet,
     stopWhen: stepCountIs(50),
     // 人工批准：MCP 写操作（删除、发送、创建、修改……）暂停，等待用户在卡片上确认。
     toolApproval: ({ toolCall }) => {
