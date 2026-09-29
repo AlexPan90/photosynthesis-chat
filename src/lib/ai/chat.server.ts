@@ -206,7 +206,11 @@ export async function handleChat(request: Request) {
     originalMessages: messages,
     sendReasoning: true,
     // 版本变化写进事件流：start 事件携带 metadata（第几版、从哪条重新生成），前端据此归组切换。
-    messageMetadata: ({ part }) => (part.type === "start" && versionMeta ? versionMeta : undefined),
+    messageMetadata: ({ part }) => {
+      if (part.type === "start") return versionMeta ?? undefined;
+      if (part.type === "finish") { const u = part.totalUsage; return { usage: { input: u.inputTokens ?? 0, output: u.outputTokens ?? 0, reasoning: u.outputTokenDetails?.reasoningTokens ?? u.reasoningTokens ?? 0, total: u.totalTokens ?? (u.inputTokens ?? 0) + (u.outputTokens ?? 0) } }; }
+      return undefined;
+    },
     generateMessageId: () => crypto.randomUUID(),
     onFinish: async ({ responseMessage }) => {
       if (!responseMessage.parts.length) return;
@@ -214,10 +218,12 @@ export async function handleChat(request: Request) {
         id: responseMessage.id, thread_id: threadId, user_id: userId, role: "assistant",
         parts: responseMessage.parts as unknown as Json,
         parent_id: parentId, selected_at: new Date().toISOString(),
-        ...(versionMeta ? { metadata: versionMeta as unknown as Json } : {}),
+        metadata: { ...(versionMeta ?? {}), ...((responseMessage.metadata as object | undefined) ?? {}) } as unknown as Json,
       });
       if (error) console.error("save assistant message failed", error.message);
-      await supabase.from("threads").update({ updated_at: new Date().toISOString() }).eq("id", threadId);
+      const used = ((responseMessage.metadata as { usage?: { total?: number } } | undefined)?.usage?.total) ?? 0;
+      const { data: t } = await supabase.from("threads").select("total_tokens").eq("id", threadId).single();
+      await supabase.from("threads").update({ updated_at: new Date().toISOString(), total_tokens: Number(t?.total_tokens ?? 0) + used }).eq("id", threadId);
     },
     onError: (error) => {
       const status = (error as { statusCode?: number })?.statusCode;
