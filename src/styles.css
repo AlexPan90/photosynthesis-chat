@@ -199,3 +199,50 @@
   box-shadow: inset 0 1px 0 color-mix(in oklab, var(--color-foreground) 5%, transparent), 0 16px 40px -32px color-mix(in oklab, var(--color-foreground) 60%, transparent);
   backdrop-filter: blur(12px);
 }
+
+/* One workspace scale: the appearance slider changes transcript, navigation, controls and previews together. */
+.relay-shell { --relay-type-scale: 1; --message-size: 14px; }
+.relay-shell [class*="text-[9px]"] { font-size: calc(9px * var(--relay-type-scale)); }
+.relay-shell [class*="text-[10px]"] { font-size: calc(10px * var(--relay-type-scale)); }
+.relay-shell [class*="text-[10.5px]"] { font-size: calc(10.5px * var(--relay-type-scale)); }
+.relay-shell [class*="text-[11px]"] { font-size: calc(11px * var(--relay-type-scale)); }
+.relay-shell [class*="text-[11.5px]"] { font-size: calc(11.5px * var(--relay-type-scale)); }
+.relay-shell [class*="text-[12px]"] { font-size: calc(12px * var(--relay-type-scale)); }
+.relay-shell [class*="text-[12.5px]"] { font-size: calc(12.5px * var(--relay-type-scale)); }
+.relay-shell [class*="text-[13px]"] { font-size: calc(13px * var(--relay-type-scale)); }
+.relay-shell [class*="text-[14px]"] { font-size: calc(14px * var(--relay-type-scale)); }
+.relay-shell .text-xs { font-size: calc(12px * var(--relay-type-scale)); }
+.relay-shell .text-sm { font-size: calc(14px * var(--relay-type-scale)); }
+.relay-shell .text-base { font-size: calc(16px * var(--relay-type-scale)); }
+.relay-shell .text-lg { font-size: calc(18px * var(--relay-type-scale)); }
+.relay-shell .text-xl { font-size: calc(20px * var(--relay-type-scale)); }
+.relay-shell .relay-message [data-streamdown="table"] :is(th, td) { font-size: var(--message-size); line-height: 1.55; }
+.relay-shell .relay-message [data-streamdown="table-wrapper"] { background: var(--color-card); border-color: var(--color-border); padding: 0; gap: 0; overflow: hidden; box-shadow: inset 0 1px 0 color-mix(in oklab, var(--color-foreground) 5%, transparent); }
+.relay-shell .relay-message [data-streamdown="table-wrapper"] > div:first-child { min-height: 34px; padding: 4px 10px; border-bottom: 1px solid var(--color-border); background: color-mix(in oklab, var(--color-primary) 5%, var(--color-card)); }
+.relay-shell .relay-message [data-streamdown="table-wrapper"] > div:first-child::before { content: 'TABLE / 数据表'; margin-right: auto; color: var(--color-muted-foreground); font: 500 calc(10px * var(--relay-type-scale)) var(--font-mono); }
+.relay-shell .relay-message [data-streamdown="table-wrapper"] > div:last-child { border: 0; border-radius: 0; max-height: min(65vh, 480px) !important; }
+.relay-shell .relay-message [data-streamdown="table"] { min-width: max-content; }
+.relay-shell .relay-message [data-streamdown="table"] thead { background: color-mix(in oklab, var(--color-primary) 8%, var(--color-muted)); }
+.relay-shell .relay-message [data-streamdown="table"] th { color: var(--color-foreground); border-bottom: 1px solid color-mix(in oklab, var(--color-primary) 23%, var(--color-border)); }
+.relay-shell .relay-message [data-streamdown="table"] tbody tr:nth-child(even) { background: color-mix(in oklab, var(--color-muted) 45%, transparent); }
+.relay-shell .relay-message [data-streamdown="table"] tbody tr:hover { background: color-mix(in oklab, var(--color-primary) 8%, transparent); }
+.relay-shell .relay-message [data-streamdown="table"] :is(th, td) { padding: 10px 16px; }
+.relay-shell .relay-message img { max-width: 100%; height: auto; border-radius: 6px; border: 1px solid var(--color-border); }
+.relay-file-card { min-width: 0; }
+.relay-file-card:hover { border-color: color-mix(in oklab, var(--color-primary) 32%, var(--color-border)); }
+.relay-data-preview thead th { box-shadow: 0 1px 0 var(--color-border); }
+.relay-data-preview tbody td:first-child { background: color-mix(in oklab, var(--color-muted) 60%, var(--color-card)); }
+.relay-data-preview tbody td:not(:first-child) { font-variant-numeric: tabular-nums; }
+.relay-artifact-chart { position: relative; display: flex; height: 170px; padding: 14px 12px 25px 37px; background: repeating-linear-gradient(to top, color-mix(in oklab, var(--color-border) 70%, transparent) 0 1px, transparent 1px 25%), var(--color-card); }
+.relay-artifact-chart-large { height: min(60vh, 460px); }
+.relay-chart-grid { position: absolute; inset: 8px auto 22px 5px; display: flex; flex-direction: column; justify-content: space-between; color: var(--color-muted-foreground); font: 9px var(--font-mono); }
+.relay-chart-bars { display: flex; width: 100%; height: 100%; align-items: end; justify-content: space-around; gap: 12px; }
+.relay-chart-column { position: relative; display: flex; flex: 1; height: 100%; max-width: 90px; flex-direction: column; align-items: center; justify-content: flex-end; }
+.relay-chart-bar { width: 65%; min-width: 10px; border: 1px solid color-mix(in oklab, var(--color-primary) 30%, transparent); border-radius: 2px 2px 0 0; background: color-mix(in oklab, var(--color-primary) 65%, var(--color-card)); }
+.relay-chart-bar-1 { background: color-mix(in oklab, var(--color-file-data) 75%, var(--color-card)); border-color: var(--color-file-data); }
+.relay-chart-bar-2 { background: color-mix(in oklab, var(--color-file-doc) 70%, var(--color-card)); border-color: var(--color-file-doc); }
+.relay-chart-value { position: absolute; bottom: calc(100% - 3px); color: var(--color-foreground); font: 600 10px var(--font-mono); }
+.relay-chart-column:has(.relay-chart-bar-0) .relay-chart-value { bottom: calc(62.5% + 3px); }
+.relay-chart-column:has(.relay-chart-bar-1) .relay-chart-value { bottom: calc(80% + 3px); }
+.relay-chart-column:has(.relay-chart-bar-2) .relay-chart-value { bottom: calc(55% + 3px); }
+.relay-chart-label { position: absolute; top: calc(100% + 5px); color: var(--color-muted-foreground); font: 10px var(--font-mono); white-space: nowrap; }
