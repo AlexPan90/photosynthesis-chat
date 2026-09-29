@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { BookOpen, Check, Github, LoaderCircle, Plus, RefreshCw, Rss, Search, SquarePen, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { MessageResponse } from "@/components/ai-elements/message";
 import { CodeBlock, CodeBlockCopyButton, CodeBlockFilename, CodeBlockHeader, CodeBlockTitle, CodeBlockActions } from "@/components/ai-elements/code-block";
 import { FileCode2, FileText, Folder, Eye, Code2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { installSkillDefs, installSkills, readSkillIndex, scanSkillSource, type SkillDef } from "@/lib/orchestra.functions";
+import { checkSkillUpdate, installSkillDefs, installSkills, readSkillIndex, scanSkillSource, type SkillDef } from "@/lib/orchestra.functions";
 import { useSkills, type Skill } from "./data";
 
 type Remote = { name: string; description: string; path: string; files: string[] };
