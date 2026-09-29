@@ -100,6 +100,49 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
     setDraft("");
     setTimeout(onActivity, 800);
   }
+
+  // ---- 快捷指令（输入 / 唤起）----
+  function exportMarkdown() {
+    const lines: string[] = [`# 对话导出`, "", `导出时间：${new Date().toLocaleString("zh-CN")}`, ""];
+    for (const m of messages) {
+      const t = m.parts.filter(p => p.type === "text").map(p => p.text).join("\n").trim();
+      if (!t) continue;
+      lines.push(m.role === "user" ? `## 你` : `## ${modelLabel(model)}`, "", t, "");
+    }
+    const blob = new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `relay-chat-${threadId.slice(0, 8)}.md`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    onNotice("已导出为 Markdown 文件");
+  }
+  type SlashCommand = { name: string; desc: string; run: () => void };
+  const slashCommands: SlashCommand[] = [
+    { name: "model", desc: "选择本次对话的模型或 Agent", run: () => { setDraft(""); setModelMenuOpen(true); } },
+    { name: "export", desc: "把当前对话导出为 Markdown 文件", run: () => { setDraft(""); exportMarkdown(); } },
+    { name: "new", desc: "开始一个新对话", run: () => { setDraft(""); void navigate({ to: "/" }); } },
+    { name: "clear", desc: "清空输入框", run: () => setDraft("") },
+    { name: "summarize", desc: "让 AI 总结一段内容", run: () => setDraft("请总结以下内容：") },
+    { name: "research", desc: "让 AI 联网调研一个主题", run: () => setDraft("请联网调研：") },
+    { name: "code", desc: "让 AI 生成代码", run: () => setDraft("请帮我写代码：") },
+    { name: "feedback", desc: "记录对这次对话的反馈", run: () => setDraft("反馈：") },
+  ];
+  const slashFilter = draft.startsWith("/") && !draft.includes(" ") ? draft.slice(1).toLowerCase() : null;
+  const slashList = slashFilter === null ? [] : slashCommands.filter(c => c.name.startsWith(slashFilter));
+  const slashOpen = slashList.length > 0;
+  useEffect(() => { setSlashIdx(0); }, [slashFilter]);
+  function pickSlash(cmd: SlashCommand) {
+    cmd.run();
+    setTimeout(() => textareaRef.current?.focus(), 0);
+  }
+  function onComposerKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (!slashOpen) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); setSlashIdx(i => (i + 1) % slashList.length); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setSlashIdx(i => (i - 1 + slashList.length) % slashList.length); }
+    else if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); pickSlash(slashList[Math.min(slashIdx, slashList.length - 1)]!); }
+    else if (e.key === "Escape") { e.preventDefault(); setDraft(""); }
+  }
   const parentOf = (i: number) => messages[i - 1]?.role === "user" ? messages[i - 1]!.id : metaOf(messages[i]!).parentId;
   function versionList(i: number) {
     const m = messages[i]!; const parent = parentOf(i);
