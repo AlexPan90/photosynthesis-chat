@@ -17,10 +17,14 @@ export type Database = {
       agents: {
         Row: {
           created_at: string
+          delegate_ids: string[]
           description: string
           id: string
+          mcp_tool_ids: string[]
           model: string
           name: string
+          skill_ids: string[]
+          sort_order: number
           system_prompt: string
           tool_ids: string[]
           updated_at: string
@@ -28,10 +32,14 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          delegate_ids?: string[]
           description?: string
           id?: string
+          mcp_tool_ids?: string[]
           model?: string
           name: string
+          skill_ids?: string[]
+          sort_order?: number
           system_prompt?: string
           tool_ids?: string[]
           updated_at?: string
@@ -39,13 +47,68 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          delegate_ids?: string[]
           description?: string
           id?: string
+          mcp_tool_ids?: string[]
           model?: string
           name?: string
+          skill_ids?: string[]
+          sort_order?: number
           system_prompt?: string
           tool_ids?: string[]
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      mcp_connections: {
+        Row: {
+          approval_tools: string[]
+          auth_type: string
+          created_at: string
+          disabled_tools: string[]
+          header_name: string
+          id: string
+          last_error: string | null
+          name: string
+          secret_enc: string | null
+          state: string
+          tools: Json
+          updated_at: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          approval_tools?: string[]
+          auth_type?: string
+          created_at?: string
+          disabled_tools?: string[]
+          header_name?: string
+          id?: string
+          last_error?: string | null
+          name: string
+          secret_enc?: string | null
+          state?: string
+          tools?: Json
+          updated_at?: string
+          url: string
+          user_id?: string
+        }
+        Update: {
+          approval_tools?: string[]
+          auth_type?: string
+          created_at?: string
+          disabled_tools?: string[]
+          header_name?: string
+          id?: string
+          last_error?: string | null
+          name?: string
+          secret_enc?: string | null
+          state?: string
+          tools?: Json
+          updated_at?: string
+          url?: string
           user_id?: string
         }
         Relationships: []
@@ -84,6 +147,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      skills: {
+        Row: {
+          content: string
+          created_at: string
+          description: string
+          enabled: boolean
+          files: Json
+          id: string
+          name: string
+          path: string | null
+          ref: string | null
+          source_type: string
+          source_url: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          description?: string
+          enabled?: boolean
+          files?: Json
+          id?: string
+          name: string
+          path?: string | null
+          ref?: string | null
+          source_type?: string
+          source_url?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          description?: string
+          enabled?: boolean
+          files?: Json
+          id?: string
+          name?: string
+          path?: string | null
+          ref?: string | null
+          source_type?: string
+          source_url?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       threads: {
         Row: {
