@@ -93,7 +93,7 @@ const ToolPayload = ({
 export type ToolProps = ComponentProps<typeof Collapsible>;
 
 export const Tool = ({ className, ...props }: ToolProps) => (
-  <Collapsible className={cn("group not-prose w-full", className)} {...props} />
+  <Collapsible className={cn("relay-tool group not-prose w-full", className)} {...props} />
 );
 
 export type ToolPart = ToolUIPart | DynamicToolUIPart;
@@ -168,7 +168,7 @@ export const ToolHeader = ({
   return (
     <CollapsibleTrigger
       className={cn(
-        "flex w-full items-center gap-1.5 rounded-sm py-1.5 text-left transition-colors hover:bg-foreground/[0.03]",
+        "flex w-full items-center gap-2 rounded-sm py-2 text-left transition-colors hover:bg-foreground/[0.03]",
         className
       )}
       {...props}

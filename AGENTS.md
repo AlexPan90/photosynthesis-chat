@@ -18,4 +18,4 @@
 - Skills 渐进加载：系统提示只放名称+描述，正文用 load_skill/read_skill_file 按需读取（远程文件从 GitHub raw 拉取、只读）——节省上下文且不执行脚本。
 - Scripts run in two sandboxes: run_js (browser Web Worker, user-confirmed client tool) and run_skill_script (E2B cloud sandbox via E2B_API_KEY, server toolApproval) — the Worker runtime cannot spawn processes or eval.
 - Paused sub-agent tasks persist their model history in delegate_sessions (RLS own-only); delegate_action executes the server-stored pending action and resumes the sub-agent — Worker is stateless, and the model-supplied args are never trusted.
-- Keep the chat workspace as a continuous ruled transcript lane beneath a structured header, with contextual resizable files and a compact sidebar; this makes the chosen technical hierarchy visible on actual and demo conversations.
+- Keep chat as a glass-paned command center: a 272px history rail, compact 56px command header, centered 840px transcript/composer, and contextual resizable workspace; this matches the user-selected complete desktop direction while preserving chat focus.
