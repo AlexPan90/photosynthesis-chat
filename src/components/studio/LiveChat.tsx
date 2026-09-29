@@ -139,7 +139,7 @@ export function ModelMenu({ model, onModel, agents, agentId, onAgent, onManage }
   </DropdownMenuContent></DropdownMenu>;
 }
 
-function ApprovalBar({ reason, onRespond }: { reason?: string; onRespond: (approved: boolean) => void }) {
+function ApprovalBar({ reason, onRespond }: { reason?: string | undefined; onRespond: (approved: boolean) => void }) {
   const [done, setDone] = useState(false);
   const respond = (ok: boolean) => { if (done) return; setDone(true); onRespond(ok); };
   return (
