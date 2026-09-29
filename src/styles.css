@@ -298,7 +298,7 @@ body { font-size: calc(16px * var(--relay-type-scale)); }
 /* Settings center: always renders fully white, even in dark mode */
 .relay-settings-light {
   color-scheme: light;
-  color: var(--foreground);
+  color: #1C1C22;
   --background: #FFFFFF;
   --foreground: #1C1C22;
   --card: #FFFFFF;
@@ -313,7 +313,7 @@ body { font-size: calc(16px * var(--relay-type-scale)); }
   --border: rgba(15, 15, 30, 0.09);
   --input: rgba(15, 15, 30, 0.12);
   --ring: #4F46E5;
-  --sidebar: #F7F7F9;
+  --sidebar: #FFFFFF;
   --sidebar-foreground: #1C1C22;
 }
 [role="dialog"].relay-settings-light, .relay-settings-light {
@@ -321,6 +321,12 @@ body { font-size: calc(16px * var(--relay-type-scale)); }
   border-color: rgba(15, 15, 30, 0.08) !important;
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 24px 60px -18px rgba(15, 15, 40, 0.22), 0 10px 40px -10px rgba(79, 70, 229, 0.16) !important;
   backdrop-filter: none !important;
+}
+.relay-settings-light > nav,
+.relay-settings-light > section,
+.relay-settings-light > section > header,
+.relay-settings-light > section > div {
+  background-color: var(--background);
 }
 
 /* Capsule composer with gradient edge glow */
