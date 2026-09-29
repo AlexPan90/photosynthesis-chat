@@ -224,12 +224,12 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
   const style = { "--message-size": `${fontSize}px` } as React.CSSProperties;
 
   return <>
-    <Conversation className="soft-scroll"><ConversationContent className="mx-auto w-full max-w-[800px] gap-0 px-5 pb-8 pt-10 md:px-10">
+    <Conversation className="relay-conversation soft-scroll"><ConversationContent className="relay-transcript mx-auto w-full max-w-[920px] gap-0 px-5 pb-8 pt-10 md:px-12">
       {messages.length === 0 ? <ConversationEmptyState className="min-h-[45vh]"><div className="flex flex-col items-center gap-4"><Mark/><h1 className="font-display text-xl font-semibold">从一个想法开始</h1><p className="text-sm text-muted-foreground">对话会自动保存，刷新或换设备后仍可继续。</p><div className="mt-3 flex flex-wrap justify-center gap-2">{["整理一份竞品分析的框架", "解释什么是 MCP 协议", "帮我规划本周工作"].map(v => <Button key={v} variant="outline" size="sm" className="lift text-xs shadow-none" onClick={() => submit(v)}>{v}<ArrowUpRight className="size-3"/></Button>)}</div></div></ConversationEmptyState> : messages.map((m, i) => {
         const isAgent = m.role === "assistant";
         const text = m.parts.filter(p => p.type === "text").map(p => p.text).join("\n");
         const streamingThis = busy && i === messages.length - 1 && isAgent;
-         return <div key={m.id} id={`msg-${m.id}`} className="mb-9 scroll-mt-6 rounded-lg transition-colors duration-700 data-[flash=true]:bg-primary/5">
+         return <div key={m.id} id={`msg-${m.id}`} className="relay-message mb-9 scroll-mt-6 rounded-lg transition-colors duration-700 data-[flash=true]:bg-primary/5">
            <div className={`mb-3 flex items-center gap-2.5 text-[11px] ${isAgent ? "" : "justify-end"}`}>{isAgent ? <><Mark/><span className="font-display font-semibold">{activeAgent?.name ?? modelLabel(model)}</span></> : <><span className="font-semibold text-muted-foreground">你</span><div className="flex size-6 items-center justify-center rounded bg-secondary text-[10px] font-semibold">{initials}</div></>}</div>
           {m.parts.map((p, idx) => {
             if (p.type === "reasoning" && p.text) return <Reasoning key={idx} className="mb-2 w-full" isStreaming={streamingThis && idx === m.parts.length - 1}><ReasoningTrigger className="text-[11px]"/><ReasoningContent className="text-[12px] text-muted-foreground">{p.text}</ReasoningContent></Reasoning>;
@@ -258,7 +258,7 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
       {status === "submitted" && <div className="flex items-center gap-2 pb-8 text-sm"><Mark/><Shimmer>正在思考...</Shimmer></div>}
       {error && <div className="mb-5 flex items-start gap-2 rounded-md border border-destructive/25 bg-destructive/5 p-3 text-xs text-destructive"><CircleAlert className="mt-px size-4 shrink-0"/><span className="flex-1">{error}</span></div>}
     </ConversationContent><ConversationScrollButton/></Conversation>
-     <div className="relay-composer-wrap shrink-0 px-4 pb-5 pt-3 md:px-6"><div className="relative mx-auto max-w-[800px]">
+     <div className="relay-composer-wrap shrink-0 px-4 pb-5 pt-3 md:px-8"><div className="relative mx-auto max-w-[824px]">
       {slash.popup}
       {goalEdit !== null && <form className="mb-2 flex items-center gap-2 rounded-lg border bg-card px-3 py-2" onSubmit={e => { e.preventDefault(); const v = goalEdit.trim(); void saveGoal(v || null); }}><Target className="size-3.5 shrink-0 text-primary"/><input autoFocus value={goalEdit} onChange={e => setGoalEdit(e.target.value)} onKeyDown={e => { if (e.key === "Escape") setGoalEdit(null); }} placeholder="这次对话要达成什么？例如：定出 10 月团建的最终方案和预算" className="h-7 flex-1 bg-transparent text-[12px] outline-none"/>{ctx.goal && <Button type="button" size="sm" variant="ghost" className="h-7 text-[11px]" onClick={() => void saveGoal(null)}>清除</Button>}<Button type="submit" size="sm" className="h-7 text-[11px]">保存</Button><button type="button" onClick={() => setGoalEdit(null)} className="text-muted-foreground hover:text-foreground"><X className="size-3.5"/></button></form>}
       {stats && <div className="mb-2 rounded-lg border bg-card p-3 text-[12px]"><div className="mb-2 flex items-center gap-2 font-medium"><BarChart3 className="size-3.5 text-primary"/>回复评分统计<button type="button" onClick={() => setStats(null)} className="ml-auto text-muted-foreground hover:text-foreground"><X className="size-3.5"/></button></div>
@@ -268,7 +268,7 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
         {stats.recent.length > 0 && <div className="mt-3 border-t pt-2"><div className="mb-1 text-[10px] text-muted-foreground">最近的意见</div>{stats.recent.map((r, i) => <div key={i} className="truncate py-0.5">{r.rating > 0 ? "👍" : "👎"} {r.comment}</div>)}</div>}</>}
       </div>}
        <PromptInput className="relay-composer rounded-xl border border-border bg-card transition-[border-color,box-shadow] duration-200 focus-within:border-primary/50" onSubmit={({ text }) => submit(text)}>
-        <PromptInputTextarea ref={textareaRef} value={draft} onChange={e => setDraft(e.target.value)} onKeyDown={slash.onKeyDown} placeholder="发送消息，输入 / 唤起快捷指令..." className="min-h-[58px] text-[13px] leading-6"/>
+        <PromptInputTextarea ref={textareaRef} value={draft} onChange={e => setDraft(e.target.value)} onKeyDown={slash.onKeyDown} placeholder="发送消息，输入 / 唤起快捷指令..." className="min-h-[76px] text-[13px] leading-6"/>
         <PromptInputFooter className="flex-wrap gap-1 px-2 py-1.5"><PromptInputTools>
             <DropdownMenu open={permMenu} onOpenChange={setPermMenu}><DropdownMenuTrigger asChild><button type="button" className={`flex h-7 items-center gap-1 rounded-md px-2 text-[11px] hover:bg-accent ${ctx.permission === "ask" ? "text-muted-foreground" : ctx.permission === "auto" ? "text-destructive" : "text-primary"}`}>{ctx.permission === "readonly" ? <Lock className="size-3"/> : <ShieldAlert className="size-3"/>}{permLabels[ctx.permission].name}</button></DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-64">{(Object.keys(permLabels) as Permission[]).map(k => <DropdownMenuItem key={k} onSelect={() => void saveCtx({ permission: k }, `权限已切换为「${permLabels[k].name}」`)} className="flex items-start gap-2 text-xs"><Check className={`mt-0.5 size-3.5 ${ctx.permission === k ? "" : "opacity-0"}`}/><div><div className="font-medium">{permLabels[k].name}</div><div className="text-[11px] text-muted-foreground">{permLabels[k].desc}</div></div></DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
