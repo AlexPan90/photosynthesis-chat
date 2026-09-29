@@ -378,12 +378,6 @@ export const CodeBlockContent = ({
   // Memoized raw tokens for immediate display
   const rawTokens = useMemo(() => createRawTokens(code), [code]);
 
-  // Synchronous cache lookup — avoids setState in effect for cached results
-  const syncTokens = useMemo(
-    () => highlightCode(code, language) ?? rawTokens,
-    [code, language, rawTokens]
-  );
-
   // Async highlighting result (populated after shiki loads)
   const [asyncTokens, setAsyncTokens] = useState<TokenizedCode | null>(null);
   const asyncKeyRef = useRef({ code, language });
@@ -412,7 +406,9 @@ export const CodeBlockContent = ({
     };
   }, [code, language]);
 
-  const tokenized = asyncTokens ?? syncTokens;
+  // First render is always raw tokens on BOTH server and client, so SSR and
+  // hydration match; colors stream in right after mount via the effect above.
+  const tokenized = asyncTokens ?? rawTokens;
 
   return (
     <div className="relative overflow-auto">

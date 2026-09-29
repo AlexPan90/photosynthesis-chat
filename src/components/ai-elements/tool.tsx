@@ -122,9 +122,9 @@ const statusLabels: Record<ToolPart["state"], string> = {
 };
 
 const statusColors: Record<ToolPart["state"], string> = {
-  "approval-requested": "text-primary",
-  "approval-responded": "text-primary",
-  "input-available": "text-primary",
+  "approval-requested": "relay-active-text",
+  "approval-responded": "relay-active-text",
+  "input-available": "relay-active-text",
   "input-streaming": "text-muted-foreground",
   "output-available": "text-success",
   "output-denied": "text-destructive",
