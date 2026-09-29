@@ -5,6 +5,10 @@ export type AgentConfig = {
   system_prompt: string;
   model: string;
   tool_ids: string[];
+  mcp_tool_ids?: string[];
+  skill_ids?: string[];
+  delegate_ids?: string[];
+  sort_order?: number;
   builtin?: boolean;
 };
 

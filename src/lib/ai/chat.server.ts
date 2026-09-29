@@ -4,6 +4,8 @@ import { convertToModelMessages, stepCountIs, streamText, type UIMessage } from 
 import { allAgents, delegateTool, OPENAI_OPTIONS, pickTools, systemFor } from "./agents.server";
 import { TOOL_CATALOG, type AgentConfig } from "./agents.shared";
 import { z } from "zod";
+import { loadMcpTools, type McpRow } from "./mcp.server";
+import { skillsPrompt, skillTools, type SkillRow } from "./skills.server";
 import type { Database, Json } from "@/integrations/supabase/types";
 import {
   createLovableAiGatewayRunIdFetch,
@@ -57,7 +59,7 @@ export async function handleChat(request: Request) {
   const { data: thread } = await supabase.from("threads").select("id,title").eq("id", threadId).maybeSingle();
   if (!thread) return json(404, "对话不存在");
 
-  const { data: rows } = await supabase.from("agents").select("id,name,description,system_prompt,model,tool_ids").order("created_at");
+  const { data: rows } = await supabase.from("agents").select("id,name,description,system_prompt,model,tool_ids,mcp_tool_ids,skill_ids,delegate_ids,sort_order").order("sort_order").order("created_at");
   const agents = allAgents((rows ?? []) as AgentConfig[]);
   const active = agentId ? agents.find(a => a.id === agentId) ?? null : null;
   if (agentId && !active) return json(404, "Agent 不存在或已被删除");
@@ -85,17 +87,27 @@ export async function handleChat(request: Request) {
     fetch: runIdFetch.fetch,
   });
 
-  // 编排：选中 Agent 时用它的提示词+工具，否则通用助手拥有全部工具；两者都可以委派给其他 Agent。
+  // 编排：选中 Agent 时用它的提示词+工具+MCP+Skills，否则通用助手拥有全部能力；都可以委派给其他 Agent。
   const toolIds = active ? active.tool_ids : TOOL_CATALOG.map(t => t.id);
-  const delegates = agents.filter(a => a.id !== active?.id);
+  const { data: mcpRows } = await supabase.from("mcp_connections").select("id,name,url,auth_type,header_name,secret_enc,state,disabled_tools");
+  const mcp = await loadMcpTools((mcpRows ?? []) as McpRow[], active ? (active.mcp_tool_ids ?? []) : "all");
+  const { data: skillRows } = await supabase.from("skills").select("id,name,description,source_type,source_url,ref,path,content,files").eq("enabled", true);
+  const skills = ((skillRows ?? []) as SkillRow[]).filter(s => !active || (active.skill_ids ?? []).includes(s.id));
+  const others = agents.filter(a => a.id !== active?.id);
+  const delegates = active && !active.builtin && (active.delegate_ids ?? []).length ? others.filter(a => active.delegate_ids!.includes(a.id)) : active && !active.builtin ? [] : others;
+  let closed = false;
+  const closeMcp = () => { if (!closed) { closed = true; void mcp.close(); } };
+  request.signal.addEventListener("abort", closeMcp);
   const result = streamText({
     model: provider.responses(model),
-    system: `${systemFor(active)}\n当子任务明显更适合某个专门 Agent 时，调用 delegate_to_agent 委派，然后整合结果回答。`,
+    system: `${systemFor(active)}${skillsPrompt(skills)}${delegates.length ? "\n当子任务明显更适合某个专门 Agent 时，调用 delegate_to_agent 委派，然后整合结果回答。" : ""}`,
     messages: await convertToModelMessages(messages),
-    tools: { ...pickTools(toolIds), ...(delegates.length ? { delegate_to_agent: delegateTool(provider, delegates, request.signal) } : {}) },
+    tools: { ...pickTools(toolIds), ...mcp.tools, ...skillTools(skills), ...(delegates.length ? { delegate_to_agent: delegateTool(provider, delegates, request.signal) } : {}) },
     stopWhen: stepCountIs(50),
     abortSignal: request.signal,
     providerOptions: OPENAI_OPTIONS,
+    onFinish: closeMcp,
+    onError: closeMcp,
   });
 
   const response = result.toUIMessageStreamResponse({
