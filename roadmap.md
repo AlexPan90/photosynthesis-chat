@@ -19,3 +19,5 @@
 - [x] P1a：真实工具调用（读网页、当前时间、计算）并在对话中显示执行卡片
 - [x] P1b：Agent 编排后端（选用 Agent、委派子 Agent、执行事件流）+ Agent 管理
 - [ ] P1c：人工批准、网页搜索（需搜索服务）
+
+- [x] Refresh chat surfaces, typography, status accents, code blocks and composer in the selected dark technical direction; preserve existing flows and light theme.
