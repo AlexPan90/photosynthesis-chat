@@ -89,7 +89,7 @@ export async function handleChat(request: Request) {
 
   // 编排：选中 Agent 时用它的提示词+工具+MCP+Skills，否则通用助手拥有全部能力；都可以委派给其他 Agent。
   const toolIds = active ? active.tool_ids : TOOL_CATALOG.map(t => t.id);
-  const { data: mcpRows } = await supabase.from("mcp_connections").select("id,name,url,auth_type,header_name,secret_enc,state,disabled_tools");
+  const { data: mcpRows } = await supabase.from("mcp_connections").select("id,name,url,auth_type,header_name,proxy_url,secret_enc,state,disabled_tools");
   const mcp = await loadMcpTools((mcpRows ?? []) as McpRow[], active ? (active.mcp_tool_ids ?? []) : "all");
   const { data: skillRows } = await supabase.from("skills").select("id,name,description,source_type,source_url,ref,path,content,files").eq("enabled", true);
   const skills = ((skillRows ?? []) as SkillRow[]).filter(s => !active || (active.skill_ids ?? []).includes(s.id));
