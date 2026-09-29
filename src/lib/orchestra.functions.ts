@@ -141,3 +141,17 @@ export const installSkills = createServerFn({ method: "POST" })
     }
     return { installed };
   });
+
+/** 切换对话的模型 / Agent：立即保存到 threads，刷新后不丢。 */
+export const updateThreadModel = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({
+    threadId: z.string().uuid(),
+    model: z.string().trim().min(1).max(120),
+    agentId: z.string().uuid().nullable().optional(),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("threads").update({ model: data.model, agent_id: data.agentId ?? null }).eq("id", data.threadId);
+    if (error) throw new Error("保存失败：" + error.message);
+    return { ok: true };
+  });
