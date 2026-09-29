@@ -30,29 +30,48 @@ const STORAGE = "relay-studio-threads-v1";
 type Thread = { id: string; title: string; group: string; updatedAt: number; messages: UIMessage[] };
 type ToolStep = { title: string; input: Record<string, string>; output?: string; errorText?: string; state: "output-available" | "input-available" | "output-error" | "input-streaming"; icon: "browser" | "search" | "file" };
 type DemoMessage = UIMessage & { steps?: ToolStep[] };
-const sampleSteps: ToolStep[] = [
-  { title: "浏览器 · 访问页面", icon: "browser", state: "output-available", input: { url: "https://example.com/pricing" }, output: "页面加载完成 · 已提取 3 个方案" },
-  { title: "网页搜索 · 竞品定价", icon: "search", state: "output-available", input: { query: "AI workspace pricing comparison", region: "global", limit: "8", freshness: "30d" }, output: [
-      "找到 8 条相关结果 · 已筛选 3 条高相关内容",
-      "",
-      "1. Relay Studio — 免费版 200 次/月，团队版 $18/席，含共享工作区与用量看板",
-      "2. Harness Desk — 免费版仅本地模型，团队版 $25/席，含审计日志与 SSO",
-      "3. Agent Console — 按量计费 $0.02/次，团队包 1 万次 $150，含优先队列",
-      "4. FlowPilot — 免费版 50 次/月，团队版 $12/席，功能较基础",
-      "5. TaskGrid — 免费版带水印，团队版 $20/席，含 API 访问",
-      "6. CoWork AI — 免费版 3 个项目，团队版 $15/席，含权限分组",
-      "7. Pilot Hub — 免费版社区支持，团队版 $22/席，含 SLA",
-      "8. Northwind Agents — 免费版限速，团队版 $19/席，含私有部署选项",
-      "",
-      "筛选依据：近 30 天更新、官方来源、含明确团队版定价。",
-    ].join("\n") },
-  { title: "浏览器 · 抓取 Notion 定价", icon: "browser", state: "output-error", input: { url: "https://notion.so/pricing", timeout: "10s" }, errorText: "请求超时（10s）：目标站点返回 403 Forbidden，已触发反爬限制" },
-  { title: "浏览器 · 重试（备用代理）", icon: "browser", state: "output-available", input: { url: "https://notion.so/pricing", proxy: "us-west" }, output: "重试成功 · 提取 4 个方案" },
-  { title: "代码 · 计算价格区间", icon: "file", state: "output-error", input: { cmd: "python analyze.py --currency USD" }, errorText: "Traceback (most recent call last):\n  File \"analyze.py\", line 42, in <module>\n    rate = rates[\"CNY\"]\nKeyError: 'CNY'" },
-  { title: "文件 · 生成分析摘要", icon: "file", state: "input-available", input: { path: "reports/pricing-summary.md" } },
-  { title: "邮件 · 发送报告给团队", icon: "file", state: "input-streaming" as ToolStep["state"], input: { to: "team@relay.dev" } },
-];
-const stepMs = ["1.2s", "2.3s", "10.0s", "3.1s", "0.8s", "", ""];
+type ToolScenario = { label: string; desc: string; steps: ToolStep[]; ms: string[] };
+const toolScenarios: Record<string, ToolScenario> = {
+  mixed: { label: "混合任务", desc: "成功 + 失败 + 重试 + 进行中", steps: [
+    { title: "浏览器 · 访问页面", icon: "browser", state: "output-available", input: { url: "https://example.com/pricing" }, output: "页面加载完成 · 已提取 3 个方案" },
+    { title: "网页搜索 · 竞品定价", icon: "search", state: "output-available", input: { query: "AI workspace pricing comparison", region: "global", limit: "8", freshness: "30d" }, output: [
+        "找到 8 条相关结果 · 已筛选 3 条高相关内容",
+        "",
+        "1. Relay Studio — 免费版 200 次/月，团队版 $18/席，含共享工作区与用量看板",
+        "2. Harness Desk — 免费版仅本地模型，团队版 $25/席，含审计日志与 SSO",
+        "3. Agent Console — 按量计费 $0.02/次，团队包 1 万次 $150，含优先队列",
+        "4. FlowPilot — 免费版 50 次/月，团队版 $12/席，功能较基础",
+        "5. TaskGrid — 免费版带水印，团队版 $20/席，含 API 访问",
+        "6. CoWork AI — 免费版 3 个项目，团队版 $15/席，含权限分组",
+        "7. Pilot Hub — 免费版社区支持，团队版 $22/席，含 SLA",
+        "8. Northwind Agents — 免费版限速，团队版 $19/席，含私有部署选项",
+        "",
+        "筛选依据：近 30 天更新、官方来源、含明确团队版定价。",
+      ].join("\n") },
+    { title: "浏览器 · 抓取 Notion 定价", icon: "browser", state: "output-error", input: { url: "https://notion.so/pricing", timeout: "10s" }, errorText: "请求超时（10s）：目标站点返回 403 Forbidden，已触发反爬限制" },
+    { title: "浏览器 · 重试（备用代理）", icon: "browser", state: "output-available", input: { url: "https://notion.so/pricing", proxy: "us-west" }, output: "重试成功 · 提取 4 个方案" },
+    { title: "代码 · 计算价格区间", icon: "file", state: "output-error", input: { cmd: "python analyze.py --currency USD" }, errorText: "Traceback (most recent call last):\n  File \"analyze.py\", line 42, in <module>\n    rate = rates[\"CNY\"]\nKeyError: 'CNY'" },
+    { title: "文件 · 生成分析摘要", icon: "file", state: "input-available", input: { path: "reports/pricing-summary.md" } },
+    { title: "邮件 · 发送报告给团队", icon: "file", state: "input-streaming", input: { to: "team@relay.dev" } },
+  ], ms: ["1.2s", "2.3s", "10.0s", "3.1s", "0.8s", "", ""] },
+  smooth: { label: "顺利完成", desc: "全部成功 · 耗时较短", steps: [
+    { title: "网页搜索 · 行业报告", icon: "search", state: "output-available", input: { query: "AI agent market report 2026" }, output: "找到 5 条结果 · 保留 2 条权威来源" },
+    { title: "浏览器 · 阅读报告全文", icon: "browser", state: "output-available", input: { url: "https://reports.example.com/ai-2026" }, output: "已提取 12 个章节 · 4,820 字" },
+    { title: "文件 · 保存摘要", icon: "file", state: "output-available", input: { path: "notes/market-summary.md" }, output: "已写入 1.2 KB" },
+  ], ms: ["1.8s", "4.6s", "0.3s"] },
+  long: { label: "长耗时任务", desc: "多步骤 · 大文件处理", steps: [
+    { title: "文件 · 读取数据集", icon: "file", state: "output-available", input: { path: "data/usage-2026.csv", rows: "128,400" }, output: "已加载 128,400 行 · 18 列" },
+    { title: "代码 · 清洗与聚合", icon: "file", state: "output-available", input: { cmd: "python clean.py --dedupe --aggregate daily" }, output: "去除重复 3,212 行 · 聚合为 365 条日级记录" },
+    { title: "代码 · 生成图表", icon: "file", state: "output-available", input: { cmd: "python chart.py --type line --out charts/usage.svg" }, output: "已生成 charts/usage.svg · 96 KB" },
+    { title: "浏览器 · 截图存档", icon: "browser", state: "input-available", input: { url: "file:///charts/usage.svg", viewport: "1440x900" } },
+  ], ms: ["12.4s", "48.2s", "21.7s", ""] },
+  broken: { label: "异常排查", desc: "连续失败 · 权限与网络", steps: [
+    { title: "浏览器 · 访问内网面板", icon: "browser", state: "output-error", input: { url: "https://internal.example.com/admin" }, errorText: "ECONNREFUSED · 无法连接到 internal.example.com:443，请检查网络或 VPN" },
+    { title: "文件 · 写入日志", icon: "file", state: "output-error", input: { path: "/var/log/agent/run.log" }, errorText: "EACCES: permission denied, open '/var/log/agent/run.log'" },
+    { title: "网页搜索 · 错误码检索", icon: "search", state: "output-available", input: { query: "ECONNREFUSED 443 troubleshooting" }, output: "找到 3 条排查建议" },
+  ], ms: ["5.0s", "0.1s", "1.9s"] },
+};
+const scenarioKeys = Object.keys(toolScenarios);
 const seed: Thread[] = [
   { id: "product-research", title: "竞品定价策略调研", group: "产品研究", updatedAt: 10, messages: [
     { id: "u1", role: "user", parts: [{ type: "text", text: "帮我调研几款 AI 工作台的定价策略，整理成一个简明的对比分析。重点关注免费版和团队版的差异。" }] },
@@ -99,6 +118,7 @@ export function Studio({ threadId }: { threadId?: string }) {
   const panesRef = useRef<HTMLDivElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const [scenario, setScenario] = useState<"default" | "loading" | "streaming" | "running" | "error">("default");
+  const [toolScenario, setToolScenario] = useState("mixed");
   const [status, setStatus] = useState<"ready" | "submitted" | "streaming" | "error">("ready");
   const [draft, setDraft] = useState("");
   const [notice, setNotice] = useState("");
@@ -166,7 +186,7 @@ export function Studio({ threadId }: { threadId?: string }) {
        <div className={`flex min-w-0 flex-1 flex-col ${preview && view !== "story" ? "lg:flex-none" : ""}`} style={preview && view !== "story" ? { width: `clamp(340px, ${split}%, calc(100% - 306px))` } : undefined}>
        <header className="grid h-12 shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b px-4 md:px-5"><div className="flex min-w-0 items-center gap-2.5">{!sidebar && <IconTip label="展开侧栏" onClick={() => setSidebar(true)}><LayoutPanelLeft className="size-4"/></IconTip>}<div className="lg:hidden"><IconTip label="打开侧栏" onClick={() => { setSidebar(true); setMobileSidebar(true); }}><LayoutPanelLeft className="size-4"/></IconTip></div><div className="hidden h-4 w-px bg-border lg:block"/><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="sm" className="min-w-0 max-w-full gap-1 px-1 text-[13px] font-medium"><span className="truncate">{view === "story" ? "潮汐来信" : active?.title || "新对话"}</span><ChevronDown className="size-3 shrink-0 text-muted-foreground"/></Button></DropdownMenuTrigger><DropdownMenuContent align="start">{([["chat", "对话", MessageSquare], ["trajectory", "轨迹", Activity]] as const).map(([value, label, Icon]) => <DropdownMenuItem key={value} onClick={() => setView(value)}><Icon className="mr-2 size-3.5"/>{label}{view === value && <Check className="ml-auto size-3"/>}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu></div><div className="flex shrink-0 items-center">{view !== "story" && <IconTip label={preview ? "收起文件" : "打开文件"} onClick={() => setPreview(!preview)}><PanelRight className="size-4"/></IconTip>}</div></header>
        {view === "chat" && <Conversation key={threadId || "home"} className="soft-scroll"><ConversationContent className="mx-auto w-full max-w-[760px] gap-0 px-5 pb-8 pt-9 md:px-10">{!active || active.messages.length === 0 ? <ConversationEmptyState className="min-h-[45vh]" title="从一个想法开始" description="向 Agent 提出问题，或交给它一项任务。" icon={<Mark/>}><div className="flex flex-col items-center gap-4"><Mark/><h1 className="font-display text-xl font-semibold">从一个想法开始</h1><p className="text-sm text-muted-foreground">向 Agent 提出问题，或交给它一项任务。</p><div className="mt-3 flex flex-wrap justify-center gap-2">{["整理一份竞品分析", "解释这段代码", "规划本周工作"].map(v => <Button key={v} variant="outline" size="sm" className="lift text-xs shadow-none" onClick={() => { if (!active) createThread(); setDraft(v); textareaRef.current?.focus(); }}>{v}<ArrowUpRight className="size-3"/></Button>)}</div></div></ConversationEmptyState> : <>{active.messages.map((m, i) => { const text = m.parts.filter(p => p.type === "text").map(p => p.text).join("\n"); const isAgent = m.role === "assistant"; return <div key={m.id} className="mb-7"><div className={`mb-2 flex items-center gap-2 text-[11px] ${isAgent ? "" : "justify-end"}`}>{isAgent ? <><Mark compact/><span className="font-semibold">{agent}</span></> : <><span className="font-semibold">你</span><div className="flex size-6 items-center justify-center rounded-full bg-secondary text-[10px] font-semibold">AP</div></>}</div><Message from={m.role} className="max-w-full"><MessageContent className={isAgent ? "w-full text-[length:var(--message-size)] leading-[1.85]" : "max-w-[86%] rounded-xl rounded-tr-sm bg-secondary px-4 py-3 text-[length:var(--message-size)] leading-[1.75]"} style={{ "--message-size": `${fontSize}px` } as React.CSSProperties}><MessageResponse>{text}</MessageResponse></MessageContent></Message>
-        {isAgent && mode === "agent" && i === 1 && <details className="group mt-3"><summary className="cursor-pointer select-none text-[11px] text-muted-foreground/80 transition-colors hover:text-foreground">{sampleSteps.length} 次工具调用<span className="ml-2 text-success">{sampleSteps.filter(s=>s.state==="output-available").length} 成功</span><span className="ml-1.5 text-destructive">{sampleSteps.filter(s=>s.state==="output-error").length} 失败</span><span className="ml-1.5 text-primary">{sampleSteps.filter(s=>s.state==="input-available").length} 进行中</span></summary><div className="mt-1 border-t border-border/40 pt-1">{sampleSteps.map((step, idx) => { const st = scenario === "error" && step.state === "input-available" ? "output-error" : step.state; const err = st === "output-error" ? (step.errorText ?? "文件写入失败：请检查访问权限") : undefined; return <Tool key={idx} defaultOpen={st === "output-error" && idx === 2}><ToolHeader type="dynamic-tool" toolName={step.title} title={step.title} state={st} duration={stepMs[idx]}/><ToolContent><ToolInput input={step.input}/><ToolOutput output={err ? undefined : step.output} errorText={err}/></ToolContent></Tool>; })}</div></details>}
+        {isAgent && mode === "agent" && i === 1 && (() => { const sc = toolScenarios[toolScenario]!; return <details className="group mt-3"><summary className="cursor-pointer select-none text-[11px] text-muted-foreground/80 transition-colors hover:text-foreground">{sc.steps.length} 次工具调用<span className="ml-2 text-success">{sc.steps.filter(s=>s.state==="output-available").length} 成功</span>{sc.steps.some(s=>s.state==="output-error") && <span className="ml-1.5 text-destructive">{sc.steps.filter(s=>s.state==="output-error").length} 失败</span>}{sc.steps.some(s=>s.state==="input-available"||s.state==="input-streaming") && <span className="ml-1.5 text-primary">{sc.steps.filter(s=>s.state==="input-available"||s.state==="input-streaming").length} 进行中</span>}</summary><div className="mt-1 border-t border-border/40 pt-1"><div className="flex flex-wrap items-center gap-1 py-1.5"><span className="mr-1 text-[10.5px] text-muted-foreground/70">演示场景</span>{scenarioKeys.map(key => <button key={key} type="button" title={toolScenarios[key]!.desc} onClick={() => setToolScenario(key)} className={`rounded-full px-2 py-0.5 text-[10.5px] transition-colors ${toolScenario === key ? "bg-primary/10 font-medium text-primary" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}>{toolScenarios[key]!.label}</button>)}</div>{sc.steps.map((step, idx) => { const st = scenario === "error" && step.state === "input-available" ? "output-error" : step.state; const err = st === "output-error" ? (step.errorText ?? "文件写入失败：请检查访问权限") : undefined; return <Tool key={`${toolScenario}-${idx}`} defaultOpen={st === "output-error" && idx === sc.steps.findIndex(s => s.state === "output-error")}><ToolHeader type="dynamic-tool" toolName={step.title} title={step.title} state={st} duration={sc.ms[idx]}/><ToolContent><ToolInput input={step.input}/><ToolOutput output={err ? undefined : step.output} errorText={err}/></ToolContent></Tool>; })}</div></details>; })()}
         {isAgent && i === active.messages.length - 1 && <div className="mt-6 border-t pt-4"><div className="mb-2 text-[11px] text-muted-foreground">交付文件 · {demoFiles.length}</div><div className="flex flex-wrap gap-x-4 gap-y-1.5">{demoFiles.slice(0, 3).map(f => { const Icon = kindStyles[f.kind].icon; return <Button key={f.id} variant="link" size="sm" className="h-7 gap-1.5 px-0 text-xs font-normal text-primary" onClick={() => { setOpenFileId(f.id); setPreview(true); }}><Icon className="size-3.5"/>{f.name}</Button>; })}<Button variant="link" size="sm" className="h-7 px-0 text-xs font-normal text-muted-foreground" onClick={() => { setOpenFileId(undefined); setPreview(true); }}>全部文件 →</Button></div></div>}{isAgent && <MessageActions className="mt-3 opacity-70"><MessageAction tooltip="复制内容" onClick={() => copyText(text)}><Copy className="size-3.5"/></MessageAction><MessageAction tooltip="重新生成" onClick={() => setNotice("界面演示中暂不支持重新生成")}><Clock3 className="size-3.5"/></MessageAction></MessageActions>}</div>; })}{(status === "submitted" || scenario === "loading") && <div className="flex items-center gap-2 pb-8 text-sm"><Mark compact/><Shimmer>正在思考...</Shimmer></div>}{scenario === "streaming" && <div className="pb-8"><div className="mb-3 flex items-center gap-2 text-xs font-semibold"><Mark compact/>{agent}<span className="font-normal text-success">正在生成</span></div><p className="stream-cursor text-sm">正在汇总已获取的信息，并生成最终分析</p></div>}{scenario === "error" && <div className="mb-5 flex items-center gap-2 rounded-md border border-destructive/25 bg-destructive/5 p-3 text-xs text-destructive"><CircleAlert className="size-4"/>执行遇到问题。查看失败步骤了解详情。</div>}</>}</ConversationContent><ConversationScrollButton/></Conversation>}
       {view === "story" && <StoryReader/>}
       {view === "trajectory" && <div className="soft-scroll min-h-0 flex-1 overflow-y-auto px-5 py-8 md:px-10"><div className="mx-auto max-w-[780px]"><h2 className="mb-1 text-sm font-semibold">执行轨迹</h2><p className="mb-6 text-[11px] text-muted-foreground">Agent 的完整决策链路、工具参数与耗时。</p><div className="space-y-4 border-l border-border pl-5">{trajectory.map((t, i) => <div key={i} className="rise relative"><span className={`absolute -left-[26px] top-1.5 size-2.5 rounded-full border-2 border-background ${t.state === "done" ? "bg-success" : t.state === "error" ? "bg-destructive" : "pulse-dot bg-warning"}`}/><div className="lift rounded-md border bg-card p-3"><div className="flex items-center gap-2"><span className="text-[12px] font-medium">{t.title}</span><span className="rounded-sm bg-muted px-1.5 py-px font-mono text-[9px] text-muted-foreground">{t.tool}</span><span className="ml-auto font-mono text-[10px] text-muted-foreground">{t.ms}</span></div><p className="mt-1.5 text-[11px] leading-6 text-muted-foreground">{t.detail}</p></div></div>)}</div></div></div>}
