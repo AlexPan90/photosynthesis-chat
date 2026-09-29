@@ -38,7 +38,7 @@ export function SettingsCenter(p: Props) {
   const [tab, setTab] = useState<(typeof tabs)[number]["id"]>("general");
   const current = tabs.find(t => t.id === tab)!;
   return <Dialog open={p.open} onOpenChange={p.onOpenChange}>
-    <DialogContent className="relay-settings-light flex h-[min(720px,88vh)] w-[min(1040px,94vw)] max-w-none gap-0 overflow-hidden rounded-2xl p-0 [&>button:last-child]:hidden">
+    <DialogContent className="relay-settings-surface flex h-[min(720px,88vh)] w-[min(1040px,94vw)] max-w-none gap-0 overflow-hidden rounded-2xl p-0 [&>button:last-child]:hidden">
       <nav className="flex w-56 shrink-0 flex-col border-r border-border/60 bg-sidebar/60 p-3">
         <DialogTitle className="flex items-center gap-2 px-2.5 pb-4 pt-2 text-[15px] font-semibold"><Settings2 className="size-4"/>设置中心</DialogTitle>
         {tabs.map(t => <button key={t.id} onClick={() => setTab(t.id)} className={`mb-0.5 flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-[13px] transition-colors ${tab === t.id ? "bg-accent font-medium text-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"}`}><t.icon className="size-4"/>{t.label}</button>)}
@@ -57,7 +57,7 @@ export function SettingsCenter(p: Props) {
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto px-7 py-3">
           {tab === "general" && <>
-            <Row title="界面语言"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="h-8 gap-1.5">{p.language}<ChevronDown className="size-3"/></Button></DropdownMenuTrigger><DropdownMenuContent className="relay-settings-light">{["简体中文", "English"].map(l => <DropdownMenuItem key={l} onClick={() => p.setLanguage(l)}>{l}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu></Row>
+            <Row title="界面语言"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="h-8 gap-1.5">{p.language}<ChevronDown className="size-3"/></Button></DropdownMenuTrigger><DropdownMenuContent className="relay-settings-surface">{["简体中文", "English"].map(l => <DropdownMenuItem key={l} onClick={() => p.setLanguage(l)}>{l}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu></Row>
             <Row title="账号" desc={p.userEmail ? `对话已保存到云端（${p.userEmail}）` : "登录后对话会保存到云端"}>{p.userEmail ? <Button variant="outline" size="sm" className="h-8" onClick={p.onSignOut}>退出登录</Button> : <Button asChild size="sm" className="h-8"><Link to="/auth">去登录</Link></Button>}</Row>
             <PermissionRow signedIn={!!p.userId} />
           </>}
@@ -116,6 +116,6 @@ function PermissionRow({ signedIn }: { signedIn: boolean }) {
   }
   return <Row title="默认权限" desc="修改后同步到全部对话和之后新建的对话；单个对话仍可用 /permission 单独调整">
     <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="sm" disabled={busy} className="h-8 gap-1.5">{permOpts[v].name}<ChevronDown className="size-3"/></Button></DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="relay-settings-light w-60">{(Object.keys(permOpts) as Perm[]).map(k => <DropdownMenuItem key={k} onClick={() => void pick(k)} className="flex flex-col items-start gap-0.5 text-xs"><span className="font-medium">{permOpts[k].name}{v === k ? " ✓" : ""}</span><span className="text-[11px] text-muted-foreground">{permOpts[k].desc}</span></DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
+      <DropdownMenuContent align="end" className="relay-settings-surface w-60">{(Object.keys(permOpts) as Perm[]).map(k => <DropdownMenuItem key={k} onClick={() => void pick(k)} className="flex flex-col items-start gap-0.5 text-xs"><span className="font-medium">{permOpts[k].name}{v === k ? " ✓" : ""}</span><span className="text-[11px] text-muted-foreground">{permOpts[k].desc}</span></DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
   </Row>;
 }
