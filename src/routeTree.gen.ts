@@ -11,8 +11,13 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as StudioRouteImport } from './routes/studio'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ChatThreadIdRouteImport } from './routes/chat.$threadId'
+import { Route as StudioIndexRouteImport } from './routes/studio.index'
+import { Route as StudioAgentsRouteImport } from './routes/studio.agents'
+import { Route as StudioMcpRouteImport } from './routes/studio.mcp'
+import { Route as StudioSkillsRouteImport } from './routes/studio.skills'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,6 +27,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudioRoute = StudioRouteImport.update({
+  id: '/studio',
+  path: '/studio',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiChatRoute = ApiChatRouteImport.update({
@@ -34,37 +44,99 @@ const ChatThreadIdRoute = ChatThreadIdRouteImport.update({
   path: '/chat/$threadId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StudioIndexRoute = StudioIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => StudioRoute,
+} as any)
+const StudioAgentsRoute = StudioAgentsRouteImport.update({
+  id: '/agents',
+  path: '/agents',
+  getParentRoute: () => StudioRoute,
+} as any)
+const StudioMcpRoute = StudioMcpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
+  getParentRoute: () => StudioRoute,
+} as any)
+const StudioSkillsRoute = StudioSkillsRouteImport.update({
+  id: '/skills',
+  path: '/skills',
+  getParentRoute: () => StudioRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/studio': typeof StudioRouteWithChildren
   '/api/chat': typeof ApiChatRoute
   '/chat/$threadId': typeof ChatThreadIdRoute
+  '/studio/agents': typeof StudioAgentsRoute
+  '/studio/mcp': typeof StudioMcpRoute
+  '/studio/skills': typeof StudioSkillsRoute
+  '/studio/': typeof StudioIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/api/chat': typeof ApiChatRoute
   '/chat/$threadId': typeof ChatThreadIdRoute
+  '/studio/agents': typeof StudioAgentsRoute
+  '/studio/mcp': typeof StudioMcpRoute
+  '/studio/skills': typeof StudioSkillsRoute
+  '/studio': typeof StudioIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/studio': typeof StudioRouteWithChildren
   '/api/chat': typeof ApiChatRoute
   '/chat/$threadId': typeof ChatThreadIdRoute
+  '/studio/agents': typeof StudioAgentsRoute
+  '/studio/mcp': typeof StudioMcpRoute
+  '/studio/skills': typeof StudioSkillsRoute
+  '/studio/': typeof StudioIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/api/chat' | '/chat/$threadId'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/studio'
+    | '/api/chat'
+    | '/chat/$threadId'
+    | '/studio/agents'
+    | '/studio/mcp'
+    | '/studio/skills'
+    | '/studio/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/api/chat' | '/chat/$threadId'
-  id: '__root__' | '/' | '/auth' | '/api/chat' | '/chat/$threadId'
+  to:
+    | '/'
+    | '/auth'
+    | '/api/chat'
+    | '/chat/$threadId'
+    | '/studio/agents'
+    | '/studio/mcp'
+    | '/studio/skills'
+    | '/studio'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/studio'
+    | '/api/chat'
+    | '/chat/$threadId'
+    | '/studio/agents'
+    | '/studio/mcp'
+    | '/studio/skills'
+    | '/studio/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
+  StudioRoute: typeof StudioRouteWithChildren
   ApiChatRoute: typeof ApiChatRoute
   ChatThreadIdRoute: typeof ChatThreadIdRoute
 }
@@ -85,6 +157,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/studio': {
+      id: '/studio'
+      path: '/studio'
+      fullPath: '/studio'
+      preLoaderRoute: typeof StudioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/chat': {
       id: '/api/chat'
       path: '/api/chat'
@@ -99,12 +178,58 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatThreadIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/studio/': {
+      id: '/studio/'
+      path: '/'
+      fullPath: '/studio/'
+      preLoaderRoute: typeof StudioIndexRouteImport
+      parentRoute: typeof StudioRoute
+    }
+    '/studio/agents': {
+      id: '/studio/agents'
+      path: '/agents'
+      fullPath: '/studio/agents'
+      preLoaderRoute: typeof StudioAgentsRouteImport
+      parentRoute: typeof StudioRoute
+    }
+    '/studio/mcp': {
+      id: '/studio/mcp'
+      path: '/mcp'
+      fullPath: '/studio/mcp'
+      preLoaderRoute: typeof StudioMcpRouteImport
+      parentRoute: typeof StudioRoute
+    }
+    '/studio/skills': {
+      id: '/studio/skills'
+      path: '/skills'
+      fullPath: '/studio/skills'
+      preLoaderRoute: typeof StudioSkillsRouteImport
+      parentRoute: typeof StudioRoute
+    }
   }
 }
+
+interface StudioRouteChildren {
+  StudioAgentsRoute: typeof StudioAgentsRoute
+  StudioMcpRoute: typeof StudioMcpRoute
+  StudioSkillsRoute: typeof StudioSkillsRoute
+  StudioIndexRoute: typeof StudioIndexRoute
+}
+
+const StudioRouteChildren: StudioRouteChildren = {
+  StudioAgentsRoute: StudioAgentsRoute,
+  StudioMcpRoute: StudioMcpRoute,
+  StudioSkillsRoute: StudioSkillsRoute,
+  StudioIndexRoute: StudioIndexRoute,
+}
+
+const StudioRouteWithChildren =
+  StudioRoute._addFileChildren(StudioRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
+  StudioRoute: StudioRouteWithChildren,
   ApiChatRoute: ApiChatRoute,
   ChatThreadIdRoute: ChatThreadIdRoute,
 }

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
+import { useNavigate } from "@tanstack/react-router";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { ArrowUpRight, Bot, Check, ChevronDown, Settings2, CircleAlert, Copy, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -41,10 +42,11 @@ type Props = {
   onAgent?: (id: string | null) => void;
 };
 
-const toolTitles: Record<string, string> = { read_webpage: "读取网页", get_current_time: "获取当前时间", calculate: "计算", delegate_to_agent: "委派 Agent" };
+const toolTitles: Record<string, string> = { read_webpage: "读取网页", get_current_time: "获取当前时间", calculate: "计算", delegate_to_agent: "委派 Agent", load_skill: "加载 Skill", read_skill_file: "读取 Skill 文件" };
 
 export function LiveChat({ threadId, initialMessages, model, onModel, fontSize, initials, onActivity, onNotice, initialAgentId = null, onAgent }: Props) {
   const { agents, custom, reload } = useAgents();
+  const navigate = useNavigate();
   const [agentId, setAgentIdState] = useState<string | null>(initialAgentId);
   const [managing, setManaging] = useState(false);
   const agentRef = useRef(agentId);
@@ -100,7 +102,7 @@ export function LiveChat({ threadId, initialMessages, model, onModel, fontSize, 
             if (p.type.startsWith("tool-") || p.type === "dynamic-tool") {
               const t = p as ToolPart;
               if (t.type === "tool-delegate_to_agent") return <DelegateCard key={idx} task={(t.input as { task?: string } | undefined)?.task} output={t.state === "output-available" ? t.output as never : undefined} preliminary={t.state === "output-available" && !!(t as { preliminary?: boolean }).preliminary} errorText={t.state === "output-error" ? t.errorText : undefined}/>;
-              return <Tool key={idx} className="mb-1" defaultOpen={t.state === "output-error"}>{t.type === "dynamic-tool" ? <ToolHeader type={t.type} state={t.state} toolName={t.toolName} title={toolTitles[t.toolName] ?? t.toolName}/> : <ToolHeader type={t.type} state={t.state} title={toolTitles[t.type.slice(5)] ?? t.type.slice(5)}/>}<ToolContent><ToolInput input={t.input}/><ToolOutput output={t.state === "output-available" ? t.output : undefined} errorText={t.state === "output-error" ? t.errorText : undefined}/></ToolContent></Tool>;
+              return <Tool key={idx} className="mb-1" defaultOpen={t.state === "output-error"}>{t.type === "dynamic-tool" ? <ToolHeader type={t.type} state={t.state} toolName={t.toolName} title={toolTitles[t.toolName] ?? t.toolName.replace(/^m\d+_/, "MCP · ")}/> : <ToolHeader type={t.type} state={t.state} title={toolTitles[t.type.slice(5)] ?? t.type.slice(5).replace(/^m\d+_/, "MCP · ")}/>}<ToolContent><ToolInput input={t.input}/><ToolOutput output={t.state === "output-available" ? t.output : undefined} errorText={t.state === "output-error" ? t.errorText : undefined}/></ToolContent></Tool>;
             }
             return null;
           })}
@@ -116,7 +118,7 @@ export function LiveChat({ threadId, initialMessages, model, onModel, fontSize, 
         <PromptInputTextarea ref={textareaRef} value={draft} onChange={e => setDraft(e.target.value)} placeholder="发送消息..." className="min-h-[58px] text-[13px] leading-6"/>
         <PromptInputFooter className="flex-wrap gap-1 px-2 py-1.5"><PromptInputTools/>
           <div className="ml-auto flex items-center gap-1">
-            <ModelMenu model={model} onModel={m => { setAgentId(null); onModel(m); }} agents={agents} agentId={agentId} onAgent={setAgentId} onManage={() => setManaging(true)}/>
+            <ModelMenu model={model} onModel={m => { setAgentId(null); onModel(m); }} agents={agents} agentId={agentId} onAgent={setAgentId} onManage={() => navigate({ to: "/studio/agents" })}/>
             <PromptInputSubmit status={status} onStop={stop} disabled={!draft.trim() && !busy} className="size-8 rounded-full"/>
           </div>
         </PromptInputFooter>

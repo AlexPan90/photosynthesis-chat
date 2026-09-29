@@ -15,6 +15,7 @@
     "rolldown": "1.2.1"
   },
   "dependencies": {
+    "@ai-sdk/mcp": "^2.0.60",
     "@ai-sdk/openai": "^4.0.78",
     "@ai-sdk/react": "^4.0.121",
     "@hookform/resolvers": "^5.2.2",

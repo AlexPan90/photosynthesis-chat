@@ -14,7 +14,7 @@ export const toolLabel = (id: string) => TOOL_CATALOG.find(t => t.id === id)?.la
 export function useAgents() {
   const [custom, setCustom] = useState<AgentConfig[]>([]);
   const reload = async () => {
-    const { data } = await supabase.from("agents").select("id,name,description,system_prompt,model,tool_ids").order("created_at");
+    const { data } = await supabase.from("agents").select("id,name,description,system_prompt,model,tool_ids,mcp_tool_ids,skill_ids,delegate_ids,sort_order").order("sort_order").order("created_at");
     setCustom((data ?? []) as AgentConfig[]);
   };
   useEffect(() => { reload(); }, []);
