@@ -66,7 +66,11 @@ export async function handleChat(request: Request) {
   if (active && (CHAT_MODELS as readonly string[]).includes(active.model)) model = active.model;
 
   const last = messages[messages.length - 1];
+  // 消息分支：每个回复挂在它回答的提问下（parent_id），同一提问下多个回复即多个版本。
+  let parentId: string | null = null;
+  let versionMeta: Record<string, unknown> | null = null;
   if (last?.role === "user") {
+    parentId = last.id;
     const { error } = await supabase.from("messages").upsert({
       id: last.id, thread_id: threadId, user_id: userId, role: "user", parts: last.parts as unknown as Json,
     });
@@ -75,6 +79,16 @@ export async function handleChat(request: Request) {
     const patch: { updated_at: string; model: string; agent_id: string | null; title?: string } = { updated_at: new Date().toISOString(), model, agent_id: agentId ?? null };
     if (thread.title === "新对话" && firstText && "text" in firstText) patch.title = firstText.text.trim().slice(0, 24) || "新对话";
     await supabase.from("threads").update(patch).eq("id", threadId);
+    const { count } = await supabase.from("messages").select("id", { count: "exact", head: true }).eq("thread_id", threadId).eq("role", "assistant").eq("parent_id", last.id);
+    const regeneratedFrom = parsed.data.regeneratedFrom ?? null;
+    versionMeta = {
+      parentId, version: (count ?? 0) + (regeneratedFrom && !count ? 2 : 1),
+      regeneratedFrom, model, agentId: agentId ?? null, createdAt: new Date().toISOString(),
+      event: regeneratedFrom ? "version.created" : "reply.created",
+    };
+  } else if (last?.role === "assistant") {
+    const idx = messages.length - 2;
+    parentId = idx >= 0 && messages[idx]?.role === "user" ? messages[idx]!.id : null;
   }
 
   const apiKey = process.env["LOVABLE_API_KEY"];
