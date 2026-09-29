@@ -2,7 +2,7 @@ import { createMCPClient, type MCPClient } from "@ai-sdk/mcp";
 import type { ToolSet } from "ai";
 import { decryptSecret } from "./crypto.server";
 
-export type McpRow = { id: string; name: string; url: string; auth_type: string; header_name: string; secret_enc: string | null; state: string; disabled_tools: string[] };
+export type McpRow = { id: string; name: string; url: string; auth_type: string; header_name: string; proxy_url?: string | null; secret_enc: string | null; state: string; disabled_tools: string[] };
 export type McpToolInfo = { name: string; description: string };
 
 export function validateMcpUrl(url: string) {
@@ -17,6 +17,12 @@ export function buildHeaders(auth_type: string, header_name: string, secret: str
   const name = header_name.trim() || "Authorization";
   const value = name.toLowerCase() === "authorization" && !/^\w+\s/.test(secret) ? `Bearer ${secret}` : secret;
   return { [name]: value };
+}
+
+/** 代理（中转）：请求发往 <代理地址>/<原始地址>，适用于 cors-anywhere 式转发或自建网关。 */
+export function withProxy(url: string, proxy?: string | null) {
+  if (!proxy?.trim()) return url;
+  return proxy.trim().replace(/\/?$/, "/") + url;
 }
 
 async function connect(url: string, headers: Record<string, string>) {
@@ -49,7 +55,7 @@ export async function loadMcpTools(rows: McpRow[], wanted: string[] | "all") {
     i++;
     try {
       const secret = row.secret_enc ? await decryptSecret(row.secret_enc) : null;
-      const client = await connect(row.url, buildHeaders(row.auth_type, row.header_name, secret));
+      const client = await connect(withProxy(row.url, row.proxy_url), buildHeaders(row.auth_type, row.header_name, secret));
       clients.push(client);
       const set = await client.tools() as ToolSet;
       for (const [name, t] of Object.entries(set)) {

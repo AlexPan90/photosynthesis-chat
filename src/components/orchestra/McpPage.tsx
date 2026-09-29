@@ -17,8 +17,8 @@ const PRESETS = [
   { name: "Notion", url: "https://mcp.notion.com/mcp", auth: "oauth", note: "需要 OAuth 授权（即将支持）" },
 ] as const;
 
-type Form = { id?: string; name: string; url: string; auth_type: "none" | "api_key"; header_name: string; secret: string };
-const blank: Form = { name: "", url: "", auth_type: "none", header_name: "Authorization", secret: "" };
+type Form = { id?: string; name: string; url: string; auth_type: "none" | "api_key"; header_name: string; secret: string; proxy_url: string };
+const blank: Form = { name: "", url: "", auth_type: "none", header_name: "Authorization", secret: "", proxy_url: "" };
 
 function StateBadge({ c }: { c: McpConn }) {
   if (c.state === "ready") return <span className="flex items-center gap-1 text-[11px] text-success"><Check className="size-3"/>已就绪</span>;
@@ -36,12 +36,12 @@ export function McpPage() {
   const [err, setErr] = useState("");
   const current = items.find(i => i.id === sel);
 
-  function open(c?: McpConn) { setErr(""); setSel(c?.id ?? "new"); setForm(c ? { id: c.id, name: c.name, url: c.url, auth_type: c.auth_type as Form["auth_type"], header_name: c.header_name, secret: "" } : blank); }
+  function open(c?: McpConn) { setErr(""); setSel(c?.id ?? "new"); setForm(c ? { id: c.id, name: c.name, url: c.url, auth_type: c.auth_type as Form["auth_type"], header_name: c.header_name, secret: "", proxy_url: c.proxy_url ?? "" } : blank); }
   async function submit() {
     if (!form.name.trim() || !form.url.trim()) return setErr("请填写名称和地址");
     setBusy(true); setErr("");
     try {
-      const r = await save({ data: { ...form, secret: form.secret || undefined } });
+      const r = await save({ data: { ...form, secret: form.secret || undefined, proxy_url: form.proxy_url.trim() } });
       await reload(); setSel(r.id); setForm(f => ({ ...f, id: r.id, secret: "" }));
       if (r.state === "failed") setErr(`已保存，但连接失败：${r.last_error ?? "未知错误"}`);
     } catch (e) { setErr((e as Error).message || "保存失败"); }
@@ -85,6 +85,7 @@ export function McpPage() {
             <label className="space-y-1 text-xs"><span className="text-muted-foreground">请求头名称</span><Input value={form.header_name} onChange={e => setForm({ ...form, header_name: e.target.value })} className="h-8 font-mono text-xs"/></label>
             <label className="space-y-1 text-xs"><span className="text-muted-foreground">密钥 {current?.auth_type === "api_key" && "（已保存，留空则不修改）"}</span><Input type="password" autoComplete="off" value={form.secret} onChange={e => setForm({ ...form, secret: e.target.value })} placeholder={current?.auth_type === "api_key" ? "••••••••" : "粘贴密钥"} className="h-8 font-mono text-xs"/></label>
           </div>}
+          <label className="block space-y-1 text-xs"><span className="text-muted-foreground">代理地址（可选）</span><Input value={form.proxy_url} onChange={e => setForm({ ...form, proxy_url: e.target.value })} placeholder="https://proxy.example.com" className="h-8 font-mono text-xs"/><span className="block text-[11px] text-muted-foreground">填写后请求会发往「代理地址/服务地址」，用于经网关或中转访问受限的 MCP 服务。</span></label>
           <p className="text-[11px] text-muted-foreground">密钥加密保存在服务端，保存后不会再显示。</p>
           {err && <p className="text-xs text-destructive">{err}</p>}
           <Button size="sm" className="text-xs" disabled={busy} onClick={submit}>{busy && <LoaderCircle className="size-3.5 animate-spin"/>}{sel === "new" ? "连接并保存" : "保存修改"}</Button>

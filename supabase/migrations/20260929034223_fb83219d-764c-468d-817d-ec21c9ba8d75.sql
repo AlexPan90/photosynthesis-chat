@@ -1,0 +1,1 @@
+GRANT SELECT (proxy_url), INSERT (proxy_url), UPDATE (proxy_url) ON public.mcp_connections TO authenticated;
