@@ -110,7 +110,7 @@ type CodeBlockProps = HTMLAttributes<HTMLDivElement> & {
   code: string;
   language: BundledLanguage;
   showLineNumbers?: boolean;
-  /** Shiki theme; defaults to Monokai. Skills source uses "dark-plus". */
+  /** Shiki theme; defaults to VS Code Dark Plus everywhere. */
   theme?: CodeTheme;
 };
 export type CodeTheme = "monokai" | "dark-plus";
@@ -142,7 +142,7 @@ const tokensCache = new Map<string, TokenizedCode>();
 // Subscribers for async token updates
 const subscribers = new Map<string, Set<(result: TokenizedCode) => void>>();
 
-const getTokensCacheKey = (code: string, language: BundledLanguage, theme: CodeTheme = "monokai") => {
+const getTokensCacheKey = (code: string, language: BundledLanguage, theme: CodeTheme = "dark-plus") => {
   const start = code.slice(0, 100);
   const end = code.length > 100 ? code.slice(-100) : "";
   return `${theme}:${language}:${code.length}:${start}:${end}`;
@@ -187,7 +187,7 @@ export const highlightCode = (
   language: BundledLanguage,
   // oxlint-disable-next-line eslint-plugin-promise(prefer-await-to-callbacks)
   callback?: (result: TokenizedCode) => void,
-  theme: CodeTheme = "monokai"
+  theme: CodeTheme = "dark-plus"
 ): TokenizedCode | null => {
   const tokensCacheKey = getTokensCacheKey(code, language, theme);
 
@@ -374,7 +374,7 @@ export const CodeBlockContent = ({
   code,
   language,
   showLineNumbers = false,
-  theme = "monokai",
+  theme = "dark-plus",
 }: {
   code: string;
   language: BundledLanguage;

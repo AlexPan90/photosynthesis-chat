@@ -43,11 +43,11 @@
   --radius-lg: 12px;
 }
 :root {
-  --code-bg: #272822;
-  --code-header: #1E1F1C;
-  --code-fg: #F8F8F2;
-  --code-muted: #75715E;
-  --code-border: #3E3D32;
+  --code-bg: #1E1E1E;
+  --code-header: #252526;
+  --code-fg: #D4D4D4;
+  --code-muted: #858585;
+  --code-border: #3C3C3C;
   --background: #FFFFFF;
   --foreground: #111114;
   --card: #FAFAFB;
