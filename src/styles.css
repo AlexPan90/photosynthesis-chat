@@ -295,40 +295,6 @@ body { font-size: calc(16px * var(--relay-type-scale)); }
 [data-slot="dropdown-menu-content"], [data-slot="popover-content"] { border-radius: 12px; }
 [data-slot="dialog-overlay"] { backdrop-filter: blur(4px); }
 
-/* Settings center: always renders fully white, even in dark mode */
-.relay-settings-light {
-  color-scheme: light;
-  color: #1C1C22;
-  --background: #FFFFFF;
-  --foreground: #1C1C22;
-  --card: #FFFFFF;
-  --popover: #FFFFFF;
-  --popover-foreground: #1C1C22;
-  --primary: #4F46E5;
-  --primary-foreground: #FFFFFF;
-  --muted: #F4F4F6;
-  --muted-foreground: #6B6B75;
-  --accent: #F0F0F4;
-  --accent-foreground: #1C1C22;
-  --border: rgba(15, 15, 30, 0.09);
-  --input: rgba(15, 15, 30, 0.12);
-  --ring: #4F46E5;
-  --sidebar: #FFFFFF;
-  --sidebar-foreground: #1C1C22;
-}
-[role="dialog"].relay-settings-light, .relay-settings-light {
-  background: #FFFFFF !important;
-  border-color: rgba(15, 15, 30, 0.08) !important;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 24px 60px -18px rgba(15, 15, 40, 0.22), 0 10px 40px -10px rgba(79, 70, 229, 0.16) !important;
-  backdrop-filter: none !important;
-}
-.relay-settings-light > nav,
-.relay-settings-light > section,
-.relay-settings-light > section > header,
-.relay-settings-light > section > div {
-  background-color: var(--background);
-}
-
 /* Capsule composer with gradient edge glow */
 .relay-composer { border-radius: 20px !important; position: relative; overflow: visible !important; background: color-mix(in oklab, var(--color-card) 86%, transparent) !important; backdrop-filter: blur(16px) saturate(140%); }
 .relay-composer::before { content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; pointer-events: none; opacity: 0; transition: opacity .25s ease;
@@ -433,4 +399,24 @@ body { font-size: calc(16px * var(--relay-type-scale)); }
 .relay-page { background: #FFFFFF; box-shadow: 0 1px 2px rgba(15,15,40,.05), 0 10px 30px -18px rgba(15,15,40,.25); }
 .dark .relay-page { background: #111217; border-color: rgba(255,255,255,.07); box-shadow: 0 18px 40px -24px rgba(0,0,0,.8); }
 .relay-extract { background: color-mix(in oklab, var(--color-muted) 45%, transparent); }
+
+/* Settings center follows the selected theme; all panes remain opaque. */
+.relay-settings-surface { --sidebar: #FFFFFF; color: var(--foreground); color-scheme: light; }
+.dark .relay-settings-surface {
+  --background: #14151A;
+  --sidebar: #14151A;
+  --popover: #1A1B21;
+  color-scheme: dark;
+}
+[role="dialog"].relay-settings-surface,
+[data-slot="dropdown-menu-content"].relay-settings-surface {
+  background: var(--background) !important;
+  border-color: var(--border) !important;
+  backdrop-filter: none !important;
+}
+[data-slot="dropdown-menu-content"].relay-settings-surface { background: var(--popover) !important; }
+.relay-settings-surface > nav,
+.relay-settings-surface > section,
+.relay-settings-surface > section > header,
+.relay-settings-surface > section > div { background-color: var(--background); }
 .dark .relay-extract { background: rgba(0,0,0,.25); }
