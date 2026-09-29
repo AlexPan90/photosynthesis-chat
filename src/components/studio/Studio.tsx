@@ -91,8 +91,13 @@ function Mark({ compact = false }: { compact?: boolean }) { return <div classNam
 function AttachedFiles() { const { files, remove, openFileDialog } = usePromptInputAttachments(); return <>{files.length > 0 && <div className="flex flex-wrap gap-2 px-3 pt-2">{files.map(f => <div key={f.id} className="flex items-center gap-1.5 rounded-md border bg-muted px-2 py-1 text-xs"><Paperclip className="size-3"/><span className="max-w-32 truncate">{f.filename || "附件"}</span><Button type="button" variant="ghost" size="icon-sm" className="size-5" aria-label="移除附件" onClick={() => remove(f.id)}><X className="size-3"/></Button></div>)}</div>}<PromptInputButton tooltip="添加附件" onClick={openFileDialog}><Paperclip className="size-4" /></PromptInputButton></>; }
 export function Studio({ threadId }: { threadId?: string }) {
   const navigate = useNavigate();
-  const [threads, setThreads] = useState<Thread[]>(seed);
+  const { user, loading: authLoading } = useAuth();
+  const [liveThreads, setLiveThreads] = useState<Thread[]>([]);
+  const [demoThreads, setDemoThreads] = useState<Thread[]>(seed);
+  const threads = useMemo(() => [...liveThreads, ...demoThreads], [liveThreads, demoThreads]);
+  const [liveMessages, setLiveMessages] = useState<{ id: string; messages: UIMessage[] } | null>(null);
   const [ready, setReady] = useState(false);
+  const initials = (user?.email ?? "访客").slice(0, 2).toUpperCase();
   const [sidebar, setSidebar] = useState(true);
   const [sidebarWidth, setSidebarWidth] = useState(228);
   const [mobileSidebar, setMobileSidebar] = useState(false);
@@ -103,7 +108,7 @@ export function Studio({ threadId }: { threadId?: string }) {
   const [settingsTab, setSettingsTab] = useState("外观");
   const [fontSize, setFontSize] = useState(14);
   const [language, setLanguage] = useState("简体中文");
-  const [model, setModel] = useState(models[0]);
+  const [model, setModel] = useState<LiveModel>("openai/gpt-6-astra");
   const [agent] = useState(agents[0]);
   const mode: "agent" | "chat" = "agent";
   const [preview, setPreview] = useState(false);
@@ -119,19 +124,50 @@ export function Studio({ threadId }: { threadId?: string }) {
   const [openFileId, setOpenFileId] = useState<string | undefined>(undefined);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => { setThreads(loadThreads()); setReady(true); setDark(localStorage.getItem("relay-dark") !== "false"); setFontSize(Number(localStorage.getItem("relay-font")) || 14); }, []);
+  useEffect(() => { setReady(true); setDark(localStorage.getItem("relay-dark") !== "false"); setFontSize(Number(localStorage.getItem("relay-font")) || 14); }, []);
   useEffect(() => { document.documentElement.classList.toggle("dark", dark); if (ready) localStorage.setItem("relay-dark", String(dark)); }, [dark, ready]);
   useEffect(() => { if (ready) localStorage.setItem("relay-font", String(fontSize)); }, [fontSize, ready]);
   useEffect(() => { textareaRef.current?.focus(); }, [threadId, status]);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  async function refreshThreads() {
+    if (!user) { setLiveThreads([]); return; }
+    const { data, error } = await supabase.from("threads").select("id,title,group_name,updated_at,model").order("updated_at", { ascending: false }).limit(200);
+    if (error) { setNotice("对话列表加载失败"); return; }
+    setLiveThreads((data ?? []).map(t => ({ id: t.id, title: t.title, group: t.group_name, updatedAt: new Date(t.updated_at).getTime(), messages: [], live: true, model: t.model })));
+  }
+  useEffect(() => { refreshThreads(); }, [user?.id]);
   const active = threads.find(t => t.id === threadId);
-  const shown = useMemo(() => [...threads].filter(t => (group === "全部会话" || t.group === group) && t.title.toLowerCase().includes(search.toLowerCase())).sort((a,b) => b.updatedAt - a.updatedAt), [threads, group, search]);
-  function persist(next: Thread[]) { localStorage.setItem(STORAGE, JSON.stringify(next)); return next; }
-  function updateThread(id: string, updater: (thread: Thread) => Thread) { setThreads(prev => persist(prev.map(t => t.id === id ? updater(t) : t))); }
-  function createThread() { const id = makeId(); setThreads(prev => persist([{ id, title: "新对话", group: "未分组", updatedAt: Date.now(), messages: [] }, ...prev])); setScenario("default"); setMobileSidebar(false); navigate({ to: "/chat/$threadId", params: { threadId: id } }); }
+  const isLive = !!active?.live;
+  useEffect(() => {
+    if (!isLive || !threadId) return;
+    if (liveMessages?.id === threadId) return;
+    setLiveMessages(null);
+    if (active?.model) setModel(active.model as LiveModel);
+    supabase.from("messages").select("id,role,parts").eq("thread_id", threadId).order("created_at").then(({ data, error }) => {
+      if (error) { setNotice("消息加载失败"); return; }
+      setLiveMessages({ id: threadId, messages: (data ?? []).map(m => ({ id: m.id, role: m.role as UIMessage["role"], parts: m.parts as UIMessage["parts"] })) });
+    });
+  }, [isLive, threadId]);
+  const shown = useMemo(() => [...threads].filter(t => (group === "全部会话" || t.group === group) && t.title.toLowerCase().includes(search.toLowerCase())).sort((a,b) => (Number(!!b.live) - Number(!!a.live)) || (b.updatedAt - a.updatedAt)), [threads, group, search]);
+  function updateThread(id: string, updater: (thread: Thread) => Thread) {
+    const target = threads.find(t => t.id === id);
+    if (target?.live) { const next = updater(target); setLiveThreads(prev => prev.map(t => t.id === id ? next : t)); supabase.from("threads").update({ group_name: next.group, title: next.title }).eq("id", id).then(({ error }) => error && setNotice("保存失败")); return; }
+    setDemoThreads(prev => prev.map(t => t.id === id ? updater(t) : t));
+  }
+  async function createThread() {
+    setMobileSidebar(false);
+    if (!user) { navigate({ to: "/auth" }); return; }
+    const { data, error } = await supabase.from("threads").insert({ user_id: user.id, model }).select("id,title,group_name,updated_at,model").single();
+    if (error || !data) { setNotice("新建对话失败"); return; }
+    setLiveThreads(prev => [{ id: data.id, title: data.title, group: data.group_name, updatedAt: Date.now(), messages: [], live: true, model: data.model }, ...prev]);
+    setLiveMessages({ id: data.id, messages: [] });
+    setScenario("default");
+    navigate({ to: "/chat/$threadId", params: { threadId: data.id } });
+  }
   useEffect(() => { const onKey = (event: KeyboardEvent) => { if (!(event.metaKey || event.ctrlKey)) return; if (event.key.toLowerCase() === "k") { event.preventDefault(); createThread(); } if (event.key.toLowerCase() === "f") { event.preventDefault(); setSidebar(true); setMobileSidebar(true); requestAnimationFrame(() => document.querySelector<HTMLInputElement>('input[aria-label="搜索对话"]')?.focus()); } }; window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey); });
   function stop() { if (timer.current) clearTimeout(timer.current); setStatus("ready"); setScenario("default"); }
-  function send(text: string, files: { filename?: string }[]) { if (!text.trim() && files.length === 0) return; const id = active?.id; if (!id) { setNotice("请先新建会话"); return; } const content = [text.trim(), ...files.map(f => `📎 ${f.filename || "附件"}`)].filter(Boolean).join("\n"); const message: UIMessage = { id: makeId(), role: "user", parts: [{ type: "text", text: content }] }; updateThread(id, t => ({ ...t, title: t.messages.length === 0 ? (text.trim().slice(0, 22) || "附件对话") : t.title, updatedAt: Date.now(), messages: [...t.messages, message] })); setDraft(""); setStatus("submitted"); timer.current = setTimeout(() => { setStatus("streaming"); updateThread(id, t => ({ ...t, messages: [...t.messages, { id: makeId(), role: "assistant", parts: [{ type: "text", text: "这是一套交互界面稿。消息发送、状态切换和本地会话均可体验；真实 AI 回复需要配置服务后接入。" }] }] })); timer.current = setTimeout(() => setStatus("ready"), 1000); }, 700); }
+  function send(text: string, files: { filename?: string }[]) { if (!text.trim() && files.length === 0) return; setNotice(user ? "示例对话为只读，请新建对话开始真实交流" : "示例对话为只读，登录后即可开始真实对话"); setTimeout(() => setNotice(""), 2600); }
+  async function signOut() { await supabase.auth.signOut(); setSettingsOpen(false); setLiveThreads([]); navigate({ to: "/", replace: true }); }
   function copyText(text: string) { navigator.clipboard.writeText(text); setNotice("已复制到剪贴板"); setTimeout(() => setNotice(""), 2200); }
   function removeThread(id: string) { setThreads(prev => persist(prev.filter(t => t.id !== id))); if (id === threadId) navigate({ to: "/" }); }
   function resizePanes(clientX: number) {
