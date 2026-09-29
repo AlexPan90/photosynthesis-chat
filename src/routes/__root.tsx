@@ -120,6 +120,14 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
+  // Apply the saved theme app-wide so studio pages match the chat page.
+  useEffect(() => {
+    const apply = () => document.documentElement.classList.toggle("dark", localStorage.getItem("relay-dark") !== "false");
+    apply();
+    window.addEventListener("storage", apply);
+    return () => window.removeEventListener("storage", apply);
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
