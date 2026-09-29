@@ -20,6 +20,14 @@ function isPublicUrl(raw: string) {
 }
 
 export const chatTools = {
+  // 浏览器端执行：无 execute，前端弹卡片确认后在隔离 Web Worker 中运行，再回传结果。
+  run_js: tool({
+    description: "在用户浏览器的隔离沙箱中运行一段 JavaScript（需用户确认）。适合精确计算、数据处理、调用允许跨域的公开 API（可用 fetch、await）。代码最后用 return 返回结果；console.log 输出也会回传。10 秒超时。",
+    inputSchema: z.object({
+      code: z.string().max(20000).describe("异步函数体，例如：const r = await fetch(url); return await r.json();"),
+      input: z.unknown().optional().describe("以变量 input 传入代码的数据"),
+    }),
+  }),
   web_search: tool({
     description: "联网搜索实时信息（新闻、最新数据、不确定的事实）。返回标题、链接和正文摘要；回答时请用 [标题](链接) 标注来源。",
     inputSchema: z.object({

@@ -105,9 +105,12 @@ export async function handleChat(request: Request) {
     tools: { ...pickTools(toolIds), ...mcp.tools, ...skillTools(skills), ...(delegates.length ? { delegate_to_agent: delegateTool(provider, delegates, request.signal) } : {}) },
     stopWhen: stepCountIs(50),
     // 人工批准：MCP 写操作（删除、发送、创建、修改……）暂停，等待用户在卡片上确认。
-    toolApproval: ({ toolCall }) => toolCall && toolCall.toolName in mcp.tools && needsApproval(toolCall.toolName)
-      ? { type: "user-approval", reason: `「${mcp.labels[toolCall.toolName] ?? toolCall.toolName}」会修改外部数据，需要你确认` }
-      : undefined,
+    toolApproval: ({ toolCall }) => {
+      if (!toolCall) return undefined;
+      if (toolCall.toolName === "run_skill_script") return { type: "user-approval", reason: "将在云沙箱中运行 Skill 脚本，需要你确认" };
+      if (toolCall.toolName in mcp.tools && needsApproval(toolCall.toolName)) return { type: "user-approval", reason: `「${mcp.labels[toolCall.toolName] ?? toolCall.toolName}」会修改外部数据，需要你确认` };
+      return undefined;
+    },
     ...(process.env["MCP_ENC_KEY"] ? { experimental_toolApprovalSecret: `approval:${process.env["MCP_ENC_KEY"]}` } : {}),
     abortSignal: request.signal,
     providerOptions: OPENAI_OPTIONS,

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { useNavigate } from "@tanstack/react-router";
-import { DefaultChatTransport, lastAssistantMessageIsCompleteWithApprovalResponses, type UIMessage } from "ai";
+import { DefaultChatTransport, lastAssistantMessageIsCompleteWithApprovalResponses, lastAssistantMessageIsCompleteWithToolCalls, type UIMessage } from "ai";
+import { runJsInSandbox } from "@/lib/js-sandbox";
 import { ArrowUpRight, Bot, Check, ChevronDown, Settings2, CircleAlert, Copy, RotateCcw, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -42,7 +43,7 @@ type Props = {
   onAgent?: (id: string | null) => void;
 };
 
-const toolTitles: Record<string, string> = { web_search: "网页搜索", read_webpage: "读取网页", get_current_time: "获取当前时间", calculate: "计算", delegate_to_agent: "委派 Agent", load_skill: "加载 Skill", read_skill_file: "读取 Skill 文件" };
+const toolTitles: Record<string, string> = { web_search: "网页搜索", read_webpage: "读取网页", get_current_time: "获取当前时间", calculate: "计算", run_js: "运行 JS（浏览器沙箱）", run_skill_script: "运行 Skill 脚本（云沙箱）", delegate_to_agent: "委派 Agent", load_skill: "加载 Skill", read_skill_file: "读取 Skill 文件" };
 
 export function LiveChat({ threadId, initialMessages, model, onModel, fontSize, initials, onActivity, onNotice, initialAgentId = null, onAgent }: Props) {
   const { agents, custom, reload } = useAgents();
@@ -66,9 +67,9 @@ export function LiveChat({ threadId, initialMessages, model, onModel, fontSize, 
     },
     prepareSendMessagesRequest: ({ messages, headers }) => ({ ...(headers ? { headers } : {}), body: { threadId, model: modelRef.current, agentId: agentRef.current, messages } }),
   }), [threadId]);
-  const { messages, sendMessage, status, stop, regenerate, addToolApprovalResponse } = useChat({
+  const { messages, sendMessage, status, stop, regenerate, addToolApprovalResponse, addToolOutput } = useChat({
     id: threadId,
-    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
+    sendAutomaticallyWhen: (o) => lastAssistantMessageIsCompleteWithApprovalResponses(o) || lastAssistantMessageIsCompleteWithToolCalls(o),
     messages: initialMessages,
     transport,
     onError: (err) => {
@@ -103,7 +104,15 @@ export function LiveChat({ threadId, initialMessages, model, onModel, fontSize, 
             if (p.type.startsWith("tool-") || p.type === "dynamic-tool") {
               const t = p as ToolPart;
               if (t.type === "tool-delegate_to_agent") return <DelegateCard key={idx} task={(t.input as { task?: string } | undefined)?.task} output={t.state === "output-available" ? t.output as never : undefined} preliminary={t.state === "output-available" && !!(t as { preliminary?: boolean }).preliminary} errorText={t.state === "output-error" ? t.errorText : undefined}/>;
-              return <Tool key={idx} className="mb-1" defaultOpen={t.state === "output-error" || t.state === "approval-requested"}>{t.type === "dynamic-tool" ? <ToolHeader type={t.type} state={t.state} toolName={t.toolName} title={toolTitles[t.toolName] ?? t.toolName.replace(/^m\d+_/, "MCP · ")}/> : <ToolHeader type={t.type} state={t.state} title={toolTitles[t.type.slice(5)] ?? t.type.slice(5).replace(/^m\d+_/, "MCP · ")}/>}<ToolContent><ToolInput input={t.input}/>{t.state === "approval-requested" && <ApprovalBar reason={t.approval.requestReason} onRespond={(approved) => addToolApprovalResponse(approved ? { id: t.approval.id, approved } : { id: t.approval.id, approved, reason: "用户拒绝执行" })}/>}<ToolOutput output={t.state === "output-available" ? t.output : undefined} errorText={t.state === "output-error" ? t.errorText : undefined}/></ToolContent></Tool>;
+              const runJsPending = t.type === "tool-run_js" && t.state === "input-available";
+              return <Tool key={idx} className="mb-1" defaultOpen={t.state === "output-error" || t.state === "approval-requested" || runJsPending}>{t.type === "dynamic-tool" ? <ToolHeader type={t.type} state={t.state} toolName={t.toolName} title={toolTitles[t.toolName] ?? t.toolName.replace(/^m\d+_/, "MCP · ")}/> : <ToolHeader type={t.type} state={t.state} title={toolTitles[t.type.slice(5)] ?? t.type.slice(5).replace(/^m\d+_/, "MCP · ")}/>}<ToolContent><ToolInput input={t.input}/>{runJsPending && <ApprovalBar reason="将在你的浏览器隔离沙箱中运行这段 JavaScript，需要你确认" onRespond={async (approved) => {
+                const toolCallId = (t as { toolCallId: string }).toolCallId;
+                if (!approved) { void addToolOutput({ tool: "run_js" as never, toolCallId, state: "output-error", errorText: "用户拒绝运行" }); return; }
+                const inp = t.input as { code?: string; input?: unknown } | undefined;
+                const r = await runJsInSandbox(inp?.code ?? "", inp?.input);
+                if (r.ok) void addToolOutput({ tool: "run_js" as never, toolCallId, output: r as never });
+                else void addToolOutput({ tool: "run_js" as never, toolCallId, state: "output-error", errorText: `${r.error}${r.logs.length ? `\n日志：\n${r.logs.join("\n")}` : ""}` });
+              }}/>}{t.state === "approval-requested" && <ApprovalBar reason={t.approval.requestReason} onRespond={(approved) => addToolApprovalResponse(approved ? { id: t.approval.id, approved } : { id: t.approval.id, approved, reason: "用户拒绝执行" })}/>}<ToolOutput output={t.state === "output-available" ? t.output : undefined} errorText={t.state === "output-error" ? t.errorText : undefined}/></ToolContent></Tool>;
             }
             return null;
           })}
