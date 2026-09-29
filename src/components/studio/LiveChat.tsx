@@ -186,18 +186,9 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
       {error && <div className="mb-5 flex items-start gap-2 rounded-md border border-destructive/25 bg-destructive/5 p-3 text-xs text-destructive"><CircleAlert className="mt-px size-4 shrink-0"/><span className="flex-1">{error}</span></div>}
     </ConversationContent><ConversationScrollButton/></Conversation>
     <div className="shrink-0 px-4 pb-4 pt-2 md:px-5"><div className="relative mx-auto max-w-[760px]">
-      {slashOpen && <div className="absolute inset-x-0 bottom-full z-20 mb-2 overflow-hidden rounded-xl border bg-popover shadow-lg" role="listbox" aria-label="快捷指令">
-        <div className="px-3 pb-1 pt-2.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70">Commands</div>
-        <div className="max-h-[280px] overflow-y-auto soft-scroll p-1">
-          {slashList.map((c, i) => <button key={c.name} type="button" role="option" aria-selected={i === slashIdx} onMouseEnter={() => setSlashIdx(i)} onClick={() => pickSlash(c)} className={`flex w-full items-baseline gap-3 rounded-md px-2.5 py-2 text-left text-[13px] ${i === slashIdx ? "bg-accent" : ""}`}>
-            <span className="shrink-0 font-semibold">{c.name}</span>
-            <span className="min-w-0 flex-1 truncate text-muted-foreground">{c.desc}</span>
-          </button>)}
-        </div>
-        <div className="border-t px-3 py-1.5 text-[10px] text-muted-foreground/70">↑↓ 选择 · Enter 确认 · Esc 关闭</div>
-      </div>}
+      {slash.popup}
       <PromptInput className="rounded-lg border bg-card shadow-[0_3px_16px_-12px_var(--color-foreground)] transition-[border-color,box-shadow] duration-150 focus-within:border-primary/50" onSubmit={({ text }) => submit(text)}>
-        <PromptInputTextarea ref={textareaRef} value={draft} onChange={e => setDraft(e.target.value)} onKeyDown={onComposerKeyDown} placeholder="发送消息，输入 / 唤起快捷指令..." className="min-h-[58px] text-[13px] leading-6"/>
+        <PromptInputTextarea ref={textareaRef} value={draft} onChange={e => setDraft(e.target.value)} onKeyDown={slash.onKeyDown} placeholder="发送消息，输入 / 唤起快捷指令..." className="min-h-[58px] text-[13px] leading-6"/>
         <PromptInputFooter className="flex-wrap gap-1 px-2 py-1.5"><PromptInputTools/>
           <div className="ml-auto flex items-center gap-1">
             <ModelMenu model={model} onModel={m => { setAgentId(null); onModel(m); }} agents={agents} agentId={agentId} onAgent={setAgentId} onManage={() => navigate({ to: "/studio/agents" })} open={modelMenuOpen} onOpenChange={setModelMenuOpen}/>
