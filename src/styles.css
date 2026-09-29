@@ -156,4 +156,4 @@
 .dark .relay-chat-header { background: #1C211D; }
 .dark .relay-composer-wrap { background: #1A1E1B; }
 .dark .relay-composer { background: #202521; }
-.dark .relay-shell .streamdown code:not(pre code) { color: var(--color-primary); }
+.dark .relay-shell :not(pre) > code { color: var(--color-primary); }
