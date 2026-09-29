@@ -415,6 +415,8 @@ body { font-size: calc(16px * var(--relay-type-scale)); }
   backdrop-filter: none !important;
 }
 .relay-settings-surface[role="menu"] { background: var(--popover) !important; }
+:root:not(.dark) .relay-settings-surface[role="dialog"],
+:root:not(.dark) .relay-settings-surface[role="menu"] { background: #FFFFFF !important; }
 .relay-settings-surface > nav,
 .relay-settings-surface > section,
 .relay-settings-surface > section > header,
