@@ -37,6 +37,33 @@ export function SkillsPage() {
   const [msg, setMsg] = useState("");
   const current = items.find(s => s.id === sel);
   const installedPaths = new Set(items.map(s => `${s.source_url}#${s.path}`));
+  const checkUpdate = useServerFn(checkSkillUpdate);
+  const busyRef = useRef(false);
+  busyRef.current = busy;
+
+  // 数据库实时订阅：任何安装/更新/删除立即反映到列表和预览
+  useEffect(() => {
+    const channel = supabase.channel("skills-live").on("postgres_changes", { event: "*", schema: "public", table: "skills" }, () => { void reload(); }).subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [reload]);
+
+  // 远程 Skill 自动检查更新：每 45 秒比对一次远端正文，有变化就静默重新拉取
+  useEffect(() => {
+    if (!current || current.source_type === "manual" || !current.source_url) return;
+    const s = current;
+    const sync = async () => {
+      if (busyRef.current) return;
+      const { changed } = await checkUpdate({ data: { id: s.id } });
+      if (!changed) return;
+      if (s.source_type === "url") await installDefs({ data: { url: s.source_url!, names: [s.path ?? s.name] } });
+      else await install({ data: { repo: s.source_url!.replace("https://github.com/", ""), items: [{ path: s.path ?? "" }] } });
+      await reload();
+      setMsg("已自动同步到最新版本");
+    };
+    const t = setInterval(() => { void sync().catch(() => {}); }, 45_000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current?.id, current?.source_type, current?.source_url]);
 
   const run = async (fn: () => Promise<void>) => { setBusy(true); setMsg(""); try { await fn(); } catch (e) { setMsg((e as Error).message || "操作失败"); } setBusy(false); };
   const doScan = (r = repo) => run(async () => { setRepo(r); const res = await scan({ data: { repo: r } }); setFound(res); setPicked(res.skills.filter(s => !installedPaths.has(`${res.source}#${s.path}`)).map(s => s.path)); if (!res.skills.length) setMsg("这个仓库里没有找到 SKILL.md"); });
