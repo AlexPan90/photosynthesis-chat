@@ -301,7 +301,7 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
           </div><PromptInputTextarea ref={textareaRef} value={draft} onChange={e => setDraft(e.target.value)} onKeyDown={slash.onKeyDown} placeholder="给 Relay 发消息，输入 / 唤起快捷指令..." className="min-h-[88px] px-4 pt-3.5 text-[14px] leading-6"/>
         <PromptInputFooter className="gap-2 px-3 pb-3 pt-0"><span className="pl-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground/70">Enter 发送 · Shift+Enter 换行</span><div className="ml-auto flex items-center gap-1">
             <ModelMenu model={model} onModel={m => { setAgentId(null); onModel(m); }} agents={agents} agentId={agentId} onAgent={setAgentId} onManage={() => navigate({ to: "/studio/agents" })} open={modelMenuOpen} onOpenChange={setModelMenuOpen}/>
-             <PromptInputSubmit status={status} onStop={stop} disabled={!draft.trim() && !busy} className="size-9 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"/>
+             <PromptInputSubmit status={status} onStop={stop} disabled={!draft.trim() && !busy} className="relay-send size-9 bg-primary text-primary-foreground hover:bg-primary/90"/>
           </div>
         </PromptInputFooter>
       </PromptInput>
