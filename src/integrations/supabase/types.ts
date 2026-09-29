@@ -72,6 +72,7 @@ export type Database = {
           id: string
           last_error: string | null
           name: string
+          proxy_url: string | null
           secret_enc: string | null
           state: string
           tools: Json
@@ -88,6 +89,7 @@ export type Database = {
           id?: string
           last_error?: string | null
           name: string
+          proxy_url?: string | null
           secret_enc?: string | null
           state?: string
           tools?: Json
@@ -104,6 +106,7 @@ export type Database = {
           id?: string
           last_error?: string | null
           name?: string
+          proxy_url?: string | null
           secret_enc?: string | null
           state?: string
           tools?: Json
