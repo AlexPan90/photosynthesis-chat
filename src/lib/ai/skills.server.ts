@@ -97,5 +97,28 @@ export function skillTools(skills: SkillRow[]): ToolSet {
         return { file, content: await fetchText(raw(owner, repo, s.ref, s.path ? `${s.path}/${file}` : file), 20000) };
       },
     }),
+    run_skill_script: tool({
+      description: "在隔离的云沙箱（Linux，含 Python/Node/bash）中运行 Skill 附带的脚本（.py/.js/.sh/.ts），会把整个 Skill 目录放进沙箱并自动安装 requirements.txt。运行前需用户确认。先用 load_skill 查看说明和文件列表。",
+      inputSchema: z.object({
+        name: z.string().describe("Skill 名称"),
+        file: z.string().describe("要运行的脚本相对路径，如 scripts/run.py"),
+        args: z.array(z.string().max(2000)).max(20).default([]).describe("命令行参数"),
+        stdin: z.string().max(20000).optional().describe("可选，传给脚本标准输入的内容"),
+      }),
+      execute: async ({ name, file, args, stdin }, { abortSignal }) => {
+        const s = find(name);
+        if (!s) throw new Error(`未找到 Skill：${name}`);
+        const files = Array.isArray(s.files) ? (s.files as string[]) : [];
+        if (!files.includes(file)) throw new Error("该脚本不属于这个 Skill");
+        if (!runnerFor(file)) throw new Error(`不支持运行该类型的脚本：${file}`);
+        if (s.source_type !== "github" || !s.source_url || !s.ref) throw new Error("手动创建的 Skill 没有可运行的脚本");
+        const { owner, repo } = parseRepo(s.source_url);
+        const ref = s.ref;
+        const wanted = files.filter(f => !/\.(png|jpe?g|gif|webp|pdf|zip|ttf|otf|woff2?)$/i.test(f)).slice(0, 40);
+        const loaded = await Promise.all(wanted.map(async f => ({ path: f, content: await fetchText(raw(owner, repo, ref, s.path ? `${s.path}/${f}` : f), 200000) })));
+        loaded.push({ path: "SKILL.md", content: s.content });
+        return runInSandbox({ files: loaded, entry: file, args, stdin, signal: abortSignal });
+      },
+    }),
   };
 }
