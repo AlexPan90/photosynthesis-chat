@@ -54,11 +54,12 @@ export function delegateTool(provider: Provider, agents: AgentConfig[], signal: 
         abortSignal: signal,
         providerOptions: OPENAI_OPTIONS,
       });
+      const running = (name: string) => [...p.steps].reverse().find(x => x.tool === name && x.state === "running");
       let last = 0;
       for await (const part of result.fullStream) {
         if (part.type === "tool-call") p.steps.push({ tool: part.toolName, state: "running", detail: JSON.stringify(part.input) });
-        else if (part.type === "tool-result") { const s = p.steps.findLast(x => x.tool === part.toolName && x.state === "running"); if (s) s.state = "done"; }
-        else if (part.type === "tool-error") { const s = p.steps.findLast(x => x.tool === part.toolName && x.state === "running"); if (s) { s.state = "error"; s.detail = String((part.error as Error)?.message ?? part.error); } }
+        else if (part.type === "tool-result") { const s = running(part.toolName); if (s) s.state = "done"; }
+        else if (part.type === "tool-error") { const s = running(part.toolName); if (s) { s.state = "error"; s.detail = String((part.error as Error)?.message ?? part.error); } }
         else if (part.type === "text-delta") p.text += part.text;
         else if (part.type === "error") throw part.error instanceof Error ? part.error : new Error("子 Agent 执行失败");
         else continue;
