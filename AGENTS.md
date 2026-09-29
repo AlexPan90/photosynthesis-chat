@@ -13,3 +13,4 @@
 - Use a graphite-neutral theme with Sora/Manrope and locate each chapter’s narration in the story context column; this keeps the chosen desktop reading workspace coherent and avoids duplicate media.
 - Keep the conversation as the default focal surface, with workspace files opened contextually in a separately resizable right column rather than showing the file pane on arrival; this avoids competing content while allowing focused file inspection.
 - Real chat streams through the `/api/chat` server route (OpenAI Responses via Lovable AI Gateway, default `openai/gpt-6-astra`); threads/messages live in Cloud tables scoped by RLS to the signed-in user, while seed demo threads stay client-side and read-only — keeps demos browsable without an account.
+- Agent 编排在 /api/chat 内完成：选中 Agent 覆盖提示词/工具/模型，委派通过 delegate_to_agent 工具的流式预览输出回传子 Agent 执行记录——前端只消费统一的 UI 消息流，无需额外协议。
