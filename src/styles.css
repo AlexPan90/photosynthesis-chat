@@ -173,7 +173,11 @@
 .relay-user-bubble { background: linear-gradient(180deg, color-mix(in oklab, var(--color-card) 100%, var(--color-foreground) 4%), var(--color-card)); border: 1px solid var(--color-border); box-shadow: inset 0 1px 0 color-mix(in oklab, var(--color-foreground) 6%, transparent); color: var(--color-foreground); }
 .relay-status-dot { position: relative; }
 .relay-status-dot::after { content: ""; position: absolute; inset: -3px; border-radius: 999px; background: currentColor; opacity: .35; animation: relay-ping 1.8s ease-out infinite; }
-@keyframes relay-ping { 0% { transform: scale(.6); opacity: .5; } 100% { transform: scale(2.2); opacity: 0; } }
+.dark .relay-status-dot { box-shadow: 0 0 8px 1px color-mix(in oklab, currentColor 70%, transparent); }
+.dark .relay-status-dot::after { opacity: .55; }
+/* Active/running status text: brighter indigo with a soft glow on dark surfaces. */
+.relay-active-text { color: var(--color-primary); }
+.dark .relay-active-text { color: #9D95FF; text-shadow: 0 0 9px color-mix(in oklab, #9D95FF 42%, transparent); }
 .relay-message { animation: rise-in 260ms cubic-bezier(.22,1,.36,1) both; }
 .relay-message .prose, .relay-message [data-streamdown] { color: var(--color-foreground); }
 .relay-sidebar a { transition: color .15s ease; }
