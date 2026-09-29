@@ -62,6 +62,36 @@ export type Database = {
         }
         Relationships: []
       }
+      delegate_sessions: {
+        Row: {
+          agent_id: string
+          created_at: string
+          id: string
+          messages: Json
+          pending: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string
+          id?: string
+          messages?: Json
+          pending?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string
+          id?: string
+          messages?: Json
+          pending?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       mcp_connections: {
         Row: {
           approval_tools: string[]
