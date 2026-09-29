@@ -116,7 +116,7 @@ export function LiveChat({ threadId, initialMessages, model, onModel, fontSize, 
         <PromptInputTextarea ref={textareaRef} value={draft} onChange={e => setDraft(e.target.value)} placeholder="发送消息..." className="min-h-[58px] text-[13px] leading-6"/>
         <PromptInputFooter className="flex-wrap gap-1 px-2 py-1.5"><PromptInputTools/>
           <div className="ml-auto flex items-center gap-1">
-            <ModelMenu model={model} onModel={m => { setAgentId(null); onModel(m); }} agents={agents} agentId={agentId} onAgent={setAgentId} onManage={() => setManaging(true)}/>
+            <ModelMenu model={model} onModel={m => { setAgentId(null); onModel(m); }} agents={agents} agentId={agentId} onAgent={setAgentId} onManage={() => navigate({ to: "/studio/agents" })}/>
             <PromptInputSubmit status={status} onStop={stop} disabled={!draft.trim() && !busy} className="size-8 rounded-full"/>
           </div>
         </PromptInputFooter>
