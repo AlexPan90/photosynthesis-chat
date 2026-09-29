@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { SkillsDock } from "./SkillsDock";
+import { ModelSettings } from "./ModelSettings";
 
 type Props = {
   open: boolean; onOpenChange: (v: boolean) => void;
@@ -73,13 +74,7 @@ export function SettingsCenter(p: Props) {
               <Slider value={[p.fontSize]} min={12} max={18} step={1} onValueChange={v => p.setFontSize(v[0] ?? 14)}/>
             </div>
           </>}
-          {tab === "models" && <div className="py-4">
-            <p className="mb-4 text-[11.5px] text-muted-foreground">仅显示已配置并验证可用的厂商与模型。</p>
-            <div className="rounded-xl border border-border/60 p-4">
-              <div className="flex items-center gap-2"><span className="text-[13px] font-medium">OpenAI</span><span className="relay-status-dot size-1.5 rounded-full bg-emerald-500"/><span className="ml-auto text-[11px] text-muted-foreground">已连接</span></div>
-              <div className="mt-3 flex flex-wrap gap-2">{["GPT-6 Astra", "GPT-6 Sol", "GPT-6 Luna"].map(m => <span key={m} className="rounded-md bg-muted px-2 py-1 font-mono text-[11px]">{m}</span>)}</div>
-            </div>
-          </div>}
+          {tab === "models" && <ModelSettings userId={p.userId}/>}
           {tab === "skills" && <div className="py-3">
             <p className="mb-2 text-[11.5px] text-muted-foreground">已启用的技能。点击 ▶ 在当前对话中调用；安装和管理请前往 Skills 页面。</p>
             <div className="-mx-3 rounded-xl"><SkillsDock userId={p.userId} canInvoke={p.canInvoke}/></div>
