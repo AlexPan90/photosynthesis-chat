@@ -161,7 +161,7 @@ export function Studio({ threadId }: { threadId?: string }) {
     const { data, error } = await supabase.from("threads").insert({ user_id: user.id, model }).select("id,title,group_name,updated_at,model").single();
     if (error || !data) { setNotice("新建对话失败"); return; }
     setLiveThreads(prev => [{ id: data.id, title: data.title, group: data.group_name, updatedAt: Date.now(), messages: [], live: true, model: data.model }, ...prev]);
-    setLiveMessages({ id: data.id, messages: [] });
+    setLiveMessages({ id: data.id, messages: [], versions: {} });
     setScenario("default");
     navigate({ to: "/chat/$threadId", params: { threadId: data.id } });
   }
