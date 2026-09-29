@@ -43,29 +43,29 @@
   --radius-lg: 8px;
 }
 :root {
-  --background: oklch(0.975 0.003 240);
-  --foreground: oklch(0.24 0.008 240);
-  --card: oklch(0.995 0.001 240);
+  --background: #F4F5F1;
+  --foreground: #171A18;
+  --card: #FFFFFF;
   --card-foreground: var(--foreground);
   --popover: var(--card);
   --popover-foreground: var(--foreground);
-  --primary: oklch(0.42 0.025 235);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.94 0.004 240);
+  --primary: #354619;
+  --primary-foreground: #F4F5F1;
+  --secondary: #E9ECE5;
   --secondary-foreground: var(--foreground);
-  --muted: oklch(0.955 0.003 240);
-  --muted-foreground: oklch(0.51 0.008 240);
-  --accent: oklch(0.92 0.008 235);
+  --muted: #EDF0EA;
+  --muted-foreground: #59645D;
+  --accent: #E3EBD5;
   --accent-foreground: var(--foreground);
   --destructive: oklch(0.55 0.17 25);
   --destructive-foreground: oklch(0.99 0 0);
-  --border: oklch(0.89 0.005 240);
-  --input: oklch(0.85 0.005 240);
-  --ring: oklch(0.52 0.025 235);
-  --success: oklch(0.54 0.105 160);
+  --border: #DCE2DA;
+  --input: #BCC7BC;
+  --ring: #6D8744;
+  --success: #4F8245;
   --warning: oklch(0.67 0.12 75);
   --info: oklch(0.56 0.08 235);
-  --sidebar: oklch(0.965 0.003 240);
+  --sidebar: #ECEFE9;
   --sidebar-foreground: var(--foreground);
   --file-code: oklch(0.54 0.08 245);
   --file-data: oklch(0.52 0.08 165);
@@ -75,29 +75,29 @@
   --file-archive: oklch(0.55 0.025 255);
 }
 .dark {
-  --background: oklch(0.215 0.007 240);
-  --foreground: oklch(0.9 0.005 240);
-  --card: oklch(0.245 0.008 240);
+  --background: #171A18;
+  --foreground: #F4F5F1;
+  --card: #202521;
   --card-foreground: var(--foreground);
-  --popover: oklch(0.275 0.009 240);
+  --popover: #262C27;
   --popover-foreground: var(--foreground);
-  --primary: oklch(0.77 0.018 220);
-  --primary-foreground: oklch(0.19 0.008 240);
-  --secondary: oklch(0.3 0.008 240);
+  --primary: #C9ED55;
+  --primary-foreground: #171A18;
+  --secondary: #2A302B;
   --secondary-foreground: var(--foreground);
-  --muted: oklch(0.285 0.008 240);
-  --muted-foreground: oklch(0.68 0.009 240);
-  --accent: oklch(0.34 0.009 240);
+  --muted: #262C27;
+  --muted-foreground: #9AA79D;
+  --accent: #353D33;
   --accent-foreground: var(--foreground);
   --destructive: oklch(0.72 0.14 25);
   --destructive-foreground: oklch(0.19 0 0);
-  --border: oklch(0.37 0.009 240);
-  --input: oklch(0.41 0.009 240);
-  --ring: oklch(0.77 0.018 220);
-  --success: oklch(0.71 0.09 160);
+  --border: #39433A;
+  --input: #59645D;
+  --ring: #C9ED55;
+  --success: #C9ED55;
   --warning: oklch(0.76 0.1 75);
   --info: oklch(0.74 0.07 235);
-  --sidebar: oklch(0.19 0.007 240);
+  --sidebar: #141715;
   --sidebar-foreground: var(--foreground);
   --file-code: oklch(0.73 0.075 245);
   --file-data: oklch(0.73 0.07 165);
@@ -143,3 +143,17 @@
 @utility pulse-dot { animation: pulse-ring 1.8s ease-out infinite; }
 @utility stream-cursor { &::after { content: ""; display: inline-block; width: 5px; height: 1em; margin-left: 3px; vertical-align: -2px; background: var(--color-success); animation: cursor-blink 1s step-end infinite; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; } }
+
+/* Relay's chat shell uses surface separation rather than decorative panels. */
+.relay-shell { background: var(--color-background); }
+.relay-sidebar { border-right: 1px solid color-mix(in oklab, var(--color-border) 60%, transparent); }
+.relay-chat-plane { background: var(--color-background); }
+.relay-chat-header { background: color-mix(in oklab, var(--color-background) 90%, var(--color-card)); border-color: color-mix(in oklab, var(--color-border) 60%, transparent); }
+.relay-composer-wrap { background: var(--color-background); }
+.relay-composer { box-shadow: 0 10px 35px -22px color-mix(in oklab, var(--color-foreground) 38%, transparent), 0 0 0 1px color-mix(in oklab, var(--color-border) 35%, transparent); }
+.relay-composer:focus-within { box-shadow: 0 12px 40px -24px color-mix(in oklab, var(--color-primary) 45%, transparent), 0 0 0 1px color-mix(in oklab, var(--color-primary) 55%, transparent); }
+.dark .relay-chat-plane { background: #1A1E1B; }
+.dark .relay-chat-header { background: #1C211D; }
+.dark .relay-composer-wrap { background: #1A1E1B; }
+.dark .relay-composer { background: #202521; }
+.dark .relay-shell .streamdown code:not(pre code) { color: var(--color-primary); }
