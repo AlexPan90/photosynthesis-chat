@@ -11,6 +11,9 @@ import { PromptInput, PromptInputTextarea, PromptInputFooter, PromptInputButton,
 import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput, type ToolPart } from "@/components/ai-elements/tool";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { supabase } from "@/integrations/supabase/client";
+import { AgentManager, DelegateCard, useAgents } from "./Agents";
+import type { AgentConfig } from "@/lib/ai/agents.shared";
+import { Bot, Settings2 } from "lucide-react";
 
 export const liveModelGroups = [
   { provider: "OpenAI", models: [
@@ -34,11 +37,20 @@ type Props = {
   initials: string;
   onActivity: () => void;
   onNotice: (text: string) => void;
+  initialAgentId?: string | null;
+  onAgent?: (id: string | null) => void;
 };
 
-const toolTitles: Record<string, string> = { read_webpage: "读取网页", get_current_time: "获取当前时间", calculate: "计算" };
+const toolTitles: Record<string, string> = { read_webpage: "读取网页", get_current_time: "获取当前时间", calculate: "计算", delegate_to_agent: "委派 Agent" };
 
-export function LiveChat({ threadId, initialMessages, model, onModel, fontSize, initials, onActivity, onNotice }: Props) {
+export function LiveChat({ threadId, initialMessages, model, onModel, fontSize, initials, onActivity, onNotice, initialAgentId = null, onAgent }: Props) {
+  const { agents, custom, reload } = useAgents();
+  const [agentId, setAgentIdState] = useState<string | null>(initialAgentId);
+  const [managing, setManaging] = useState(false);
+  const agentRef = useRef(agentId);
+  agentRef.current = agentId;
+  const setAgentId = (id: string | null) => { setAgentIdState(id); onAgent?.(id); };
+  const activeAgent = agents.find(a => a.id === agentId) ?? null;
   const [draft, setDraft] = useState("");
   const [error, setError] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -50,7 +62,7 @@ export function LiveChat({ threadId, initialMessages, model, onModel, fontSize, 
       const { data } = await supabase.auth.getSession();
       return data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {};
     },
-    prepareSendMessagesRequest: ({ messages, headers }) => ({ ...(headers ? { headers } : {}), body: { threadId, model: modelRef.current, messages } }),
+    prepareSendMessagesRequest: ({ messages, headers }) => ({ ...(headers ? { headers } : {}), body: { threadId, model: modelRef.current, agentId: agentRef.current, messages } }),
   }), [threadId]);
   const { messages, sendMessage, status, stop, regenerate } = useChat({
     id: threadId,
@@ -82,11 +94,12 @@ export function LiveChat({ threadId, initialMessages, model, onModel, fontSize, 
         const text = m.parts.filter(p => p.type === "text").map(p => p.text).join("\n");
         const streamingThis = busy && i === messages.length - 1 && isAgent;
         return <div key={m.id} className="mb-7">
-          <div className={`mb-2 flex items-center gap-2 text-[11px] ${isAgent ? "" : "justify-end"}`}>{isAgent ? <><Mark/><span className="font-semibold">{modelLabel(model)}</span></> : <><span className="font-semibold">你</span><div className="flex size-6 items-center justify-center rounded-full bg-secondary text-[10px] font-semibold">{initials}</div></>}</div>
+          <div className={`mb-2 flex items-center gap-2 text-[11px] ${isAgent ? "" : "justify-end"}`}>{isAgent ? <><Mark/><span className="font-semibold">{activeAgent?.name ?? modelLabel(model)}</span></> : <><span className="font-semibold">你</span><div className="flex size-6 items-center justify-center rounded-full bg-secondary text-[10px] font-semibold">{initials}</div></>}</div>
           {m.parts.map((p, idx) => {
             if (p.type === "reasoning" && p.text) return <Reasoning key={idx} className="mb-2 w-full" isStreaming={streamingThis && idx === m.parts.length - 1}><ReasoningTrigger className="text-[11px]"/><ReasoningContent className="text-[12px] text-muted-foreground">{p.text}</ReasoningContent></Reasoning>;
             if (p.type.startsWith("tool-") || p.type === "dynamic-tool") {
               const t = p as ToolPart;
+              if (t.type === "tool-delegate_to_agent") return <DelegateCard key={idx} task={(t.input as { task?: string } | undefined)?.task} output={t.state === "output-available" ? t.output as never : undefined} preliminary={t.state === "output-available" && !!(t as { preliminary?: boolean }).preliminary} errorText={t.state === "output-error" ? t.errorText : undefined}/>;
               return <Tool key={idx} className="mb-1" defaultOpen={t.state === "output-error"}>{t.type === "dynamic-tool" ? <ToolHeader type={t.type} state={t.state} toolName={t.toolName} title={toolTitles[t.toolName] ?? t.toolName}/> : <ToolHeader type={t.type} state={t.state} title={toolTitles[t.type.slice(5)] ?? t.type.slice(5)}/>}<ToolContent><ToolInput input={t.input}/><ToolOutput output={t.state === "output-available" ? t.output : undefined} errorText={t.state === "output-error" ? t.errorText : undefined}/></ToolContent></Tool>;
             }
             return null;
@@ -103,18 +116,22 @@ export function LiveChat({ threadId, initialMessages, model, onModel, fontSize, 
         <PromptInputTextarea ref={textareaRef} value={draft} onChange={e => setDraft(e.target.value)} placeholder="发送消息..." className="min-h-[58px] text-[13px] leading-6"/>
         <PromptInputFooter className="flex-wrap gap-1 px-2 py-1.5"><PromptInputTools/>
           <div className="ml-auto flex items-center gap-1">
-            <ModelMenu model={model} onModel={onModel}/>
+            <ModelMenu model={model} onModel={m => { setAgentId(null); onModel(m); }} agents={agents} agentId={agentId} onAgent={setAgentId} onManage={() => setManaging(true)}/>
             <PromptInputSubmit status={status} onStop={stop} disabled={!draft.trim() && !busy} className="size-8 rounded-full"/>
           </div>
         </PromptInputFooter>
       </PromptInput>
     </div></div>
+    <AgentManager open={managing} onOpenChange={setManaging} custom={custom} reload={reload} models={liveModelGroups.flatMap(g => g.models.map(m => ({ id: m.id, label: m.label })))}/>
   </>;
 }
 
-export function ModelMenu({ model, onModel }: { model: string; onModel: (m: LiveModel) => void }) {
-  return <DropdownMenu><DropdownMenuTrigger asChild><PromptInputButton tooltip="切换模型" className="max-w-[150px] gap-1 truncate px-2 text-[11px] text-muted-foreground">{modelLabel(model)}<ChevronDown className="size-3 shrink-0"/></PromptInputButton></DropdownMenuTrigger><DropdownMenuContent align="end" className="min-w-[220px]">
-    {liveModelGroups.map(g => <div key={g.provider}><div className="px-2 pt-2.5 pb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70">{g.provider}</div>{g.models.map(m => <DropdownMenuItem key={m.id} onClick={() => onModel(m.id)}>{m.label}{model === m.id && <Check className="ml-auto size-3.5"/>}</DropdownMenuItem>)}</div>)}
-    {upcomingProviders.map(p => <div key={p}><div className="px-2 pt-2.5 pb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70">{p}</div><DropdownMenuItem disabled className="text-[11px]">即将接入</DropdownMenuItem></div>)}
+export function ModelMenu({ model, onModel, agents, agentId, onAgent, onManage }: { model: string; onModel: (m: LiveModel) => void; agents?: AgentConfig[]; agentId?: string | null; onAgent?: (id: string) => void; onManage?: () => void }) {
+  const active = agents?.find(a => a.id === agentId);
+  const head = (t: string) => <div className="px-2 pt-2.5 pb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70">{t}</div>;
+  return <DropdownMenu><DropdownMenuTrigger asChild><PromptInputButton tooltip="切换模型或 Agent" className="max-w-[160px] gap-1 truncate px-2 text-[11px] text-muted-foreground">{active && <Bot className="size-3 shrink-0"/>}{active?.name ?? modelLabel(model)}<ChevronDown className="size-3 shrink-0"/></PromptInputButton></DropdownMenuTrigger><DropdownMenuContent align="end" className="max-h-[70vh] min-w-[240px] overflow-y-auto">
+    {agents && <>{head("Agent")}{agents.map(a => <DropdownMenuItem key={a.id} onClick={() => onAgent?.(a.id)} className="items-start"><Bot className="mt-0.5 size-3.5"/><span className="min-w-0 flex-1"><span className="block">{a.name}</span><span className="block truncate text-[10.5px] text-muted-foreground">{a.description}</span></span>{agentId === a.id && <Check className="size-3.5"/>}</DropdownMenuItem>)}<DropdownMenuItem onClick={onManage} className="text-[11px] text-muted-foreground"><Settings2 className="size-3.5"/>管理 Agent…</DropdownMenuItem></>}
+    {liveModelGroups.map(g => <div key={g.provider}>{head(g.provider)}{g.models.map(m => <DropdownMenuItem key={m.id} onClick={() => onModel(m.id)}>{m.label}{!active && model === m.id && <Check className="ml-auto size-3.5"/>}</DropdownMenuItem>)}</div>)}
+    {upcomingProviders.map(p => <div key={p}>{head(p)}<DropdownMenuItem disabled className="text-[11px]">即将接入</DropdownMenuItem></div>)}
   </DropdownMenuContent></DropdownMenu>;
 }
