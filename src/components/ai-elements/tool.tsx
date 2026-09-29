@@ -101,6 +101,7 @@ export type ToolPart = ToolUIPart | DynamicToolUIPart;
 export type ToolHeaderProps = {
   title?: string;
   className?: string;
+  duration?: string | undefined;
 } & (
   | { type: ToolUIPart["type"]; state: ToolUIPart["state"]; toolName?: never }
   | {
@@ -111,13 +112,13 @@ export type ToolHeaderProps = {
 );
 
 const statusLabels: Record<ToolPart["state"], string> = {
-  "approval-requested": "Awaiting Approval",
-  "approval-responded": "Responded",
-  "input-available": "Running",
-  "input-streaming": "Pending",
-  "output-available": "Completed",
-  "output-denied": "Denied",
-  "output-error": "Error",
+  "approval-requested": "待审批",
+  "approval-responded": "已审批",
+  "input-available": "执行中",
+  "input-streaming": "排队中",
+  "output-available": "完成",
+  "output-denied": "已拒绝",
+  "output-error": "失败",
 };
 
 const statusColors: Record<ToolPart["state"], string> = {
@@ -158,11 +159,11 @@ export const ToolHeader = ({
   type,
   state,
   toolName,
+  duration,
   ...props
 }: ToolHeaderProps) => {
   const derivedName =
     type === "dynamic-tool" ? toolName : type.split("-").slice(1).join("-");
-  const quiet = state === "output-available";
 
   return (
     <CollapsibleTrigger
@@ -174,10 +175,10 @@ export const ToolHeader = ({
     >
       <ChevronDownIcon className="size-3 shrink-0 text-muted-foreground/60 transition-transform group-data-[state=closed]:-rotate-90" />
       <WrenchIcon className="size-3 shrink-0 text-muted-foreground/70" />
-      <span className="min-w-0 truncate text-[12px] text-muted-foreground">
+      <span className={cn("min-w-0 truncate text-[12px]", state === "output-error" ? "text-destructive" : "text-muted-foreground")}>
         {title ?? derivedName}
       </span>
-      {!quiet && (
+      {(
         <span
           className={cn(
             "ml-0.5 inline-flex shrink-0 items-center gap-1 text-[10.5px]",
@@ -188,6 +189,7 @@ export const ToolHeader = ({
           {statusLabels[state]}
         </span>
       )}
+      {duration && <span className="ml-auto shrink-0 pr-1 font-mono text-[10.5px] tabular-nums text-muted-foreground/60">{duration}</span>}
     </CollapsibleTrigger>
   );
 };
