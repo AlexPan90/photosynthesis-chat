@@ -37,7 +37,7 @@ const permLabels: Record<Permission, { name: string; desc: string }> = {
   readonly: { name: "只读", desc: "禁止删除、发送、修改和运行脚本，只能搜索和读取" },
 };
 
-function Mark() { return <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground"><span className="font-mono text-base font-semibold leading-none">R<span className="text-success">.</span></span></div>; }
+function Mark() { return <div className="flex size-7 shrink-0 items-center justify-center rounded bg-primary text-primary-foreground shadow-[0_0_16px_-8px_var(--color-primary)]"><span className="font-mono text-base font-semibold leading-none">R<span className="text-primary-foreground/60">.</span></span></div>; }
 
 type Props = {
   threadId: string;
@@ -224,13 +224,13 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
   const style = { "--message-size": `${fontSize}px` } as React.CSSProperties;
 
   return <>
-    <Conversation className="soft-scroll"><ConversationContent className="mx-auto w-full max-w-[760px] gap-0 px-5 pb-8 pt-9 md:px-10">
+    <Conversation className="soft-scroll"><ConversationContent className="mx-auto w-full max-w-[800px] gap-0 px-5 pb-8 pt-10 md:px-10">
       {messages.length === 0 ? <ConversationEmptyState className="min-h-[45vh]"><div className="flex flex-col items-center gap-4"><Mark/><h1 className="font-display text-xl font-semibold">从一个想法开始</h1><p className="text-sm text-muted-foreground">对话会自动保存，刷新或换设备后仍可继续。</p><div className="mt-3 flex flex-wrap justify-center gap-2">{["整理一份竞品分析的框架", "解释什么是 MCP 协议", "帮我规划本周工作"].map(v => <Button key={v} variant="outline" size="sm" className="lift text-xs shadow-none" onClick={() => submit(v)}>{v}<ArrowUpRight className="size-3"/></Button>)}</div></div></ConversationEmptyState> : messages.map((m, i) => {
         const isAgent = m.role === "assistant";
         const text = m.parts.filter(p => p.type === "text").map(p => p.text).join("\n");
         const streamingThis = busy && i === messages.length - 1 && isAgent;
-        return <div key={m.id} id={`msg-${m.id}`} className="mb-7 scroll-mt-6 rounded-lg transition-colors duration-700 data-[flash=true]:bg-primary/5">
-          <div className={`mb-2 flex items-center gap-2 text-[11px] ${isAgent ? "" : "justify-end"}`}>{isAgent ? <><Mark/><span className="font-semibold">{activeAgent?.name ?? modelLabel(model)}</span></> : <><span className="font-semibold">你</span><div className="flex size-6 items-center justify-center rounded-full bg-secondary text-[10px] font-semibold">{initials}</div></>}</div>
+         return <div key={m.id} id={`msg-${m.id}`} className="mb-9 scroll-mt-6 rounded-lg transition-colors duration-700 data-[flash=true]:bg-primary/5">
+           <div className={`mb-3 flex items-center gap-2.5 text-[11px] ${isAgent ? "" : "justify-end"}`}>{isAgent ? <><Mark/><span className="font-display font-semibold">{activeAgent?.name ?? modelLabel(model)}</span></> : <><span className="font-semibold text-muted-foreground">你</span><div className="flex size-6 items-center justify-center rounded bg-secondary text-[10px] font-semibold">{initials}</div></>}</div>
           {m.parts.map((p, idx) => {
             if (p.type === "reasoning" && p.text) return <Reasoning key={idx} className="mb-2 w-full" isStreaming={streamingThis && idx === m.parts.length - 1}><ReasoningTrigger className="text-[11px]"/><ReasoningContent className="text-[12px] text-muted-foreground">{p.text}</ReasoningContent></Reasoning>;
             if (p.type.startsWith("tool-") || p.type === "dynamic-tool") {
@@ -249,7 +249,7 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
             }
             return null;
           })}
-          {text && <Message from={m.role} className="max-w-full"><MessageContent style={style} className={isAgent ? "w-full text-[length:var(--message-size)] leading-[1.85]" : "max-w-[86%] rounded-xl rounded-tr-sm bg-secondary px-4 py-3 text-[length:var(--message-size)] leading-[1.75]"}><MessageResponse>{text}</MessageResponse></MessageContent></Message>}
+           {text && <Message from={m.role} className="max-w-full"><MessageContent style={style} className={isAgent ? "w-full text-[length:var(--message-size)] leading-[1.85]" : "max-w-[86%] rounded-lg border border-border/60 bg-secondary/70 px-4 py-3 text-[length:var(--message-size)] leading-[1.75]"}><MessageResponse>{text}</MessageResponse></MessageContent></Message>}
           {m.id === ctx.summaryUpto && ctx.summary && <details className="group mt-6 text-[11px] text-muted-foreground"><summary className="flex cursor-pointer list-none items-center gap-3"><span className="h-px flex-1 bg-border"/><Layers className="size-3"/>以上内容已压缩为摘要，AI 只会看到摘要<span className="underline decoration-dotted">查看</span><span className="h-px flex-1 bg-border"/></summary><div className="mt-2 rounded-md border bg-muted/30 px-3 py-2 text-[12px] leading-6 text-foreground"><MessageResponse>{ctx.summary}</MessageResponse></div></details>}
           {isAgent && text && !streamingThis && <MessageActions className="mt-3 opacity-70"><MessageAction tooltip="复制内容" onClick={() => { navigator.clipboard.writeText(text); onNotice("已复制到剪贴板"); }}><Copy className="size-3.5"/></MessageAction><MessageAction tooltip="有帮助" onClick={() => void rate(m.id, 1)} className={ratings[m.id]?.rating === 1 ? "text-primary" : ""}><ThumbsUp className={`size-3.5 ${ratings[m.id]?.rating === 1 ? "fill-current" : ""}`}/></MessageAction><MessageAction tooltip="没帮助" onClick={() => void rate(m.id, -1)} className={ratings[m.id]?.rating === -1 ? "text-destructive" : ""}><ThumbsDown className={`size-3.5 ${ratings[m.id]?.rating === -1 ? "fill-current" : ""}`}/></MessageAction>{i === messages.length - 1 && <MessageAction tooltip="重新生成（保留当前版本）" onClick={() => regen(i)}><RotateCcw className="size-3.5"/></MessageAction>}<VersionSwitcher list={versionList(i)} current={m.id} disabled={busy} onPick={v => switchVersion(i, v)}/>{versionList(i).length > 1 && <MessageAction tooltip="并排对比所有版本" onClick={() => navigate({ to: "/compare/$threadId", params: { threadId } })}><Columns2 className="size-3.5"/></MessageAction>}</MessageActions>}
           {commentFor === m.id && ratings[m.id] && <form className="mt-2 flex items-center gap-2" onSubmit={e => { e.preventDefault(); const v = new FormData(e.currentTarget).get("c"); void rate(m.id, ratings[m.id]!.rating, String(v ?? "").trim()); }}><input name="c" autoFocus defaultValue={ratings[m.id]!.comment} placeholder={ratings[m.id]!.rating > 0 ? "哪里好？（可选）" : "哪里不好？（可选）"} className="h-7 flex-1 rounded-md border bg-transparent px-2 text-[12px] outline-none focus:border-primary/50"/><Button type="submit" size="sm" variant="outline" className="h-7 text-[11px] shadow-none">提交</Button><button type="button" onClick={() => setCommentFor(null)} className="text-muted-foreground hover:text-foreground"><X className="size-3.5"/></button></form>}
@@ -258,7 +258,7 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
       {status === "submitted" && <div className="flex items-center gap-2 pb-8 text-sm"><Mark/><Shimmer>正在思考...</Shimmer></div>}
       {error && <div className="mb-5 flex items-start gap-2 rounded-md border border-destructive/25 bg-destructive/5 p-3 text-xs text-destructive"><CircleAlert className="mt-px size-4 shrink-0"/><span className="flex-1">{error}</span></div>}
     </ConversationContent><ConversationScrollButton/></Conversation>
-    <div className="shrink-0 px-4 pb-4 pt-2 md:px-5"><div className="relative mx-auto max-w-[760px]">
+     <div className="relay-composer-wrap shrink-0 px-4 pb-5 pt-3 md:px-6"><div className="relative mx-auto max-w-[800px]">
       {slash.popup}
       {goalEdit !== null && <form className="mb-2 flex items-center gap-2 rounded-lg border bg-card px-3 py-2" onSubmit={e => { e.preventDefault(); const v = goalEdit.trim(); void saveGoal(v || null); }}><Target className="size-3.5 shrink-0 text-primary"/><input autoFocus value={goalEdit} onChange={e => setGoalEdit(e.target.value)} onKeyDown={e => { if (e.key === "Escape") setGoalEdit(null); }} placeholder="这次对话要达成什么？例如：定出 10 月团建的最终方案和预算" className="h-7 flex-1 bg-transparent text-[12px] outline-none"/>{ctx.goal && <Button type="button" size="sm" variant="ghost" className="h-7 text-[11px]" onClick={() => void saveGoal(null)}>清除</Button>}<Button type="submit" size="sm" className="h-7 text-[11px]">保存</Button><button type="button" onClick={() => setGoalEdit(null)} className="text-muted-foreground hover:text-foreground"><X className="size-3.5"/></button></form>}
       {stats && <div className="mb-2 rounded-lg border bg-card p-3 text-[12px]"><div className="mb-2 flex items-center gap-2 font-medium"><BarChart3 className="size-3.5 text-primary"/>回复评分统计<button type="button" onClick={() => setStats(null)} className="ml-auto text-muted-foreground hover:text-foreground"><X className="size-3.5"/></button></div>
@@ -267,7 +267,7 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
         <div className="space-y-1.5">{stats.byModel.map(r => { const n = r.up + r.down; return <div key={r.model} className="flex items-center gap-2"><span className="w-32 truncate text-muted-foreground">{r.model.startsWith("agent:") ? `Agent · ${r.model.slice(6)}` : modelLabel(r.model)}</span><div className="flex h-1.5 flex-1 overflow-hidden rounded-full bg-destructive/30"><div className="bg-primary" style={{ width: `${r.up / n * 100}%` }}/></div><span className="w-16 text-right tabular-nums text-muted-foreground">{r.up}/{n}</span></div>; })}</div>
         {stats.recent.length > 0 && <div className="mt-3 border-t pt-2"><div className="mb-1 text-[10px] text-muted-foreground">最近的意见</div>{stats.recent.map((r, i) => <div key={i} className="truncate py-0.5">{r.rating > 0 ? "👍" : "👎"} {r.comment}</div>)}</div>}</>}
       </div>}
-      <PromptInput className="rounded-lg border bg-card shadow-[0_3px_16px_-12px_var(--color-foreground)] transition-[border-color,box-shadow] duration-150 focus-within:border-primary/50" onSubmit={({ text }) => submit(text)}>
+       <PromptInput className="relay-composer rounded-xl border border-border bg-card transition-[border-color,box-shadow] duration-200 focus-within:border-primary/50" onSubmit={({ text }) => submit(text)}>
         <PromptInputTextarea ref={textareaRef} value={draft} onChange={e => setDraft(e.target.value)} onKeyDown={slash.onKeyDown} placeholder="发送消息，输入 / 唤起快捷指令..." className="min-h-[58px] text-[13px] leading-6"/>
         <PromptInputFooter className="flex-wrap gap-1 px-2 py-1.5"><PromptInputTools>
             <DropdownMenu open={permMenu} onOpenChange={setPermMenu}><DropdownMenuTrigger asChild><button type="button" className={`flex h-7 items-center gap-1 rounded-md px-2 text-[11px] hover:bg-accent ${ctx.permission === "ask" ? "text-muted-foreground" : ctx.permission === "auto" ? "text-destructive" : "text-primary"}`}>{ctx.permission === "readonly" ? <Lock className="size-3"/> : <ShieldAlert className="size-3"/>}{permLabels[ctx.permission].name}</button></DropdownMenuTrigger>
@@ -278,7 +278,7 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
           </PromptInputTools>
           <div className="ml-auto flex items-center gap-1">
             <ModelMenu model={model} onModel={m => { setAgentId(null); onModel(m); }} agents={agents} agentId={agentId} onAgent={setAgentId} onManage={() => navigate({ to: "/studio/agents" })} open={modelMenuOpen} onOpenChange={setModelMenuOpen}/>
-            <PromptInputSubmit status={status} onStop={stop} disabled={!draft.trim() && !busy} className="size-8 rounded-full"/>
+             <PromptInputSubmit status={status} onStop={stop} disabled={!draft.trim() && !busy} className="size-8 rounded-md"/>
           </div>
         </PromptInputFooter>
       </PromptInput>
