@@ -12,7 +12,13 @@ export function SkillsDock({ userId, canInvoke }: { userId?: string | undefined;
   useEffect(() => { setOpen(localStorage.getItem("relay-skills-dock") !== "0"); }, []);
   useEffect(() => {
     if (!userId) { setSkills([]); return; }
-    supabase.from("skills").select("id,name,description").eq("enabled", true).order("name").then(({ data }) => setSkills(data ?? []));
+    const load = () => supabase.from("skills").select("id,name,description").eq("enabled", true).order("name").then(({ data }) => setSkills(data ?? []));
+    load();
+    // 安装/启用后（同页或其他标签页）即时同步
+    const ch = supabase.channel(`skills-dock-${userId}`).on("postgres_changes", { event: "*", schema: "public", table: "skills" }, load).subscribe();
+    window.addEventListener("focus", load);
+    window.addEventListener("relay:skills-changed", load);
+    return () => { supabase.removeChannel(ch); window.removeEventListener("focus", load); window.removeEventListener("relay:skills-changed", load); };
   }, [userId]);
   if (!userId) return null;
   const toggle = () => setOpen(v => { localStorage.setItem("relay-skills-dock", v ? "0" : "1"); return !v; });
