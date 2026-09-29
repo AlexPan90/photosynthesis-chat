@@ -292,6 +292,7 @@ export type Database = {
           summary: string | null
           summary_upto: string | null
           title: string
+          total_tokens: number
           updated_at: string
           user_id: string
         }
@@ -307,6 +308,7 @@ export type Database = {
           summary?: string | null
           summary_upto?: string | null
           title?: string
+          total_tokens?: number
           updated_at?: string
           user_id?: string
         }
@@ -322,6 +324,7 @@ export type Database = {
           summary?: string | null
           summary_upto?: string | null
           title?: string
+          total_tokens?: number
           updated_at?: string
           user_id?: string
         }

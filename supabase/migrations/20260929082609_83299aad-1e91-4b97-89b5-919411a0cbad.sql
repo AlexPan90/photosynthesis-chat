@@ -1,0 +1,1 @@
+ALTER TABLE public.threads ADD COLUMN total_tokens bigint NOT NULL DEFAULT 0;

@@ -1,6 +1,6 @@
 import type { UIMessage } from "ai";
 
-export type VersionMeta = { parentId?: string; version?: number; regeneratedFrom?: string | null; createdAt?: string; selectedAt?: string; event?: string; model?: string };
+export type VersionMeta = { parentId?: string; version?: number; regeneratedFrom?: string | null; createdAt?: string; selectedAt?: string; event?: string; model?: string; usage?: { input: number; output: number; reasoning?: number; total: number } };
 export type Row = { id: string; role: string; parts: unknown; parent_id: string | null; metadata: unknown; selected_at: string | null; created_at: string };
 
 export const metaOf = (m: UIMessage) => (m.metadata ?? {}) as VersionMeta;
