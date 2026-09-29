@@ -1,41 +1,14 @@
 import { CodeBlock } from "@/components/ai-elements/code-block";
 import type { BundledLanguage } from "shiki";
 import { useState } from "react";
-import { Play, X } from "lucide-react";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { kindStyles, type StudioFile } from "./files";
-import { ArtifactVisual } from "./ArtifactVisual";
+import { ArchiveViewer, AudioViewer, DocViewer, ImageViewer, JsonViewer } from "./ArtifactViewers";
 import { DataPreview } from "./DataPreview";
 
 function Preview({ file }: { file: StudioFile }) {
-  if (file.doc) {
-    return (
-      <div className="space-y-4">
-        <div className="rounded-md border bg-card p-4">
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">目录 · {file.doc.pages} 页</p>
-          <ol className="space-y-1.5">
-            {file.doc.toc.map((t, i) => (
-              <li key={t} className="flex items-baseline gap-2 text-[11px] text-muted-foreground">
-                <span className="font-mono text-[10px] opacity-60">{String(i + 1).padStart(2, "0")}</span>
-                {t}
-              </li>
-            ))}
-          </ol>
-        </div>
-        <article className="rounded-md border bg-background p-5 text-[13px] leading-[1.9]">
-          {file.doc.excerpt.split("\n\n").map((block, i) =>
-            block.startsWith("## ") ? (
-              <h3 key={i} className="mb-3 text-[15px] font-semibold">{block.slice(3)}</h3>
-            ) : block.startsWith("> ") ? (
-              <blockquote key={i} className="mt-3 border-l-2 border-file-doc/50 pl-3 text-muted-foreground">{block.slice(2)}</blockquote>
-            ) : (
-              <p key={i} className="text-muted-foreground">{block}</p>
-            ),
-          )}
-        </article>
-      </div>
-    );
-  }
+  if (file.doc) return <DocViewer file={file} />;
   if (file.table) {
     return <DataPreview file={file} />;
   }
@@ -71,49 +44,10 @@ function Preview({ file }: { file: StudioFile }) {
       </div>
     );
   }
-  if (file.image) {
-    return <ArtifactVisual file={file} />;
-  }
-  if (file.audio) {
-    return (
-      <div className="space-y-4">
-        <div className="rounded-md border bg-card p-4">
-          <div className="flex items-center gap-3">
-            <Button size="icon-sm" className="size-9 rounded-full" aria-label="播放录音"><Play className="size-4" /></Button>
-            <div className="flex h-10 flex-1 items-center gap-[3px]">
-              {file.audio.wave.map((h, i) => (
-                <span key={i} className={`flex-1 rounded-full ${i < 10 ? "bg-file-media" : "bg-file-media/30"}`} style={{ height: `${Math.max(14, h)}%` }} />
-              ))}
-            </div>
-            <span className="font-mono text-[11px] text-muted-foreground">{file.audio.duration}</span>
-          </div>
-        </div>
-        <div className="space-y-2">
-          {file.audio.transcript.map((t) => (
-            <div key={t.at} className="lift flex gap-3 rounded-md border bg-card px-3 py-2">
-              <span className="shrink-0 font-mono text-[10px] text-file-media">{t.at}</span>
-              <p className="text-[12px] leading-6 text-muted-foreground">{t.text}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-  if (file.json) {
-    return (
-      <CodeBlock code={file.json} language="json" showLineNumbers className="soft-scroll max-h-[520px] overflow-auto"/>
-    );
-  }
-  return (
-    <div className="space-y-2">
-      {["pricing-summary.md", "competitor-pricing.csv", "pricing-chart.svg", "raw-payload.json", "analyze.ts", "report.tsx", "README.md"].map((n) => (
-        <div key={n} className="flex items-center justify-between rounded-md border bg-card px-3 py-2 text-[11px]">
-          <span className="font-mono">{n}</span>
-          <span className="font-mono text-[10px] text-muted-foreground">已打包</span>
-        </div>
-      ))}
-    </div>
-  );
+  if (file.image) return <ImageViewer file={file} />;
+  if (file.audio) return <AudioViewer file={file} />;
+  if (file.json) return <JsonViewer json={file.json} />;
+  return <ArchiveViewer file={file} />;
 }
 
 export function FileViewer({ file, onClose }: { file: StudioFile; onClose: () => void }) {
