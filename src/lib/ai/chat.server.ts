@@ -103,7 +103,7 @@ export async function handleChat(request: Request) {
   let model: string = parsed.data.model;
   const messages = parsed.data.messages as UIMessage[];
 
-  const { data: thread } = await supabase.from("threads").select("id,title,summary,summary_upto,permission,plan_mode").eq("id", threadId).maybeSingle();
+  const { data: thread } = await supabase.from("threads").select("id,title,summary,summary_upto,permission,plan_mode,goal").eq("id", threadId).maybeSingle();
   if (!thread) return json(404, "对话不存在");
 
   const { data: rows } = await supabase.from("agents").select("id,name,description,system_prompt,model,tool_ids,mcp_tool_ids,skill_ids,delegate_ids,sort_order").order("sort_order").order("created_at");
@@ -169,7 +169,8 @@ export async function handleChat(request: Request) {
   const tools = readOnly ? Object.fromEntries(Object.entries(allTools).filter(([n]) => !isWrite(n))) : allTools;
   const cut = thread.summary && thread.summary_upto ? messages.findIndex(m => m.id === thread.summary_upto) : -1;
   const history = cut >= 0 ? messages.slice(cut + 1) : messages;
-  const stateNote = `${cut >= 0 ? `\n\n【早期对话摘要】\n${thread.summary}` : ""}${thread.plan_mode ? "\n\n【计划模式】只制定计划，不执行任何修改外部数据的操作。可以用只读工具（搜索、读取）收集信息，然后输出编号的分步计划：每步写清做什么、用哪个工具或 Agent、预期结果，最后询问用户是否按计划执行。" : permission === "readonly" ? "\n\n【只读权限】当前对话禁止删除、发送、创建、修改和运行脚本，如用户要求这类操作，说明需要先用 /permission 调整权限。" : ""}`;
+  const goalNote = thread.goal ? `\n\n【对话目标】${thread.goal}\n每一步都要围绕这个目标：先判断本轮请求与目标的关系，偏离时提醒用户；回答末尾用一行「目标进度：…」说明离目标还差什么。当你判断目标已经完全达成时，在末尾明确写「✅ 目标已达成」并建议用户用 /goal 清除或设定新目标。` : "";
+  const stateNote = `${goalNote}${cut >= 0 ? `\n\n【早期对话摘要】\n${thread.summary}` : ""}${thread.plan_mode ? "\n\n【计划模式】只制定计划，不执行任何修改外部数据的操作。可以用只读工具（搜索、读取）收集信息，然后输出编号的分步计划：每步写清做什么、用哪个工具或 Agent、预期结果，最后询问用户是否按计划执行。" : permission === "readonly" ? "\n\n【只读权限】当前对话禁止删除、发送、创建、修改和运行脚本，如用户要求这类操作，说明需要先用 /permission 调整权限。" : ""}`;
   const result = streamText({
     model: provider.responses(model),
     system: `${systemFor(active)}${skillsPrompt(skills)}${delegates.length ? "\n当子任务明显更适合某个专门 Agent 时，调用 delegate_to_agent 委派，然后整合结果回答。" : ""}${stateNote}`,

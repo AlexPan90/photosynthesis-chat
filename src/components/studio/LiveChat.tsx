@@ -3,7 +3,7 @@ import { useChat } from "@ai-sdk/react";
 import { useNavigate } from "@tanstack/react-router";
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithApprovalResponses, lastAssistantMessageIsCompleteWithToolCalls, type UIMessage } from "ai";
 import { runJsInSandbox } from "@/lib/js-sandbox";
-import { ArrowUpRight, Bot, Check, ChevronDown, ChevronLeft, ChevronRight, Columns2, GitBranch, Settings2, CircleAlert, Copy, RotateCcw, ShieldAlert, Layers, Lock, ListChecks } from "lucide-react";
+import { ArrowUpRight, Bot, Check, ChevronDown, ChevronLeft, ChevronRight, Columns2, GitBranch, Settings2, CircleAlert, Copy, RotateCcw, ShieldAlert, Layers, Lock, ListChecks, Target, ThumbsUp, ThumbsDown, X, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Conversation, ConversationContent, ConversationEmptyState, ConversationScrollButton } from "@/components/ai-elements/conversation";
@@ -69,19 +69,50 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
   const [versions, setVersions] = useState<Record<string, UIMessage[]>>(initialVersions);
   const [error, setError] = useState("");
   // 对话状态（存在 threads 表里，服务端据此改变行为）
-  const [ctx, setCtx] = useState<{ permission: Permission; plan: boolean; summary: string | null; summaryUpto: string | null }>({ permission: "ask", plan: false, summary: null, summaryUpto: null });
+  const [ctx, setCtx] = useState<{ permission: Permission; plan: boolean; summary: string | null; summaryUpto: string | null; goal: string | null }>({ permission: "ask", plan: false, summary: null, summaryUpto: null, goal: null });
+  const [goalEdit, setGoalEdit] = useState<string | null>(null);
+  const [ratings, setRatings] = useState<Record<string, { rating: number; comment: string }>>({});
+  const [commentFor, setCommentFor] = useState<string | null>(null);
+  const [stats, setStats] = useState<null | { up: number; down: number; byModel: { model: string; up: number; down: number }[]; recent: { comment: string; rating: number }[]; thread: { up: number; down: number } }>(null);
   const [permMenu, setPermMenu] = useState(false);
   const [compacting, setCompacting] = useState(false);
   useEffect(() => {
-    void supabase.from("threads").select("permission,plan_mode,summary,summary_upto").eq("id", threadId).maybeSingle().then(({ data }) => {
-      if (data) setCtx({ permission: (data.permission as Permission) ?? "ask", plan: data.plan_mode, summary: data.summary, summaryUpto: data.summary_upto });
+    void supabase.from("threads").select("permission,plan_mode,summary,summary_upto,goal").eq("id", threadId).maybeSingle().then(({ data }) => {
+      if (data) setCtx({ permission: (data.permission as Permission) ?? "ask", plan: data.plan_mode, summary: data.summary, summaryUpto: data.summary_upto, goal: data.goal });
     });
+    void supabase.from("message_feedback").select("message_id,rating,comment").eq("thread_id", threadId).then(({ data }) => setRatings(Object.fromEntries((data ?? []).map(r => [r.message_id, { rating: r.rating, comment: r.comment }]))));
   }, [threadId]);
   async function saveCtx(patch: { permission?: Permission; plan_mode?: boolean }, notice: string) {
     const { error } = await supabase.from("threads").update(patch).eq("id", threadId);
     if (error) { onNotice("设置未保存，请重试"); return; }
     setCtx(c => ({ ...c, ...(patch.permission ? { permission: patch.permission } : {}), ...(patch.plan_mode !== undefined ? { plan: patch.plan_mode } : {}) }));
     onNotice(notice);
+  }
+  async function saveGoal(goal: string | null) {
+    const { error } = await supabase.from("threads").update({ goal }).eq("id", threadId);
+    if (error) { onNotice("目标未保存，请重试"); return; }
+    setCtx(c => ({ ...c, goal })); setGoalEdit(null);
+    onNotice(goal ? "目标已设定：AI 之后每一步都会围绕它" : "已清除对话目标");
+  }
+  async function rate(messageId: string, rating: number, comment?: string) {
+    const prev = ratings[messageId];
+    if (prev && prev.rating === rating && comment === undefined) {
+      await supabase.from("message_feedback").delete().eq("message_id", messageId);
+      setRatings(r => { const n = { ...r }; delete n[messageId]; return n; }); setCommentFor(null); return;
+    }
+    const row = { message_id: messageId, thread_id: threadId, rating, comment: comment ?? prev?.comment ?? "", model: activeAgent ? `agent:${activeAgent.name}` : model };
+    const { error } = await supabase.from("message_feedback").upsert(row);
+    if (error) { onNotice("评分未保存，请重试"); return; }
+    setRatings(r => ({ ...r, [messageId]: { rating, comment: row.comment } }));
+    if (comment !== undefined) { setCommentFor(null); onNotice("已记录你的意见"); }
+    else { setCommentFor(messageId); onNotice(rating > 0 ? "已记录：有帮助" : "已记录：没帮助"); }
+  }
+  async function loadStats() {
+    const { data } = await supabase.from("message_feedback").select("rating,comment,model,thread_id,updated_at").order("updated_at", { ascending: false }).limit(1000);
+    const rows = data ?? []; const by: Record<string, { up: number; down: number }> = {};
+    for (const r of rows) { const k = r.model ?? "未知"; by[k] ??= { up: 0, down: 0 }; if (r.rating > 0) by[k].up++; else by[k].down++; }
+    const cnt = (xs: typeof rows) => ({ up: xs.filter(r => r.rating > 0).length, down: xs.filter(r => r.rating < 0).length });
+    setStats({ ...cnt(rows), byModel: Object.entries(by).map(([model, v]) => ({ model, ...v })).sort((a, b) => b.up + b.down - a.up - a.down), recent: rows.filter(r => r.comment).slice(0, 5).map(r => ({ comment: r.comment, rating: r.rating })), thread: cnt(rows.filter(r => r.thread_id === threadId)) });
   }
   async function compact() {
     if (busy || compacting) return;
@@ -163,7 +194,8 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
     { name: "summarize", desc: "让 AI 总结一段内容", run: () => setDraft("请总结以下内容：") },
     { name: "research", desc: "让 AI 联网调研一个主题", run: () => setDraft("请联网调研：") },
     { name: "code", desc: "让 AI 生成代码", run: () => setDraft("请帮我写代码：") },
-    { name: "feedback", desc: "记录对这次对话的反馈", run: () => setDraft("反馈：") },
+    { name: "goal", desc: ctx.goal ? `修改或清除目标（当前：${ctx.goal.slice(0, 16)}）` : "设定对话目标，AI 每一步都围绕它", run: () => { setDraft(""); setGoalEdit(ctx.goal ?? ""); } },
+    { name: "feedback", desc: "查看回复评分统计", run: () => { setDraft(""); void loadStats(); } },
   ];
   const slash = useSlashCommands(slashCommands, draft, setDraft, textareaRef);
   const parentOf = (i: number) => messages[i - 1]?.role === "user" ? messages[i - 1]!.id : metaOf(messages[i]!).parentId;
@@ -219,7 +251,8 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
           })}
           {text && <Message from={m.role} className="max-w-full"><MessageContent style={style} className={isAgent ? "w-full text-[length:var(--message-size)] leading-[1.85]" : "max-w-[86%] rounded-xl rounded-tr-sm bg-secondary px-4 py-3 text-[length:var(--message-size)] leading-[1.75]"}><MessageResponse>{text}</MessageResponse></MessageContent></Message>}
           {m.id === ctx.summaryUpto && ctx.summary && <details className="group mt-6 text-[11px] text-muted-foreground"><summary className="flex cursor-pointer list-none items-center gap-3"><span className="h-px flex-1 bg-border"/><Layers className="size-3"/>以上内容已压缩为摘要，AI 只会看到摘要<span className="underline decoration-dotted">查看</span><span className="h-px flex-1 bg-border"/></summary><div className="mt-2 rounded-md border bg-muted/30 px-3 py-2 text-[12px] leading-6 text-foreground"><MessageResponse>{ctx.summary}</MessageResponse></div></details>}
-          {isAgent && text && !streamingThis && <MessageActions className="mt-3 opacity-70"><MessageAction tooltip="复制内容" onClick={() => { navigator.clipboard.writeText(text); onNotice("已复制到剪贴板"); }}><Copy className="size-3.5"/></MessageAction>{i === messages.length - 1 && <MessageAction tooltip="重新生成（保留当前版本）" onClick={() => regen(i)}><RotateCcw className="size-3.5"/></MessageAction>}<VersionSwitcher list={versionList(i)} current={m.id} disabled={busy} onPick={v => switchVersion(i, v)}/>{versionList(i).length > 1 && <MessageAction tooltip="并排对比所有版本" onClick={() => navigate({ to: "/compare/$threadId", params: { threadId } })}><Columns2 className="size-3.5"/></MessageAction>}</MessageActions>}
+          {isAgent && text && !streamingThis && <MessageActions className="mt-3 opacity-70"><MessageAction tooltip="复制内容" onClick={() => { navigator.clipboard.writeText(text); onNotice("已复制到剪贴板"); }}><Copy className="size-3.5"/></MessageAction><MessageAction tooltip="有帮助" onClick={() => void rate(m.id, 1)} className={ratings[m.id]?.rating === 1 ? "text-primary" : ""}><ThumbsUp className={`size-3.5 ${ratings[m.id]?.rating === 1 ? "fill-current" : ""}`}/></MessageAction><MessageAction tooltip="没帮助" onClick={() => void rate(m.id, -1)} className={ratings[m.id]?.rating === -1 ? "text-destructive" : ""}><ThumbsDown className={`size-3.5 ${ratings[m.id]?.rating === -1 ? "fill-current" : ""}`}/></MessageAction>{i === messages.length - 1 && <MessageAction tooltip="重新生成（保留当前版本）" onClick={() => regen(i)}><RotateCcw className="size-3.5"/></MessageAction>}<VersionSwitcher list={versionList(i)} current={m.id} disabled={busy} onPick={v => switchVersion(i, v)}/>{versionList(i).length > 1 && <MessageAction tooltip="并排对比所有版本" onClick={() => navigate({ to: "/compare/$threadId", params: { threadId } })}><Columns2 className="size-3.5"/></MessageAction>}</MessageActions>}
+          {commentFor === m.id && ratings[m.id] && <form className="mt-2 flex items-center gap-2" onSubmit={e => { e.preventDefault(); const v = new FormData(e.currentTarget).get("c"); void rate(m.id, ratings[m.id]!.rating, String(v ?? "").trim()); }}><input name="c" autoFocus defaultValue={ratings[m.id]!.comment} placeholder={ratings[m.id]!.rating > 0 ? "哪里好？（可选）" : "哪里不好？（可选）"} className="h-7 flex-1 rounded-md border bg-transparent px-2 text-[12px] outline-none focus:border-primary/50"/><Button type="submit" size="sm" variant="outline" className="h-7 text-[11px] shadow-none">提交</Button><button type="button" onClick={() => setCommentFor(null)} className="text-muted-foreground hover:text-foreground"><X className="size-3.5"/></button></form>}
         </div>;
       })}
       {status === "submitted" && <div className="flex items-center gap-2 pb-8 text-sm"><Mark/><Shimmer>正在思考...</Shimmer></div>}
@@ -227,12 +260,20 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
     </ConversationContent><ConversationScrollButton/></Conversation>
     <div className="shrink-0 px-4 pb-4 pt-2 md:px-5"><div className="relative mx-auto max-w-[760px]">
       {slash.popup}
+      {goalEdit !== null && <form className="mb-2 flex items-center gap-2 rounded-lg border bg-card px-3 py-2" onSubmit={e => { e.preventDefault(); const v = goalEdit.trim(); void saveGoal(v || null); }}><Target className="size-3.5 shrink-0 text-primary"/><input autoFocus value={goalEdit} onChange={e => setGoalEdit(e.target.value)} onKeyDown={e => { if (e.key === "Escape") setGoalEdit(null); }} placeholder="这次对话要达成什么？例如：定出 10 月团建的最终方案和预算" className="h-7 flex-1 bg-transparent text-[12px] outline-none"/>{ctx.goal && <Button type="button" size="sm" variant="ghost" className="h-7 text-[11px]" onClick={() => void saveGoal(null)}>清除</Button>}<Button type="submit" size="sm" className="h-7 text-[11px]">保存</Button><button type="button" onClick={() => setGoalEdit(null)} className="text-muted-foreground hover:text-foreground"><X className="size-3.5"/></button></form>}
+      {stats && <div className="mb-2 rounded-lg border bg-card p-3 text-[12px]"><div className="mb-2 flex items-center gap-2 font-medium"><BarChart3 className="size-3.5 text-primary"/>回复评分统计<button type="button" onClick={() => setStats(null)} className="ml-auto text-muted-foreground hover:text-foreground"><X className="size-3.5"/></button></div>
+        {stats.up + stats.down === 0 ? <p className="text-muted-foreground">还没有评分。在回复下方点 👍 / 👎 即可评分。</p> : <>
+        <div className="mb-3 grid grid-cols-3 gap-2">{[["全部评分", `${stats.up + stats.down}`], ["满意率", `${Math.round(stats.up / (stats.up + stats.down) * 100)}%`], ["本对话", `👍 ${stats.thread.up} · 👎 ${stats.thread.down}`]].map(([k, v]) => <div key={k} className="rounded-md bg-muted/40 px-2.5 py-2"><div className="text-[10px] text-muted-foreground">{k}</div><div className="font-display text-sm font-semibold">{v}</div></div>)}</div>
+        <div className="space-y-1.5">{stats.byModel.map(r => { const n = r.up + r.down; return <div key={r.model} className="flex items-center gap-2"><span className="w-32 truncate text-muted-foreground">{r.model.startsWith("agent:") ? `Agent · ${r.model.slice(6)}` : modelLabel(r.model)}</span><div className="flex h-1.5 flex-1 overflow-hidden rounded-full bg-destructive/30"><div className="bg-primary" style={{ width: `${r.up / n * 100}%` }}/></div><span className="w-16 text-right tabular-nums text-muted-foreground">{r.up}/{n}</span></div>; })}</div>
+        {stats.recent.length > 0 && <div className="mt-3 border-t pt-2"><div className="mb-1 text-[10px] text-muted-foreground">最近的意见</div>{stats.recent.map((r, i) => <div key={i} className="truncate py-0.5">{r.rating > 0 ? "👍" : "👎"} {r.comment}</div>)}</div>}</>}
+      </div>}
       <PromptInput className="rounded-lg border bg-card shadow-[0_3px_16px_-12px_var(--color-foreground)] transition-[border-color,box-shadow] duration-150 focus-within:border-primary/50" onSubmit={({ text }) => submit(text)}>
         <PromptInputTextarea ref={textareaRef} value={draft} onChange={e => setDraft(e.target.value)} onKeyDown={slash.onKeyDown} placeholder="发送消息，输入 / 唤起快捷指令..." className="min-h-[58px] text-[13px] leading-6"/>
         <PromptInputFooter className="flex-wrap gap-1 px-2 py-1.5"><PromptInputTools>
             <DropdownMenu open={permMenu} onOpenChange={setPermMenu}><DropdownMenuTrigger asChild><button type="button" className={`flex h-7 items-center gap-1 rounded-md px-2 text-[11px] hover:bg-accent ${ctx.permission === "ask" ? "text-muted-foreground" : ctx.permission === "auto" ? "text-destructive" : "text-primary"}`}>{ctx.permission === "readonly" ? <Lock className="size-3"/> : <ShieldAlert className="size-3"/>}{permLabels[ctx.permission].name}</button></DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-64">{(Object.keys(permLabels) as Permission[]).map(k => <DropdownMenuItem key={k} onSelect={() => void saveCtx({ permission: k }, `权限已切换为「${permLabels[k].name}」`)} className="flex items-start gap-2 text-xs"><Check className={`mt-0.5 size-3.5 ${ctx.permission === k ? "" : "opacity-0"}`}/><div><div className="font-medium">{permLabels[k].name}</div><div className="text-[11px] text-muted-foreground">{permLabels[k].desc}</div></div></DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
             {ctx.plan && <button type="button" onClick={() => void saveCtx({ plan_mode: false }, "已退出计划模式")} className="flex h-7 items-center gap-1 rounded-md bg-primary/10 px-2 text-[11px] text-primary hover:bg-primary/15" title="点击退出计划模式"><ListChecks className="size-3"/>计划模式</button>}
+            {ctx.goal && <button type="button" onClick={() => setGoalEdit(ctx.goal)} className="flex h-7 max-w-[220px] items-center gap-1 rounded-md bg-primary/10 px-2 text-[11px] text-primary hover:bg-primary/15" title={`目标：${ctx.goal}（点击修改）`}><Target className="size-3 shrink-0"/><span className="truncate">{ctx.goal}</span></button>}
             {compacting && <span className="flex h-7 items-center px-2 text-[11px]"><Shimmer>正在压缩对话...</Shimmer></span>}
           </PromptInputTools>
           <div className="ml-auto flex items-center gap-1">
