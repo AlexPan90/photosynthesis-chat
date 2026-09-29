@@ -3,7 +3,7 @@ import { useChat } from "@ai-sdk/react";
 import { useNavigate } from "@tanstack/react-router";
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithApprovalResponses, lastAssistantMessageIsCompleteWithToolCalls, type UIMessage } from "ai";
 import { runJsInSandbox } from "@/lib/js-sandbox";
-import { ArrowUpRight, Bot, Check, ChevronDown, Settings2, CircleAlert, Copy, RotateCcw, ShieldAlert } from "lucide-react";
+import { ArrowUpRight, Bot, Check, ChevronDown, ChevronLeft, ChevronRight, GitBranch, Settings2, CircleAlert, Copy, RotateCcw, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Conversation, ConversationContent, ConversationEmptyState, ConversationScrollButton } from "@/components/ai-elements/conversation";
@@ -15,6 +15,7 @@ import { Shimmer } from "@/components/ai-elements/shimmer";
 import { supabase } from "@/integrations/supabase/client";
 import { AgentManager, DelegateCard, useAgents } from "./Agents";
 import type { AgentConfig } from "@/lib/ai/agents.shared";
+import { metaOf } from "@/lib/branches";
 
 
 export const liveModelGroups = [
@@ -33,6 +34,7 @@ function Mark() { return <div className="flex size-7 shrink-0 items-center justi
 type Props = {
   threadId: string;
   initialMessages: UIMessage[];
+  initialVersions?: Record<string, UIMessage[]>;
   model: LiveModel;
   onModel: (m: LiveModel) => void;
   fontSize: number;
@@ -45,7 +47,7 @@ type Props = {
 
 const toolTitles: Record<string, string> = { web_search: "网页搜索", read_webpage: "读取网页", get_current_time: "获取当前时间", calculate: "计算", run_js: "运行 JS（浏览器沙箱）", run_skill_script: "运行 Skill 脚本（云沙箱）", delegate_to_agent: "委派 Agent", load_skill: "加载 Skill", read_skill_file: "读取 Skill 文件" };
 
-export function LiveChat({ threadId, initialMessages, model, onModel, fontSize, initials, onActivity, onNotice, initialAgentId = null, onAgent }: Props) {
+export function LiveChat({ threadId, initialMessages, initialVersions = {}, model, onModel, fontSize, initials, onActivity, onNotice, initialAgentId = null, onAgent }: Props) {
   const { agents, custom, reload } = useAgents();
   const navigate = useNavigate();
   const [agentId, setAgentIdState] = useState<string | null>(initialAgentId);
@@ -55,6 +57,7 @@ export function LiveChat({ threadId, initialMessages, model, onModel, fontSize, 
   const setAgentId = (id: string | null) => { setAgentIdState(id); onAgent?.(id); };
   const activeAgent = agents.find(a => a.id === agentId) ?? null;
   const [draft, setDraft] = useState("");
+  const [versions, setVersions] = useState<Record<string, UIMessage[]>>(initialVersions);
   const [error, setError] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const modelRef = useRef(model);
@@ -65,9 +68,9 @@ export function LiveChat({ threadId, initialMessages, model, onModel, fontSize, 
       const { data } = await supabase.auth.getSession();
       return data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {};
     },
-    prepareSendMessagesRequest: ({ messages, headers }) => ({ ...(headers ? { headers } : {}), body: { threadId, model: modelRef.current, agentId: agentRef.current, messages } }),
+    prepareSendMessagesRequest: ({ messages, headers, trigger, messageId }) => ({ ...(headers ? { headers } : {}), body: { threadId, model: modelRef.current, agentId: agentRef.current, messages, regeneratedFrom: trigger === "regenerate-message" ? messageId : undefined } }),
   }), [threadId]);
-  const { messages, sendMessage, status, stop, regenerate, addToolApprovalResponse, addToolOutput } = useChat({
+  const { messages, setMessages, sendMessage, status, stop, regenerate, addToolApprovalResponse, addToolOutput } = useChat({
     id: threadId,
     sendAutomaticallyWhen: (o) => lastAssistantMessageIsCompleteWithApprovalResponses(o) || lastAssistantMessageIsCompleteWithToolCalls(o),
     messages: initialMessages,
@@ -88,6 +91,29 @@ export function LiveChat({ threadId, initialMessages, model, onModel, fontSize, 
     sendMessage({ text: text.trim() });
     setDraft("");
     setTimeout(onActivity, 800);
+  }
+  const parentOf = (i: number) => messages[i - 1]?.role === "user" ? messages[i - 1]!.id : metaOf(messages[i]!).parentId;
+  function versionList(i: number) {
+    const m = messages[i]!; const parent = parentOf(i);
+    const list = [...(parent ? versions[parent] ?? [] : []).filter(v => v.id !== m.id), m];
+    const t = (v: UIMessage) => metaOf(v).createdAt ?? "\uffff";
+    return list.sort((a, b) => t(a).localeCompare(t(b)));
+  }
+  function keepVersion(i: number) {
+    const m = messages[i]; const parent = parentOf(i);
+    if (!m || !parent) return;
+    setVersions(prev => ({ ...prev, [parent]: [...(prev[parent] ?? []).filter(v => v.id !== m.id), { ...m, metadata: { ...metaOf(m), parentId: parent } }] }));
+  }
+  function regen(i: number) {
+    setError(""); keepVersion(i);
+    void regenerate({ messageId: messages[i]!.id });
+  }
+  function switchVersion(i: number, target: UIMessage) {
+    if (busy) return;
+    keepVersion(i);
+    const now = new Date().toISOString();
+    setMessages(messages.map((x, k) => (k === i ? { ...target, metadata: { ...metaOf(target), selectedAt: now } } : x)));
+    void supabase.from("messages").update({ selected_at: now, parent_id: parentOf(i) ?? null }).eq("id", target.id).then(({ error }) => error && onNotice("版本切换未保存"));
   }
   const style = { "--message-size": `${fontSize}px` } as React.CSSProperties;
 
@@ -117,7 +143,7 @@ export function LiveChat({ threadId, initialMessages, model, onModel, fontSize, 
             return null;
           })}
           {text && <Message from={m.role} className="max-w-full"><MessageContent style={style} className={isAgent ? "w-full text-[length:var(--message-size)] leading-[1.85]" : "max-w-[86%] rounded-xl rounded-tr-sm bg-secondary px-4 py-3 text-[length:var(--message-size)] leading-[1.75]"}><MessageResponse>{text}</MessageResponse></MessageContent></Message>}
-          {isAgent && text && !streamingThis && <MessageActions className="mt-3 opacity-70"><MessageAction tooltip="复制内容" onClick={() => { navigator.clipboard.writeText(text); onNotice("已复制到剪贴板"); }}><Copy className="size-3.5"/></MessageAction>{i === messages.length - 1 && <MessageAction tooltip="重新生成" onClick={() => { setError(""); regenerate(); }}><RotateCcw className="size-3.5"/></MessageAction>}</MessageActions>}
+          {isAgent && text && !streamingThis && <MessageActions className="mt-3 opacity-70"><MessageAction tooltip="复制内容" onClick={() => { navigator.clipboard.writeText(text); onNotice("已复制到剪贴板"); }}><Copy className="size-3.5"/></MessageAction>{i === messages.length - 1 && <MessageAction tooltip="重新生成（保留当前版本）" onClick={() => regen(i)}><RotateCcw className="size-3.5"/></MessageAction>}<VersionSwitcher list={versionList(i)} current={m.id} disabled={busy} onPick={v => switchVersion(i, v)}/></MessageActions>}
         </div>;
       })}
       {status === "submitted" && <div className="flex items-center gap-2 pb-8 text-sm"><Mark/><Shimmer>正在思考...</Shimmer></div>}
@@ -146,6 +172,19 @@ export function ModelMenu({ model, onModel, agents, agentId, onAgent, onManage }
     {liveModelGroups.map(g => <div key={g.provider}>{head(g.provider)}{g.models.map(m => <DropdownMenuItem key={m.id} onClick={() => onModel(m.id)}>{m.label}{!active && model === m.id && <Check className="ml-auto size-3.5"/>}</DropdownMenuItem>)}</div>)}
     {upcomingProviders.map(p => <div key={p}>{head(p)}<DropdownMenuItem disabled className="text-[11px]">即将接入</DropdownMenuItem></div>)}
   </DropdownMenuContent></DropdownMenu>;
+}
+
+function VersionSwitcher({ list, current, disabled, onPick }: { list: UIMessage[]; current: string; disabled: boolean; onPick: (m: UIMessage) => void }) {
+  if (list.length < 2) return null;
+  const idx = Math.max(0, list.findIndex(v => v.id === current));
+  const meta = metaOf(list[idx]!);
+  const when = meta.createdAt ? new Date(meta.createdAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" }) : "";
+  return <div className="ml-1 flex items-center gap-0.5 text-[11px] text-muted-foreground" aria-label="回复版本">
+    <Button variant="ghost" size="icon" className="size-6" disabled={disabled || idx === 0} aria-label="上一版" onClick={() => onPick(list[idx - 1]!)}><ChevronLeft className="size-3.5"/></Button>
+    <span className="tabular-nums">{idx + 1} / {list.length}</span>
+    <Button variant="ghost" size="icon" className="size-6" disabled={disabled || idx === list.length - 1} aria-label="下一版" onClick={() => onPick(list[idx + 1]!)}><ChevronRight className="size-3.5"/></Button>
+    {meta.regeneratedFrom && <span className="ml-1 flex items-center gap-1" title="该版本由重新生成产生"><GitBranch className="size-3"/>重新生成{when && ` · ${when}`}</span>}
+  </div>;
 }
 
 function ApprovalBar({ reason, onRespond }: { reason?: string | undefined; onRespond: (approved: boolean) => void }) {

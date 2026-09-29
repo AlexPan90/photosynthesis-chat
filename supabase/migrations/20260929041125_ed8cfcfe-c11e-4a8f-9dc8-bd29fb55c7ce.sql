@@ -1,0 +1,2 @@
+ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS parent_id text, ADD COLUMN IF NOT EXISTS metadata jsonb NOT NULL DEFAULT '{}'::jsonb, ADD COLUMN IF NOT EXISTS selected_at timestamptz;
+CREATE INDEX IF NOT EXISTS messages_thread_parent_idx ON public.messages(thread_id, parent_id);

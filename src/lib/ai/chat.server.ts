@@ -21,6 +21,7 @@ const bodySchema = z.object({
   model: z.enum(CHAT_MODELS).default("openai/gpt-6-astra"),
   agentId: z.string().max(80).nullish(),
   messages: z.array(z.any()).min(1).max(200),
+  regeneratedFrom: z.string().max(120).nullish(),
 });
 
 const json = (status: number, error: string) =>
@@ -66,7 +67,11 @@ export async function handleChat(request: Request) {
   if (active && (CHAT_MODELS as readonly string[]).includes(active.model)) model = active.model;
 
   const last = messages[messages.length - 1];
+  // 消息分支：每个回复挂在它回答的提问下（parent_id），同一提问下多个回复即多个版本。
+  let parentId: string | null = null;
+  let versionMeta: Record<string, unknown> | null = null;
   if (last?.role === "user") {
+    parentId = last.id;
     const { error } = await supabase.from("messages").upsert({
       id: last.id, thread_id: threadId, user_id: userId, role: "user", parts: last.parts as unknown as Json,
     });
@@ -75,6 +80,17 @@ export async function handleChat(request: Request) {
     const patch: { updated_at: string; model: string; agent_id: string | null; title?: string } = { updated_at: new Date().toISOString(), model, agent_id: agentId ?? null };
     if (thread.title === "新对话" && firstText && "text" in firstText) patch.title = firstText.text.trim().slice(0, 24) || "新对话";
     await supabase.from("threads").update(patch).eq("id", threadId);
+    const regeneratedFrom = parsed.data.regeneratedFrom ?? null;
+    if (regeneratedFrom) await supabase.from("messages").update({ parent_id: last.id }).eq("id", regeneratedFrom).is("parent_id", null);
+    const { count } = await supabase.from("messages").select("id", { count: "exact", head: true }).eq("thread_id", threadId).eq("role", "assistant").eq("parent_id", last.id);
+    versionMeta = {
+      parentId, version: (count ?? 0) + 1,
+      regeneratedFrom, model, agentId: agentId ?? null, createdAt: new Date().toISOString(),
+      event: regeneratedFrom ? "version.created" : "reply.created",
+    };
+  } else if (last?.role === "assistant") {
+    const idx = messages.length - 2;
+    parentId = idx >= 0 && messages[idx]?.role === "user" ? messages[idx]!.id : null;
   }
 
   const apiKey = process.env["LOVABLE_API_KEY"];
@@ -121,12 +137,16 @@ export async function handleChat(request: Request) {
   const response = result.toUIMessageStreamResponse({
     originalMessages: messages,
     sendReasoning: true,
+    // 版本变化写进事件流：start 事件携带 metadata（第几版、从哪条重新生成），前端据此归组切换。
+    messageMetadata: ({ part }) => (part.type === "start" && versionMeta ? versionMeta : undefined),
     generateMessageId: () => crypto.randomUUID(),
     onFinish: async ({ responseMessage }) => {
       if (!responseMessage.parts.length) return;
       const { error } = await supabase.from("messages").upsert({
         id: responseMessage.id, thread_id: threadId, user_id: userId, role: "assistant",
         parts: responseMessage.parts as unknown as Json,
+        parent_id: parentId, selected_at: new Date().toISOString(),
+        ...(versionMeta ? { metadata: versionMeta as unknown as Json } : {}),
       });
       if (error) console.error("save assistant message failed", error.message);
       await supabase.from("threads").update({ updated_at: new Date().toISOString() }).eq("id", threadId);

@@ -120,24 +120,33 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          metadata: Json
+          parent_id: string | null
           parts: Json
           role: string
+          selected_at: string | null
           thread_id: string
           user_id: string
         }
         Insert: {
           created_at?: string
           id: string
+          metadata?: Json
+          parent_id?: string | null
           parts?: Json
           role: string
+          selected_at?: string | null
           thread_id: string
           user_id?: string
         }
         Update: {
           created_at?: string
           id?: string
+          metadata?: Json
+          parent_id?: string | null
           parts?: Json
           role?: string
+          selected_at?: string | null
           thread_id?: string
           user_id?: string
         }
