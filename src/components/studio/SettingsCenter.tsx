@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import { ArrowUpRight, Blocks, Bot, Keyboard, Moon, Plug, Settings2, SlidersHorizontal, Sparkles, Sun, X, Cpu, ChevronDown } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -57,7 +59,7 @@ export function SettingsCenter(p: Props) {
           {tab === "general" && <>
             <Row title="界面语言"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="h-8 gap-1.5">{p.language}<ChevronDown className="size-3"/></Button></DropdownMenuTrigger><DropdownMenuContent>{["简体中文", "English"].map(l => <DropdownMenuItem key={l} onClick={() => p.setLanguage(l)}>{l}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu></Row>
             <Row title="账号" desc={p.userEmail ? `对话已保存到云端（${p.userEmail}）` : "登录后对话会保存到云端"}>{p.userEmail ? <Button variant="outline" size="sm" className="h-8" onClick={p.onSignOut}>退出登录</Button> : <Button asChild size="sm" className="h-8"><Link to="/auth">去登录</Link></Button>}</Row>
-            <Row title="默认权限" desc="新对话的默认操作权限，可在对话中用 /permission 调整"><span className="rounded-md border px-2.5 py-1 text-xs text-muted-foreground">操作前确认</span></Row>
+            <PermissionRow signedIn={!!p.userId} />
           </>}
           {tab === "appearance" && <>
             <div className="border-b border-border/60 py-4">
@@ -93,4 +95,27 @@ export function SettingsCenter(p: Props) {
       </section>
     </DialogContent>
   </Dialog>;
+}
+
+const permOpts = { ask: { name: "操作前确认", desc: "删除、发送、运行脚本前弹卡片确认" }, auto: { name: "自动执行", desc: "不再询问，直接执行所有工具" }, readonly: { name: "只读", desc: "禁止任何写操作和脚本" } } as const;
+type Perm = keyof typeof permOpts;
+function PermissionRow({ signedIn }: { signedIn: boolean }) {
+  const [v, setV] = useState<Perm>("ask");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { const s = localStorage.getItem("relay-default-permission"); if (s === "ask" || s === "auto" || s === "readonly") setV(s); }, []);
+  async function pick(k: Perm) {
+    if (!signedIn) { toast.error("登录后才能设置权限"); return; }
+    setBusy(true);
+    const { data: u } = await supabase.auth.getUser();
+    const { error } = await supabase.from("threads").update({ permission: k }).eq("user_id", u.user?.id ?? "");
+    setBusy(false);
+    if (error) { toast.error("保存失败，请重试"); return; }
+    localStorage.setItem("relay-default-permission", k); setV(k);
+    window.dispatchEvent(new CustomEvent("relay-permission", { detail: k }));
+    toast.success(`已将所有对话权限设为「${permOpts[k].name}」`);
+  }
+  return <Row title="默认权限" desc="修改后同步到全部对话和之后新建的对话；单个对话仍可用 /permission 单独调整">
+    <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="sm" disabled={busy} className="h-8 gap-1.5">{permOpts[v].name}<ChevronDown className="size-3"/></Button></DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-60">{(Object.keys(permOpts) as Perm[]).map(k => <DropdownMenuItem key={k} onClick={() => void pick(k)} className="flex flex-col items-start gap-0.5 text-xs"><span className="font-medium">{permOpts[k].name}{v === k ? " ✓" : ""}</span><span className="text-[11px] text-muted-foreground">{permOpts[k].desc}</span></DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
+  </Row>;
 }

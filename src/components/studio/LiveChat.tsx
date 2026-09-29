@@ -85,6 +85,10 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
     });
     void supabase.from("message_feedback").select("message_id,rating,comment").eq("thread_id", threadId).then(({ data }) => setRatings(Object.fromEntries((data ?? []).map(r => [r.message_id, { rating: r.rating, comment: r.comment }]))));
   }, [threadId]);
+  useEffect(() => {
+    const h = (e: Event) => { const k = (e as CustomEvent<Permission>).detail; setCtx(c => ({ ...c, permission: k })); };
+    window.addEventListener("relay-permission", h); return () => window.removeEventListener("relay-permission", h);
+  }, []);
   async function saveCtx(patch: { permission?: Permission; plan_mode?: boolean }, notice: string) {
     const { error } = await supabase.from("threads").update(patch).eq("id", threadId);
     if (error) { onNotice("设置未保存，请重试"); return; }
