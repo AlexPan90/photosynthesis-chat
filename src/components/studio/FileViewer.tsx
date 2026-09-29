@@ -1,3 +1,5 @@
+import { CodeBlock } from "@/components/ai-elements/code-block";
+import type { BundledLanguage } from "shiki";
 import { useState } from "react";
 import { Play, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -86,19 +88,12 @@ function Preview({ file }: { file: StudioFile }) {
   }
   if (file.code) {
     return (
-      <div className="overflow-hidden rounded-md border">
-        <div className="flex items-center gap-2 border-b bg-muted/50 px-3 py-1.5 font-mono text-[10px] text-muted-foreground">
+      <div className="overflow-hidden rounded-lg border border-[color:var(--code-border)] bg-[color:var(--code-bg)]">
+        <div className="flex items-center gap-2 border-b border-[color:var(--code-border)] bg-[color:var(--code-header)] px-3 py-1.5 font-mono text-[10px] text-[color:var(--code-muted)]">
           <span>{file.path}</span>
           <span className="ml-auto uppercase">{file.code.language}</span>
         </div>
-        <div className="soft-scroll max-h-[420px] overflow-auto bg-background px-3 py-2 font-mono text-[11px] leading-6">
-          {file.code.content.split("\n").map((line, i) => (
-            <div key={i} className="flex gap-3">
-              <span className="w-6 shrink-0 select-none text-right text-muted-foreground/50">{i + 1}</span>
-              <span className="whitespace-pre text-foreground/85">{line || " "}</span>
-            </div>
-          ))}
-        </div>
+        <div className="soft-scroll max-h-[520px] overflow-auto [&_pre]:text-[11.5px] [&_code]:text-[11.5px]"><CodeBlock code={file.code.content} language={file.code.language as BundledLanguage} showLineNumbers className="rounded-none border-0 shadow-none"/></div>
       </div>
     );
   }
@@ -145,7 +140,7 @@ function Preview({ file }: { file: StudioFile }) {
   }
   if (file.json) {
     return (
-      <pre className="soft-scroll max-h-[420px] overflow-auto rounded-md border bg-muted/30 p-3 font-mono text-[11px] leading-6 text-muted-foreground">{file.json}</pre>
+      <CodeBlock code={file.json} language="json" showLineNumbers className="soft-scroll max-h-[520px] overflow-auto"/>
     );
   }
   return (
@@ -193,7 +188,7 @@ export function FileViewer({ file, onClose }: { file: StudioFile; onClose: () =>
       <div className="soft-scroll min-h-0 flex-1 overflow-y-auto p-3">
         {tab === "预览" && <div className="rise"><Preview file={file} /></div>}
         {tab === "原始" && (
-          <pre className="soft-scroll overflow-auto rounded-md border bg-muted/30 p-3 font-mono text-[11px] leading-6 text-muted-foreground">{raw}</pre>
+          <CodeBlock code={raw} language={(file.code?.language ?? (file.json ? "json" : "text")) as BundledLanguage} showLineNumbers/>
         )}
         {tab === "信息" && (
           <div className="space-y-1.5">

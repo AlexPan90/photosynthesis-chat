@@ -60,10 +60,8 @@ const addKeysToTokens = (lines: ThemedToken[][]): KeyedLine[] =>
 // Token rendering component
 const TokenSpan = ({ token }: { token: ThemedToken }) => (
   <span
-    className="dark:!bg-[var(--shiki-dark-bg)] dark:!text-[var(--shiki-dark)]"
     style={
       {
-        backgroundColor: token.bgColor,
         color: token.color,
         fontStyle: isItalic(token.fontStyle) ? "italic" : undefined,
         fontWeight: isBold(token.fontStyle) ? "bold" : undefined,
@@ -85,7 +83,7 @@ const LINE_NUMBER_CLASSES = cn(
   "before:w-8",
   "before:mr-4",
   "before:text-right",
-  "before:text-muted-foreground/50",
+  "before:text-[color:var(--code-muted)]",
   "before:font-mono",
   "before:select-none"
 );
@@ -157,7 +155,7 @@ const getHighlighter = (
 
   const highlighterPromise = createHighlighter({
     langs: [language],
-    themes: ["github-light", "github-dark"],
+    themes: ["monokai"],
   });
 
   highlighterCache.set(language, highlighterPromise);
@@ -212,10 +210,7 @@ export const highlightCode = (
 
       const result = highlighter.codeToTokens(code, {
         lang: langToUse,
-        themes: {
-          dark: "github-dark",
-          light: "github-light",
-        },
+        theme: "monokai",
       });
 
       const tokenized: TokenizedCode = {
@@ -257,8 +252,8 @@ const CodeBlockBody = memo(
   }) => {
     const preStyle = useMemo(
       () => ({
-        backgroundColor: tokenized.bg,
-        color: tokenized.fg,
+        backgroundColor: "transparent",
+        color: "var(--code-fg)",
       }),
       [tokenized.bg, tokenized.fg]
     );
@@ -271,7 +266,7 @@ const CodeBlockBody = memo(
     return (
       <pre
         className={cn(
-          "dark:!bg-[var(--shiki-dark-bg)] dark:!text-[var(--shiki-dark)] m-0 bg-transparent p-3.5 text-[13px] leading-relaxed",
+          "m-0 bg-transparent p-3.5 text-[13px] leading-relaxed",
           className
         )}
         style={preStyle}
@@ -309,7 +304,7 @@ export const CodeBlockContainer = ({
 }: HTMLAttributes<HTMLDivElement> & { language: string }) => (
   <div
     className={cn(
-      "group relative w-full overflow-hidden rounded-md border border-border/60 bg-muted/40 text-foreground shadow-[0_12px_32px_-24px_var(--color-foreground)]",
+      "group relative w-full overflow-hidden rounded-lg border border-[color:var(--code-border)] bg-[color:var(--code-bg)] text-[color:var(--code-fg)] shadow-[0_12px_32px_-24px_var(--color-foreground)]",
       className
     )}
     data-language={language}
@@ -329,7 +324,7 @@ export const CodeBlockHeader = ({
 }: HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex items-center justify-between border-b border-border/50 bg-secondary/40 px-3 py-2 text-muted-foreground text-[11px]",
+      "flex items-center justify-between border-b border-[color:var(--code-border)] bg-[color:var(--code-header)] px-3 py-2 text-[color:var(--code-muted)] text-[11px]",
       className
     )}
     {...props}
@@ -405,11 +400,12 @@ export const CodeBlockContent = ({
   useEffect(() => {
     let cancelled = false;
 
-    highlightCode(code, language, (result) => {
+    const cachedResult = highlightCode(code, language, (result) => {
       if (!cancelled) {
         setAsyncTokens(result);
       }
     });
+    if (cachedResult) setAsyncTokens(cachedResult);
 
     return () => {
       cancelled = true;
