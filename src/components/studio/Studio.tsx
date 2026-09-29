@@ -167,6 +167,17 @@ export function Studio({ threadId }: { threadId?: string }) {
   }
   useEffect(() => { const onKey = (event: KeyboardEvent) => { if (!(event.metaKey || event.ctrlKey)) return; if (event.key.toLowerCase() === "k") { event.preventDefault(); createThread(); } if (event.key.toLowerCase() === "f") { event.preventDefault(); setSidebar(true); setMobileSidebar(true); requestAnimationFrame(() => document.querySelector<HTMLInputElement>('input[aria-label="搜索对话"]')?.focus()); } }; window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey); });
   function stop() { if (timer.current) clearTimeout(timer.current); setStatus("ready"); setScenario("default"); }
+  const [modelMenuOpen, setModelMenuOpen] = useState(false);
+  const slashCommands: SlashCommand[] = [
+    { name: "model", desc: "选择本次对话的模型", run: () => { setDraft(""); setModelMenuOpen(true); } },
+    { name: "new", desc: "开始一个新对话", run: () => { setDraft(""); void createThread(); } },
+    { name: "clear", desc: "清空输入框", run: () => setDraft("") },
+    { name: "summarize", desc: "让 AI 总结一段内容", run: () => setDraft("请总结以下内容：") },
+    { name: "research", desc: "让 AI 联网调研一个主题", run: () => setDraft("请联网调研：") },
+    { name: "code", desc: "让 AI 生成代码", run: () => setDraft("请帮我写代码：") },
+    { name: "feedback", desc: "记录对这次对话的反馈", run: () => setDraft("反馈：") },
+  ];
+  const slash = useSlashCommands(slashCommands, draft, setDraft, textareaRef);
   function send(text: string, files: { filename?: string }[]) { if (!text.trim() && files.length === 0) return; setNotice(user ? "示例对话为只读，请新建对话开始真实交流" : "示例对话为只读，登录后即可开始真实对话"); setTimeout(() => setNotice(""), 2600); }
   async function signOut() { await supabase.auth.signOut(); setSettingsOpen(false); setLiveThreads([]); navigate({ to: "/", replace: true }); }
   function copyText(text: string) { navigator.clipboard.writeText(text); setNotice("已复制到剪贴板"); setTimeout(() => setNotice(""), 2200); }
