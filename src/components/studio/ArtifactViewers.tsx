@@ -23,7 +23,7 @@ export function ImageViewer({ file }: { file: StudioFile }) {
     <div className={`relay-stage relay-stage-${bg} rounded-lg border p-3`}><ArtifactVisual file={file}/></div>
     <div className="grid grid-cols-3 gap-2" role="tablist" aria-label="预览背景">
       {(["grid", "dark", "light"] as const).map(k => <button key={k} type="button" role="tab" aria-selected={bg === k} onClick={() => setBg(k)} className={`relay-thumb group overflow-hidden rounded-lg border text-left transition ${bg === k ? "relay-thumb-active" : ""}`}>
-        <div className={`relay-stage relay-stage-${k} pointer-events-none h-16 p-1.5`}><div className="origin-top-left scale-[.5] w-[200%]"><ArtifactVisual file={file} compact/></div></div>
+        <div className={`relay-stage relay-stage-${k} pointer-events-none h-16 overflow-hidden p-1.5`}><div className="origin-top-left scale-[.5] w-[200%]"><ArtifactVisual file={file} compact/></div></div>
         <div className="border-t bg-card px-2 py-1 font-mono text-[10px] text-muted-foreground group-aria-selected:text-foreground">{k === "grid" ? "透明格" : k === "dark" ? "深底" : "浅底"}</div>
       </button>)}
     </div>
