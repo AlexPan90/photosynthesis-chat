@@ -57,6 +57,8 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
   const setAgentId = (id: string | null) => { setAgentIdState(id); onAgent?.(id); };
   const activeAgent = agents.find(a => a.id === agentId) ?? null;
   const [draft, setDraft] = useState("");
+  const [slashIdx, setSlashIdx] = useState(0);
+  const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const [versions, setVersions] = useState<Record<string, UIMessage[]>>(initialVersions);
   const [error, setError] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
