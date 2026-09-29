@@ -268,3 +268,6 @@
 .relay-streaming-cursor::after { content: ""; display: inline-block; width: .55em; height: 1.05em; margin-left: 2px; vertical-align: -0.15em; border-radius: 2px; background: var(--color-primary); box-shadow: 0 0 10px var(--color-primary); animation: relay-cursor 1s steps(2) infinite; }
 @keyframes relay-cursor { 50% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .relay-streaming-cursor::after, [data-streaming="true"] .relay-message > :last-child > :last-child::after { animation: none; } }
+.relay-stage-grid { background-color: var(--color-muted); background-image: conic-gradient(color-mix(in oklab, var(--color-foreground) 7%, transparent) 25%, transparent 0 50%, color-mix(in oklab, var(--color-foreground) 7%, transparent) 0 75%, transparent 0); background-size: 16px 16px; }
+.relay-stage-dark { background: #0b0b0d; }
+.relay-stage-light { background: #fafafa; }
