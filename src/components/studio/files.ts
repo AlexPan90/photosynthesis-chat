@@ -16,7 +16,7 @@ export type StudioFile = {
   diff?: { added: number; removed: number; lines: { type: "add" | "del" | "ctx"; text: string }[] };
   table?: { columns: string[]; rows: string[][]; totalRows: number };
   doc?: { pages: number; toc: string[]; excerpt: string };
-  image?: { width: number; height: number; caption: string; palette: string[] };
+  image?: { width: number; height: number; caption: string; palette: string[]; src?: string };
   audio?: { duration: string; transcript: { at: string; text: string }[]; wave: number[] };
   json?: string;
 };
