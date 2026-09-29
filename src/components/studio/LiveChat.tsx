@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
+import { useNavigate } from "@tanstack/react-router";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { ArrowUpRight, Bot, Check, ChevronDown, Settings2, CircleAlert, Copy, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,7 @@ const toolTitles: Record<string, string> = { read_webpage: "读取网页", get_c
 
 export function LiveChat({ threadId, initialMessages, model, onModel, fontSize, initials, onActivity, onNotice, initialAgentId = null, onAgent }: Props) {
   const { agents, custom, reload } = useAgents();
+  const navigate = useNavigate();
   const [agentId, setAgentIdState] = useState<string | null>(initialAgentId);
   const [managing, setManaging] = useState(false);
   const agentRef = useRef(agentId);
