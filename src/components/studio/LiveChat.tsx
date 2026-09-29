@@ -41,7 +41,7 @@ type Props = {
   onAgent?: (id: string | null) => void;
 };
 
-const toolTitles: Record<string, string> = { read_webpage: "读取网页", get_current_time: "获取当前时间", calculate: "计算", delegate_to_agent: "委派 Agent" };
+const toolTitles: Record<string, string> = { read_webpage: "读取网页", get_current_time: "获取当前时间", calculate: "计算", delegate_to_agent: "委派 Agent", load_skill: "加载 Skill", read_skill_file: "读取 Skill 文件" };
 
 export function LiveChat({ threadId, initialMessages, model, onModel, fontSize, initials, onActivity, onNotice, initialAgentId = null, onAgent }: Props) {
   const { agents, custom, reload } = useAgents();
