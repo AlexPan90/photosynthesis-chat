@@ -12,3 +12,4 @@
 - Keep branching-story sample content and reader state client-side, with browser speech synthesis used only for narration preview; this avoids implying that demo assets include recorded audio.
 - Use a graphite-neutral theme with Sora/Manrope and locate each chapter’s narration in the story context column; this keeps the chosen desktop reading workspace coherent and avoids duplicate media.
 - Keep the conversation as the default focal surface, with workspace files opened contextually in a separately resizable right column rather than showing the file pane on arrival; this avoids competing content while allowing focused file inspection.
+- Real chat streams through the `/api/chat` server route (OpenAI Responses via Lovable AI Gateway, default `openai/gpt-6-astra`); threads/messages live in Cloud tables scoped by RLS to the signed-in user, while seed demo threads stay client-side and read-only — keeps demos browsable without an account.

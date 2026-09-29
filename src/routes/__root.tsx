@@ -80,7 +80,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Relay Studio" },
       { name: "description", content: "AI Agent 对话工作空间" },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
+      { property: "og:title", content: "Relay Studio" },
       { property: "og:description", content: "AI Agent 对话工作空间" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
