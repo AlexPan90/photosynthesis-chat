@@ -301,7 +301,7 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
       </PromptInput>
     </div></div>
     <AgentManager open={managing} onOpenChange={setManaging} custom={custom} reload={reload} models={liveModelGroups.flatMap(g => g.models.map(m => ({ id: m.id, label: m.label })))}/>
-  </>;
+  </div>;
 }
 
 export function ModelMenu({ model, onModel, agents, agentId, onAgent, onManage, open, onOpenChange }: { model: string; onModel: (m: LiveModel) => void; agents?: AgentConfig[]; agentId?: string | null; onAgent?: (id: string) => void; onManage?: () => void; open?: boolean; onOpenChange?: (open: boolean) => void }) {
