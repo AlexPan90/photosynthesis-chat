@@ -352,3 +352,28 @@ body { font-size: calc(16px * var(--relay-type-scale)); }
 .relay-file-card:hover { transform: translateY(-2px); }
 .relay-shell button { transition-property: color, background-color, border-color, box-shadow, transform, opacity; transition-duration: .2s; transition-timing-function: ease; }
 @media (prefers-reduced-motion: reduce) { .relay-empty::after, .relay-message:has(.relay-streaming-cursor) .relay-agent-avatar, .relay-term-error .relay-term-dot { animation: none; } }
+
+/* ---- Light theme parity: same hierarchy, readable contrast ---- */
+:root:not(.dark) .relay-conversation, :root:not(.dark) .relay-transcript { background-color: #FBFBFC; }
+:root:not(.dark) :is([role="dialog"], [data-radix-popper-content-wrapper] > *, [data-slot="dropdown-menu-content"], [data-slot="popover-content"]) {
+  background: color-mix(in oklab, #FFFFFF 88%, transparent) !important;
+  border-color: rgba(15, 15, 30, 0.08) !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,.9) inset, 0 18px 48px -18px rgba(15,15,40,.22), 0 8px 30px -12px color-mix(in oklab, var(--color-primary) 18%, transparent) !important;
+}
+:root:not(.dark) [data-slot="dialog-overlay"] { background: rgba(20, 20, 35, 0.28); }
+:root:not(.dark) .relay-term { background: #F6F6F9; border-color: rgba(15, 15, 30, 0.09); }
+:root:not(.dark) .relay-term-head { background: #EEEEF3; color: #5B5B66; border-bottom-color: rgba(15, 15, 30, 0.07); }
+:root:not(.dark) .relay-term-dot { box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-success) 20%, transparent); }
+:root:not(.dark) .relay-term-error .relay-term-dot { box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-destructive) 20%, transparent); }
+:root:not(.dark) .relay-shell .relay-message [data-streamdown="table-wrapper"] { background: #FFFFFF; border-color: rgba(15, 15, 30, 0.09); box-shadow: 0 1px 2px rgba(15,15,40,.04); }
+:root:not(.dark) .relay-shell .relay-message [data-streamdown="table"] th { color: #52525B; border-bottom-color: rgba(15, 15, 30, 0.12) !important; }
+:root:not(.dark) .relay-shell .relay-message [data-streamdown="table"] td { color: #27272A; }
+:root:not(.dark) .relay-shell .relay-message [data-streamdown="table"] tbody tr + tr td { border-top-color: rgba(15, 15, 30, 0.08); }
+:root:not(.dark) .relay-shell .relay-message [data-streamdown="table"] tbody tr:hover { background: color-mix(in oklab, var(--color-primary) 6%, transparent) !important; }
+:root:not(.dark) .relay-message:not(:last-child)::before { background: linear-gradient(to bottom, color-mix(in oklab, var(--color-primary) 45%, transparent), rgba(15,15,30,.10) 60%, transparent); }
+:root:not(.dark) .relay-nav-active { background: linear-gradient(90deg, color-mix(in oklab, var(--color-primary) 11%, #fff), color-mix(in oklab, var(--color-primary) 3%, #fff)) !important; }
+:root:not(.dark) .relay-nav-active::before { box-shadow: 0 0 6px color-mix(in oklab, var(--color-primary) 55%, transparent); }
+:root:not(.dark) .relay-composer { background: #FFFFFF !important; box-shadow: 0 1px 2px rgba(15,15,40,.05), 0 12px 32px -20px rgba(15,15,40,.25); }
+:root:not(.dark) .relay-pill { background: #F4F4F7; border-color: rgba(15, 15, 30, 0.10); color: #27272A; }
+:root:not(.dark) .relay-file-card:hover { box-shadow: 0 12px 28px -18px rgba(15,15,40,.28); }
+:root:not(.dark) .relay-shell::after { opacity: .02; }
