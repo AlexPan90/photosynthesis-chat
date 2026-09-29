@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 type SkillItem = { id: string; name: string; description: string };
 
 /** 侧栏技能面板：拖到对话区或点击 ▶ 直接调用，结果以普通回复出现在当前对话。 */
-export function SkillsDock({ userId, canInvoke }: { userId?: string; canInvoke: boolean }) {
+export function SkillsDock({ userId, canInvoke }: { userId?: string | undefined; canInvoke: boolean }) {
   const [skills, setSkills] = useState<SkillItem[]>([]);
   const [open, setOpen] = useState(true);
   useEffect(() => { setOpen(localStorage.getItem("relay-skills-dock") !== "0"); }, []);
