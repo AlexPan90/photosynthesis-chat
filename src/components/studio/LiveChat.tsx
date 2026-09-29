@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
-import { ArrowUpRight, Check, ChevronDown, CircleAlert, Copy, RotateCcw } from "lucide-react";
+import { ArrowUpRight, Bot, Check, ChevronDown, Settings2, CircleAlert, Copy, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Conversation, ConversationContent, ConversationEmptyState, ConversationScrollButton } from "@/components/ai-elements/conversation";
@@ -13,7 +13,7 @@ import { Shimmer } from "@/components/ai-elements/shimmer";
 import { supabase } from "@/integrations/supabase/client";
 import { AgentManager, DelegateCard, useAgents } from "./Agents";
 import type { AgentConfig } from "@/lib/ai/agents.shared";
-import { Bot, Settings2 } from "lucide-react";
+
 
 export const liveModelGroups = [
   { provider: "OpenAI", models: [

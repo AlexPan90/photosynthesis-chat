@@ -29,7 +29,7 @@ const trajectory: { title: string; tool: string; ms: string; detail: string; sta
   { title: "写入分析文件", tool: "fs.write", ms: "running", detail: "reports/pricing-summary.md · 正在写入结构化摘要与对比表格。", state: "running" },
 ];
 
-type Thread = { id: string; title: string; group: string; updatedAt: number; messages: UIMessage[]; live?: boolean; model?: string };
+type Thread = { id: string; title: string; group: string; updatedAt: number; messages: UIMessage[]; live?: boolean; model?: string; agentId?: string | null };
 type ToolStep = { title: string; input: Record<string, string>; output?: string; errorText?: string; state: "output-available" | "input-available" | "output-error" | "input-streaming"; icon: "browser" | "search" | "file" };
 type DemoMessage = UIMessage & { steps?: ToolStep[] };
 type ToolScenario = { label: string; desc: string; steps: ToolStep[]; ms: string[] };
