@@ -3,7 +3,7 @@ import { useChat } from "@ai-sdk/react";
 import { useNavigate } from "@tanstack/react-router";
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithApprovalResponses, lastAssistantMessageIsCompleteWithToolCalls, type UIMessage } from "ai";
 import { runJsInSandbox } from "@/lib/js-sandbox";
-import { ArrowUpRight, Bot, Check, ChevronDown, ChevronLeft, ChevronRight, GitBranch, Settings2, CircleAlert, Copy, RotateCcw, ShieldAlert } from "lucide-react";
+import { ArrowUpRight, Bot, Check, ChevronDown, ChevronLeft, ChevronRight, Columns2, GitBranch, Settings2, CircleAlert, Copy, RotateCcw, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Conversation, ConversationContent, ConversationEmptyState, ConversationScrollButton } from "@/components/ai-elements/conversation";
@@ -84,6 +84,12 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
   });
   const busy = status === "submitted" || status === "streaming";
   useEffect(() => { textareaRef.current?.focus(); }, [threadId, status]);
+  useEffect(() => {
+    const id = window.location.hash.slice(1);
+    if (!id.startsWith("msg-")) return;
+    const t = setTimeout(() => { const el = document.getElementById(id); if (!el) return; el.scrollIntoView({ block: "start" }); el.dataset["flash"] = "true"; setTimeout(() => { el.dataset["flash"] = "false"; }, 1600); }, 150);
+    return () => clearTimeout(t);
+  }, [threadId]);
 
   function submit(text: string) {
     if (!text.trim() || busy) return;
@@ -123,7 +129,7 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
         const isAgent = m.role === "assistant";
         const text = m.parts.filter(p => p.type === "text").map(p => p.text).join("\n");
         const streamingThis = busy && i === messages.length - 1 && isAgent;
-        return <div key={m.id} className="mb-7">
+        return <div key={m.id} id={`msg-${m.id}`} className="mb-7 scroll-mt-6 rounded-lg transition-colors duration-700 data-[flash=true]:bg-primary/5">
           <div className={`mb-2 flex items-center gap-2 text-[11px] ${isAgent ? "" : "justify-end"}`}>{isAgent ? <><Mark/><span className="font-semibold">{activeAgent?.name ?? modelLabel(model)}</span></> : <><span className="font-semibold">你</span><div className="flex size-6 items-center justify-center rounded-full bg-secondary text-[10px] font-semibold">{initials}</div></>}</div>
           {m.parts.map((p, idx) => {
             if (p.type === "reasoning" && p.text) return <Reasoning key={idx} className="mb-2 w-full" isStreaming={streamingThis && idx === m.parts.length - 1}><ReasoningTrigger className="text-[11px]"/><ReasoningContent className="text-[12px] text-muted-foreground">{p.text}</ReasoningContent></Reasoning>;
@@ -143,7 +149,7 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
             return null;
           })}
           {text && <Message from={m.role} className="max-w-full"><MessageContent style={style} className={isAgent ? "w-full text-[length:var(--message-size)] leading-[1.85]" : "max-w-[86%] rounded-xl rounded-tr-sm bg-secondary px-4 py-3 text-[length:var(--message-size)] leading-[1.75]"}><MessageResponse>{text}</MessageResponse></MessageContent></Message>}
-          {isAgent && text && !streamingThis && <MessageActions className="mt-3 opacity-70"><MessageAction tooltip="复制内容" onClick={() => { navigator.clipboard.writeText(text); onNotice("已复制到剪贴板"); }}><Copy className="size-3.5"/></MessageAction>{i === messages.length - 1 && <MessageAction tooltip="重新生成（保留当前版本）" onClick={() => regen(i)}><RotateCcw className="size-3.5"/></MessageAction>}<VersionSwitcher list={versionList(i)} current={m.id} disabled={busy} onPick={v => switchVersion(i, v)}/></MessageActions>}
+          {isAgent && text && !streamingThis && <MessageActions className="mt-3 opacity-70"><MessageAction tooltip="复制内容" onClick={() => { navigator.clipboard.writeText(text); onNotice("已复制到剪贴板"); }}><Copy className="size-3.5"/></MessageAction>{i === messages.length - 1 && <MessageAction tooltip="重新生成（保留当前版本）" onClick={() => regen(i)}><RotateCcw className="size-3.5"/></MessageAction>}<VersionSwitcher list={versionList(i)} current={m.id} disabled={busy} onPick={v => switchVersion(i, v)}/>{versionList(i).length > 1 && <MessageAction tooltip="并排对比所有版本" onClick={() => navigate({ to: "/compare/$threadId", params: { threadId } })}><Columns2 className="size-3.5"/></MessageAction>}</MessageActions>}
         </div>;
       })}
       {status === "submitted" && <div className="flex items-center gap-2 pb-8 text-sm"><Mark/><Shimmer>正在思考...</Shimmer></div>}

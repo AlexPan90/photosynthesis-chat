@@ -14,6 +14,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as StudioRouteImport } from './routes/studio'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ChatThreadIdRouteImport } from './routes/chat.$threadId'
+import { Route as CompareThreadIdRouteImport } from './routes/compare.$threadId'
 import { Route as StudioIndexRouteImport } from './routes/studio.index'
 import { Route as StudioAgentsRouteImport } from './routes/studio.agents'
 import { Route as StudioMcpRouteImport } from './routes/studio.mcp'
@@ -44,6 +45,11 @@ const ChatThreadIdRoute = ChatThreadIdRouteImport.update({
   path: '/chat/$threadId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CompareThreadIdRoute = CompareThreadIdRouteImport.update({
+  id: '/compare/$threadId',
+  path: '/compare/$threadId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StudioIndexRoute = StudioIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/studio': typeof StudioRouteWithChildren
   '/api/chat': typeof ApiChatRoute
   '/chat/$threadId': typeof ChatThreadIdRoute
+  '/compare/$threadId': typeof CompareThreadIdRoute
   '/studio/agents': typeof StudioAgentsRoute
   '/studio/mcp': typeof StudioMcpRoute
   '/studio/skills': typeof StudioSkillsRoute
@@ -81,6 +88,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/api/chat': typeof ApiChatRoute
   '/chat/$threadId': typeof ChatThreadIdRoute
+  '/compare/$threadId': typeof CompareThreadIdRoute
   '/studio/agents': typeof StudioAgentsRoute
   '/studio/mcp': typeof StudioMcpRoute
   '/studio/skills': typeof StudioSkillsRoute
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/studio': typeof StudioRouteWithChildren
   '/api/chat': typeof ApiChatRoute
   '/chat/$threadId': typeof ChatThreadIdRoute
+  '/compare/$threadId': typeof CompareThreadIdRoute
   '/studio/agents': typeof StudioAgentsRoute
   '/studio/mcp': typeof StudioMcpRoute
   '/studio/skills': typeof StudioSkillsRoute
@@ -106,6 +115,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/api/chat'
     | '/chat/$threadId'
+    | '/compare/$threadId'
     | '/studio/agents'
     | '/studio/mcp'
     | '/studio/skills'
@@ -116,6 +126,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/api/chat'
     | '/chat/$threadId'
+    | '/compare/$threadId'
     | '/studio/agents'
     | '/studio/mcp'
     | '/studio/skills'
@@ -127,6 +138,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/api/chat'
     | '/chat/$threadId'
+    | '/compare/$threadId'
     | '/studio/agents'
     | '/studio/mcp'
     | '/studio/skills'
@@ -139,6 +151,7 @@ export interface RootRouteChildren {
   StudioRoute: typeof StudioRouteWithChildren
   ApiChatRoute: typeof ApiChatRoute
   ChatThreadIdRoute: typeof ChatThreadIdRoute
+  CompareThreadIdRoute: typeof CompareThreadIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -176,6 +189,13 @@ declare module '@tanstack/react-router' {
       path: '/chat/$threadId'
       fullPath: '/chat/$threadId'
       preLoaderRoute: typeof ChatThreadIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/$threadId': {
+      id: '/compare/$threadId'
+      path: '/compare/$threadId'
+      fullPath: '/compare/$threadId'
+      preLoaderRoute: typeof CompareThreadIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/studio/': {
@@ -232,6 +252,7 @@ const rootRouteChildren: RootRouteChildren = {
   StudioRoute: StudioRouteWithChildren,
   ApiChatRoute: ApiChatRoute,
   ChatThreadIdRoute: ChatThreadIdRoute,
+  CompareThreadIdRoute: CompareThreadIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
