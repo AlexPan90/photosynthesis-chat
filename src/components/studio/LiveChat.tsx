@@ -27,7 +27,6 @@ export const liveModelGroups = [
     { id: "openai/gpt-6-luna", label: "GPT-6 Luna" },
   ] },
 ] as const;
-export const upcomingProviders = ["Anthropic", "DeepSeek", "本地模型"];
 export type LiveModel = (typeof liveModelGroups)[number]["models"][number]["id"];
 export const modelLabel = (id: string) => liveModelGroups.flatMap(g => g.models).find(m => m.id === id)?.label ?? id;
 
