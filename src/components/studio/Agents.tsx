@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Bot, Check, CircleAlert, LoaderCircle, Plus, Trash2 } from "lucide-react";
+import { Bot, Check, CircleAlert, LoaderCircle, Plus, ShieldAlert, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
