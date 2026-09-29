@@ -38,6 +38,7 @@ const permLabels: Record<Permission, { name: string; desc: string }> = {
   readonly: { name: "只读", desc: "禁止删除、发送、修改和运行脚本，只能搜索和读取" },
 };
 
+export const fmtTok = (n: number) => n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
 function Mark() { return <div className="flex size-9 shrink-0 items-center justify-center relay-agent-avatar rounded-lg bg-primary text-primary-foreground"><Zap className="size-4"/></div>; }
 
 type Props = {
@@ -50,13 +51,14 @@ type Props = {
   initials: string;
   onActivity: () => void;
   onNotice: (text: string) => void;
+  onUsage?: (u: { total: number; context: number; replies: number }) => void;
   initialAgentId?: string | null;
   onAgent?: (id: string | null) => void;
 };
 
 const toolTitles: Record<string, string> = { web_search: "网页搜索", read_webpage: "读取网页", get_current_time: "获取当前时间", calculate: "计算", run_js: "运行 JS（浏览器沙箱）", run_skill_script: "运行 Skill 脚本（云沙箱）", delegate_to_agent: "委派 Agent", delegate_action: "子任务请求的操作", load_skill: "加载 Skill", read_skill_file: "读取 Skill 文件" };
 
-export function LiveChat({ threadId, initialMessages, initialVersions = {}, model, onModel, fontSize, initials, onActivity, onNotice, initialAgentId = null, onAgent }: Props) {
+export function LiveChat({ threadId, initialMessages, initialVersions = {}, model, onModel, fontSize, initials, onActivity, onNotice, initialAgentId = null, onAgent, onUsage }: Props) {
   const { agents, custom, reload } = useAgents();
   const navigate = useNavigate();
   const [agentId, setAgentIdState] = useState<string | null>(initialAgentId);
@@ -239,6 +241,12 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
   }
   const style = { "--message-size": `${fontSize}px` } as React.CSSProperties;
 
+  useEffect(() => {
+    if (!onUsage) return;
+    let total = 0, context = 0, replies = 0;
+    for (const m of messages) { const u = metaOf(m).usage; if (u) { total += u.total; context = u.input + u.output; replies++; } }
+    onUsage({ total, context, replies });
+  }, [messages]);
   const isSkillDrag = (e: React.DragEvent) => e.dataTransfer.types.includes("application/x-relay-skill");
   return <div className="relative flex min-h-0 flex-1 flex-col" onDragOver={e => { if (!isSkillDrag(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = "copy"; setDropHover(true); }} onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropHover(false); }} onDrop={e => { if (!isSkillDrag(e)) return; e.preventDefault(); setDropHover(false); try { const d = JSON.parse(e.dataTransfer.getData("application/x-relay-skill")); invokeSkill(d.name, d.description ?? ""); } catch { /* ignore */ } }}>
     {dropHover && <div className="pointer-events-none absolute inset-3 z-30 flex items-center justify-center rounded-2xl border-2 border-dashed border-primary/60 bg-primary/5 backdrop-blur-[1px]"><div className="rounded-lg border border-primary/40 bg-card px-4 py-2 text-[13px] font-medium text-primary shadow-lg">松开即调用该技能{draft.trim() ? "，输入框内容作为任务" : ""}</div></div>}
@@ -269,7 +277,7 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
           })}
            {text && <Message from="assistant" className="max-w-full"><MessageContent style={style} className={isAgent ? "w-full text-[length:var(--message-size)] leading-[1.8]" : "relay-user-bubble w-fit max-w-full rounded-xl px-4 py-3 text-[length:var(--message-size)] leading-[1.75]"}><MessageResponse>{text}</MessageResponse></MessageContent></Message>}
           {m.id === ctx.summaryUpto && ctx.summary && <details className="group mt-6 text-[11px] text-muted-foreground"><summary className="flex cursor-pointer list-none items-center gap-3"><span className="h-px flex-1 bg-border"/><Layers className="size-3"/>以上内容已压缩为摘要，AI 只会看到摘要<span className="underline decoration-dotted">查看</span><span className="h-px flex-1 bg-border"/></summary><div className="mt-2 rounded-md border bg-muted/30 px-3 py-2 text-[12px] leading-6 text-foreground"><MessageResponse>{ctx.summary}</MessageResponse></div></details>}
-          {isAgent && text && !streamingThis && <MessageActions className="mt-3 opacity-70"><MessageAction tooltip="复制内容" onClick={() => { navigator.clipboard.writeText(text); onNotice("已复制到剪贴板"); }}><Copy className="size-3.5"/></MessageAction><MessageAction tooltip="有帮助" onClick={() => void rate(m.id, 1)} className={ratings[m.id]?.rating === 1 ? "text-primary" : ""}><ThumbsUp className={`size-3.5 ${ratings[m.id]?.rating === 1 ? "fill-current" : ""}`}/></MessageAction><MessageAction tooltip="没帮助" onClick={() => void rate(m.id, -1)} className={ratings[m.id]?.rating === -1 ? "text-destructive" : ""}><ThumbsDown className={`size-3.5 ${ratings[m.id]?.rating === -1 ? "fill-current" : ""}`}/></MessageAction>{i === messages.length - 1 && <MessageAction tooltip="重新生成（保留当前版本）" onClick={() => regen(i)}><RotateCcw className="size-3.5"/></MessageAction>}<VersionSwitcher list={versionList(i)} current={m.id} disabled={busy} onPick={v => switchVersion(i, v)}/>{versionList(i).length > 1 && <MessageAction tooltip="并排对比所有版本" onClick={() => navigate({ to: "/compare/$threadId", params: { threadId } })}><Columns2 className="size-3.5"/></MessageAction>}</MessageActions>}
+          {isAgent && text && !streamingThis && <MessageActions className="mt-3 opacity-70">{metaOf(m).usage && <span title={`输入 ${metaOf(m).usage!.input.toLocaleString()} · 输出 ${metaOf(m).usage!.output.toLocaleString()}${metaOf(m).usage!.reasoning ? `（含思考 ${metaOf(m).usage!.reasoning!.toLocaleString()}）` : ""}`} className="mr-1 rounded-md border px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">{fmtTok(metaOf(m).usage!.total)} tokens</span>}<MessageAction tooltip="复制内容" onClick={() => { navigator.clipboard.writeText(text); onNotice("已复制到剪贴板"); }}><Copy className="size-3.5"/></MessageAction><MessageAction tooltip="有帮助" onClick={() => void rate(m.id, 1)} className={ratings[m.id]?.rating === 1 ? "text-primary" : ""}><ThumbsUp className={`size-3.5 ${ratings[m.id]?.rating === 1 ? "fill-current" : ""}`}/></MessageAction><MessageAction tooltip="没帮助" onClick={() => void rate(m.id, -1)} className={ratings[m.id]?.rating === -1 ? "text-destructive" : ""}><ThumbsDown className={`size-3.5 ${ratings[m.id]?.rating === -1 ? "fill-current" : ""}`}/></MessageAction>{i === messages.length - 1 && <MessageAction tooltip="重新生成（保留当前版本）" onClick={() => regen(i)}><RotateCcw className="size-3.5"/></MessageAction>}<VersionSwitcher list={versionList(i)} current={m.id} disabled={busy} onPick={v => switchVersion(i, v)}/>{versionList(i).length > 1 && <MessageAction tooltip="并排对比所有版本" onClick={() => navigate({ to: "/compare/$threadId", params: { threadId } })}><Columns2 className="size-3.5"/></MessageAction>}</MessageActions>}
           {commentFor === m.id && ratings[m.id] && <form className="mt-2 flex items-center gap-2" onSubmit={e => { e.preventDefault(); const v = new FormData(e.currentTarget).get("c"); void rate(m.id, ratings[m.id]!.rating, String(v ?? "").trim()); }}><input name="c" autoFocus defaultValue={ratings[m.id]!.comment} placeholder={ratings[m.id]!.rating > 0 ? "哪里好？（可选）" : "哪里不好？（可选）"} className="h-7 flex-1 rounded-md border bg-transparent px-2 text-[12px] outline-none focus:border-primary/50"/><Button type="submit" size="sm" variant="outline" className="h-7 text-[11px] shadow-none">提交</Button><button type="button" onClick={() => setCommentFor(null)} className="text-muted-foreground hover:text-foreground"><X className="size-3.5"/></button></form>}
         </div></div>;
       })}
