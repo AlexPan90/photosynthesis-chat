@@ -22,6 +22,7 @@ const bodySchema = z.object({
   agentId: z.string().max(80).nullish(),
   messages: z.array(z.any()).min(1).max(200),
   regeneratedFrom: z.string().max(120).nullish(),
+  invokeSkill: z.string().max(120).nullish(),
 });
 
 const json = (status: number, error: string) =>
@@ -154,7 +155,7 @@ export async function handleChat(request: Request) {
   const { data: mcpRows } = await supabase.from("mcp_connections").select("id,name,url,auth_type,header_name,proxy_url,secret_enc,state,disabled_tools");
   const mcp = await loadMcpTools((mcpRows ?? []) as McpRow[], active ? (active.mcp_tool_ids ?? []) : "all");
   const { data: skillRows } = await supabase.from("skills").select("id,name,description,source_type,source_url,ref,path,content,files").eq("enabled", true);
-  const skills = ((skillRows ?? []) as SkillRow[]).filter(s => !active || (active.skill_ids ?? []).includes(s.id));
+  const skills = ((skillRows ?? []) as SkillRow[]).filter(s => !active || (active.skill_ids ?? []).includes(s.id) || s.name === parsed.data.invokeSkill);
   const others = agents.filter(a => a.id !== active?.id);
   const delegates = active && !active.builtin && (active.delegate_ids ?? []).length ? others.filter(a => active.delegate_ids!.includes(a.id)) : active && !active.builtin ? [] : others;
   const subRes = { mcpRows: (mcpRows ?? []) as McpRow[], skillRows: (skillRows ?? []) as SkillRow[], store: { supabase, userId } };
