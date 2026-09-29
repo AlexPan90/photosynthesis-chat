@@ -19,3 +19,5 @@
 - Scripts run in two sandboxes: run_js (browser Web Worker, user-confirmed client tool) and run_skill_script (E2B cloud sandbox via E2B_API_KEY, server toolApproval) — the Worker runtime cannot spawn processes or eval.
 - Paused sub-agent tasks persist their model history in delegate_sessions (RLS own-only); delegate_action executes the server-stored pending action and resumes the sub-agent — Worker is stateless, and the model-supplied args are never trusted.
 - Chat layout follows the reference: 272px sidebar (brand, search, recent sessions, user footer), 60px breadcrumb header, square-avatar left-aligned messages in an 860px column, composer with context chip row, and a 300px Context Files + token usage rail on xl that swaps to the file workspace when a file opens.
+
+- Keep workspace text sizing driven by the shell-scale CSS variable and artifact previews specialized by file type; this prevents isolated hard-coded type sizes and misleading generic thumbnails.
