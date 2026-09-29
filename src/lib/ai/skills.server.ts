@@ -16,8 +16,16 @@ export function parseRepo(input: string) {
 }
 
 export function parseFrontmatter(md: string) {
-  const fm = md.match(/^---\s*\n([\s\S]*?)\n---/);
-  const get = (k: string) => fm?.[1]?.match(new RegExp(`^${k}:\\s*(.+)$`, "m"))?.[1]?.trim().replace(/^["']|["']$/g, "") ?? "";
+  const lines = (md.match(/^---\s*\n([\s\S]*?)\n---/)?.[1] ?? "").split("\n");
+  const get = (k: string) => {
+    const i = lines.findIndex(l => l.startsWith(`${k}:`));
+    if (i < 0) return "";
+    const v = lines[i]!.slice(k.length + 1).trim();
+    if (!/^[>|][-+]?$/.test(v)) return v.replace(/^["']|["']$/g, "");
+    const out: string[] = [];
+    for (const l of lines.slice(i + 1)) { if (l && !/^\s/.test(l)) break; out.push(l.trim()); }
+    return out.join(" ").trim();
+  };
   return { name: get("name"), description: get("description") };
 }
 
