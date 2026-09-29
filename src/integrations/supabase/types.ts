@@ -245,6 +245,10 @@ export type Database = {
           group_name: string
           id: string
           model: string
+          permission: string
+          plan_mode: boolean
+          summary: string | null
+          summary_upto: string | null
           title: string
           updated_at: string
           user_id: string
@@ -255,6 +259,10 @@ export type Database = {
           group_name?: string
           id?: string
           model?: string
+          permission?: string
+          plan_mode?: boolean
+          summary?: string | null
+          summary_upto?: string | null
           title?: string
           updated_at?: string
           user_id?: string
@@ -265,6 +273,10 @@ export type Database = {
           group_name?: string
           id?: string
           model?: string
+          permission?: string
+          plan_mode?: boolean
+          summary?: string | null
+          summary_upto?: string | null
           title?: string
           updated_at?: string
           user_id?: string

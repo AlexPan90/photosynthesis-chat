@@ -3,7 +3,7 @@ import { useChat } from "@ai-sdk/react";
 import { useNavigate } from "@tanstack/react-router";
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithApprovalResponses, lastAssistantMessageIsCompleteWithToolCalls, type UIMessage } from "ai";
 import { runJsInSandbox } from "@/lib/js-sandbox";
-import { ArrowUpRight, Bot, Check, ChevronDown, ChevronLeft, ChevronRight, Columns2, GitBranch, Settings2, CircleAlert, Copy, RotateCcw, ShieldAlert } from "lucide-react";
+import { ArrowUpRight, Bot, Check, ChevronDown, ChevronLeft, ChevronRight, Columns2, GitBranch, Settings2, CircleAlert, Copy, RotateCcw, ShieldAlert, Layers, Lock, ListChecks } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Conversation, ConversationContent, ConversationEmptyState, ConversationScrollButton } from "@/components/ai-elements/conversation";
@@ -29,6 +29,13 @@ export const liveModelGroups = [
 export const upcomingProviders = ["Anthropic", "DeepSeek", "本地模型"];
 export type LiveModel = (typeof liveModelGroups)[number]["models"][number]["id"];
 export const modelLabel = (id: string) => liveModelGroups.flatMap(g => g.models).find(m => m.id === id)?.label ?? id;
+
+type Permission = "ask" | "auto" | "readonly";
+const permLabels: Record<Permission, { name: string; desc: string }> = {
+  ask: { name: "操作前确认", desc: "删除、发送、运行脚本前弹卡片等你批准（默认）" },
+  auto: { name: "自动执行", desc: "所有操作直接执行，不再询问，请谨慎使用" },
+  readonly: { name: "只读", desc: "禁止删除、发送、修改和运行脚本，只能搜索和读取" },
+};
 
 function Mark() { return <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground"><span className="font-mono text-base font-semibold leading-none">R<span className="text-success">.</span></span></div>; }
 
@@ -61,6 +68,34 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const [versions, setVersions] = useState<Record<string, UIMessage[]>>(initialVersions);
   const [error, setError] = useState("");
+  // 对话状态（存在 threads 表里，服务端据此改变行为）
+  const [ctx, setCtx] = useState<{ permission: Permission; plan: boolean; summary: string | null; summaryUpto: string | null }>({ permission: "ask", plan: false, summary: null, summaryUpto: null });
+  const [permMenu, setPermMenu] = useState(false);
+  const [compacting, setCompacting] = useState(false);
+  useEffect(() => {
+    void supabase.from("threads").select("permission,plan_mode,summary,summary_upto").eq("id", threadId).maybeSingle().then(({ data }) => {
+      if (data) setCtx({ permission: (data.permission as Permission) ?? "ask", plan: data.plan_mode, summary: data.summary, summaryUpto: data.summary_upto });
+    });
+  }, [threadId]);
+  async function saveCtx(patch: { permission?: Permission; plan_mode?: boolean }, notice: string) {
+    const { error } = await supabase.from("threads").update(patch).eq("id", threadId);
+    if (error) { onNotice("设置未保存，请重试"); return; }
+    setCtx(c => ({ ...c, ...(patch.permission ? { permission: patch.permission } : {}), ...(patch.plan_mode !== undefined ? { plan: patch.plan_mode } : {}) }));
+    onNotice(notice);
+  }
+  async function compact() {
+    if (busy || compacting) return;
+    if (messages[messages.length - 1]?.role !== "assistant") { onNotice("还没有可压缩的回复"); return; }
+    setCompacting(true); setError("");
+    try {
+      const { data } = await supabase.auth.getSession();
+      const res = await fetch("/api/compact", { method: "POST", headers: { "content-type": "application/json", ...(data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {}) }, body: JSON.stringify({ threadId, messages }) });
+      const body = await res.json().catch(() => ({})) as { summary?: string; summaryUpto?: string; error?: string };
+      if (!res.ok || !body.summary) { setError(body.error ?? "压缩失败，请稍后重试"); return; }
+      setCtx(c => ({ ...c, summary: body.summary!, summaryUpto: body.summaryUpto! }));
+      onNotice("已压缩：之后只发送摘要和新消息");
+    } finally { setCompacting(false); }
+  }
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const modelRef = useRef(model);
   modelRef.current = model;
@@ -122,6 +157,9 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
     { name: "export", desc: "把当前对话导出为 Markdown 文件", run: () => { setDraft(""); exportMarkdown(); } },
     { name: "new", desc: "开始一个新对话", run: () => { setDraft(""); void navigate({ to: "/" }); } },
     { name: "clear", desc: "清空输入框", run: () => setDraft("") },
+    { name: "compact", desc: "把之前的对话压缩成摘要，节省上下文", run: () => { setDraft(""); void compact(); } },
+    { name: "permission", desc: `调整操作权限（当前：${permLabels[ctx.permission].name}）`, run: () => { setDraft(""); setPermMenu(true); } },
+    { name: "plan", desc: ctx.plan ? "关闭计划模式，恢复正常执行" : "开启计划模式：先出计划，不执行修改操作", run: () => { setDraft(""); void saveCtx({ plan_mode: !ctx.plan }, ctx.plan ? "已退出计划模式" : "计划模式已开启：AI 只制定计划，不会执行修改操作"); } },
     { name: "summarize", desc: "让 AI 总结一段内容", run: () => setDraft("请总结以下内容：") },
     { name: "research", desc: "让 AI 联网调研一个主题", run: () => setDraft("请联网调研：") },
     { name: "code", desc: "让 AI 生成代码", run: () => setDraft("请帮我写代码：") },
@@ -180,6 +218,7 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
             return null;
           })}
           {text && <Message from={m.role} className="max-w-full"><MessageContent style={style} className={isAgent ? "w-full text-[length:var(--message-size)] leading-[1.85]" : "max-w-[86%] rounded-xl rounded-tr-sm bg-secondary px-4 py-3 text-[length:var(--message-size)] leading-[1.75]"}><MessageResponse>{text}</MessageResponse></MessageContent></Message>}
+          {m.id === ctx.summaryUpto && ctx.summary && <details className="group mt-6 text-[11px] text-muted-foreground"><summary className="flex cursor-pointer list-none items-center gap-3"><span className="h-px flex-1 bg-border"/><Layers className="size-3"/>以上内容已压缩为摘要，AI 只会看到摘要<span className="underline decoration-dotted">查看</span><span className="h-px flex-1 bg-border"/></summary><div className="mt-2 rounded-md border bg-muted/30 px-3 py-2 text-[12px] leading-6 text-foreground"><MessageResponse>{ctx.summary}</MessageResponse></div></details>}
           {isAgent && text && !streamingThis && <MessageActions className="mt-3 opacity-70"><MessageAction tooltip="复制内容" onClick={() => { navigator.clipboard.writeText(text); onNotice("已复制到剪贴板"); }}><Copy className="size-3.5"/></MessageAction>{i === messages.length - 1 && <MessageAction tooltip="重新生成（保留当前版本）" onClick={() => regen(i)}><RotateCcw className="size-3.5"/></MessageAction>}<VersionSwitcher list={versionList(i)} current={m.id} disabled={busy} onPick={v => switchVersion(i, v)}/>{versionList(i).length > 1 && <MessageAction tooltip="并排对比所有版本" onClick={() => navigate({ to: "/compare/$threadId", params: { threadId } })}><Columns2 className="size-3.5"/></MessageAction>}</MessageActions>}
         </div>;
       })}
@@ -190,7 +229,12 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
       {slash.popup}
       <PromptInput className="rounded-lg border bg-card shadow-[0_3px_16px_-12px_var(--color-foreground)] transition-[border-color,box-shadow] duration-150 focus-within:border-primary/50" onSubmit={({ text }) => submit(text)}>
         <PromptInputTextarea ref={textareaRef} value={draft} onChange={e => setDraft(e.target.value)} onKeyDown={slash.onKeyDown} placeholder="发送消息，输入 / 唤起快捷指令..." className="min-h-[58px] text-[13px] leading-6"/>
-        <PromptInputFooter className="flex-wrap gap-1 px-2 py-1.5"><PromptInputTools/>
+        <PromptInputFooter className="flex-wrap gap-1 px-2 py-1.5"><PromptInputTools>
+            <DropdownMenu open={permMenu} onOpenChange={setPermMenu}><DropdownMenuTrigger asChild><button type="button" className={`flex h-7 items-center gap-1 rounded-md px-2 text-[11px] hover:bg-accent ${ctx.permission === "ask" ? "text-muted-foreground" : ctx.permission === "auto" ? "text-destructive" : "text-primary"}`}>{ctx.permission === "readonly" ? <Lock className="size-3"/> : <ShieldAlert className="size-3"/>}{permLabels[ctx.permission].name}</button></DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-64">{(Object.keys(permLabels) as Permission[]).map(k => <DropdownMenuItem key={k} onSelect={() => void saveCtx({ permission: k }, `权限已切换为「${permLabels[k].name}」`)} className="flex items-start gap-2 text-xs"><Check className={`mt-0.5 size-3.5 ${ctx.permission === k ? "" : "opacity-0"}`}/><div><div className="font-medium">{permLabels[k].name}</div><div className="text-[11px] text-muted-foreground">{permLabels[k].desc}</div></div></DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
+            {ctx.plan && <button type="button" onClick={() => void saveCtx({ plan_mode: false }, "已退出计划模式")} className="flex h-7 items-center gap-1 rounded-md bg-primary/10 px-2 text-[11px] text-primary hover:bg-primary/15" title="点击退出计划模式"><ListChecks className="size-3"/>计划模式</button>}
+            {compacting && <span className="flex h-7 items-center px-2 text-[11px]"><Shimmer>正在压缩对话...</Shimmer></span>}
+          </PromptInputTools>
           <div className="ml-auto flex items-center gap-1">
             <ModelMenu model={model} onModel={m => { setAgentId(null); onModel(m); }} agents={agents} agentId={agentId} onAgent={setAgentId} onManage={() => navigate({ to: "/studio/agents" })} open={modelMenuOpen} onOpenChange={setModelMenuOpen}/>
             <PromptInputSubmit status={status} onStop={stop} disabled={!draft.trim() && !busy} className="size-8 rounded-full"/>

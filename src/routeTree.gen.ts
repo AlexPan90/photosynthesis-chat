@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as StudioRouteImport } from './routes/studio'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as ApiCompactRouteImport } from './routes/api/compact'
 import { Route as ChatThreadIdRouteImport } from './routes/chat.$threadId'
 import { Route as CompareThreadIdRouteImport } from './routes/compare.$threadId'
 import { Route as StudioIndexRouteImport } from './routes/studio.index'
@@ -38,6 +39,11 @@ const StudioRoute = StudioRouteImport.update({
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCompactRoute = ApiCompactRouteImport.update({
+  id: '/api/compact',
+  path: '/api/compact',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChatThreadIdRoute = ChatThreadIdRouteImport.update({
@@ -76,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/studio': typeof StudioRouteWithChildren
   '/api/chat': typeof ApiChatRoute
+  '/api/compact': typeof ApiCompactRoute
   '/chat/$threadId': typeof ChatThreadIdRoute
   '/compare/$threadId': typeof CompareThreadIdRoute
   '/studio/agents': typeof StudioAgentsRoute
@@ -87,6 +94,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/compact': typeof ApiCompactRoute
   '/chat/$threadId': typeof ChatThreadIdRoute
   '/compare/$threadId': typeof CompareThreadIdRoute
   '/studio/agents': typeof StudioAgentsRoute
@@ -100,6 +108,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/studio': typeof StudioRouteWithChildren
   '/api/chat': typeof ApiChatRoute
+  '/api/compact': typeof ApiCompactRoute
   '/chat/$threadId': typeof ChatThreadIdRoute
   '/compare/$threadId': typeof CompareThreadIdRoute
   '/studio/agents': typeof StudioAgentsRoute
@@ -114,6 +123,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/studio'
     | '/api/chat'
+    | '/api/compact'
     | '/chat/$threadId'
     | '/compare/$threadId'
     | '/studio/agents'
@@ -125,6 +135,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/api/chat'
+    | '/api/compact'
     | '/chat/$threadId'
     | '/compare/$threadId'
     | '/studio/agents'
@@ -137,6 +148,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/studio'
     | '/api/chat'
+    | '/api/compact'
     | '/chat/$threadId'
     | '/compare/$threadId'
     | '/studio/agents'
@@ -150,6 +162,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   StudioRoute: typeof StudioRouteWithChildren
   ApiChatRoute: typeof ApiChatRoute
+  ApiCompactRoute: typeof ApiCompactRoute
   ChatThreadIdRoute: typeof ChatThreadIdRoute
   CompareThreadIdRoute: typeof CompareThreadIdRoute
 }
@@ -182,6 +195,13 @@ declare module '@tanstack/react-router' {
       path: '/api/chat'
       fullPath: '/api/chat'
       preLoaderRoute: typeof ApiChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/compact': {
+      id: '/api/compact'
+      path: '/api/compact'
+      fullPath: '/api/compact'
+      preLoaderRoute: typeof ApiCompactRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/chat/$threadId': {
@@ -251,6 +271,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   StudioRoute: StudioRouteWithChildren,
   ApiChatRoute: ApiChatRoute,
+  ApiCompactRoute: ApiCompactRoute,
   ChatThreadIdRoute: ChatThreadIdRoute,
   CompareThreadIdRoute: CompareThreadIdRoute,
 }
