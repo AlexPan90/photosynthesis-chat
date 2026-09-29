@@ -8,6 +8,7 @@ import { Conversation, ConversationContent, ConversationEmptyState, Conversation
 import { Message, MessageContent, MessageResponse, MessageActions, MessageAction } from "@/components/ai-elements/message";
 import { Reasoning, ReasoningContent, ReasoningTrigger } from "@/components/ai-elements/reasoning";
 import { PromptInput, PromptInputTextarea, PromptInputFooter, PromptInputButton, PromptInputSubmit, PromptInputTools } from "@/components/ai-elements/prompt-input";
+import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput, type ToolPart } from "@/components/ai-elements/tool";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -34,6 +35,8 @@ type Props = {
   onActivity: () => void;
   onNotice: (text: string) => void;
 };
+
+const toolTitles: Record<string, string> = { read_webpage: "读取网页", get_current_time: "获取当前时间", calculate: "计算" };
 
 export function LiveChat({ threadId, initialMessages, model, onModel, fontSize, initials, onActivity, onNotice }: Props) {
   const [draft, setDraft] = useState("");
@@ -80,7 +83,14 @@ export function LiveChat({ threadId, initialMessages, model, onModel, fontSize, 
         const streamingThis = busy && i === messages.length - 1 && isAgent;
         return <div key={m.id} className="mb-7">
           <div className={`mb-2 flex items-center gap-2 text-[11px] ${isAgent ? "" : "justify-end"}`}>{isAgent ? <><Mark/><span className="font-semibold">{modelLabel(model)}</span></> : <><span className="font-semibold">你</span><div className="flex size-6 items-center justify-center rounded-full bg-secondary text-[10px] font-semibold">{initials}</div></>}</div>
-          {m.parts.map((p, idx) => p.type === "reasoning" && p.text ? <Reasoning key={idx} className="mb-2 w-full" isStreaming={streamingThis && idx === m.parts.length - 1}><ReasoningTrigger className="text-[11px]"/><ReasoningContent className="text-[12px] text-muted-foreground">{p.text}</ReasoningContent></Reasoning> : null)}
+          {m.parts.map((p, idx) => {
+            if (p.type === "reasoning" && p.text) return <Reasoning key={idx} className="mb-2 w-full" isStreaming={streamingThis && idx === m.parts.length - 1}><ReasoningTrigger className="text-[11px]"/><ReasoningContent className="text-[12px] text-muted-foreground">{p.text}</ReasoningContent></Reasoning>;
+            if (p.type.startsWith("tool-") || p.type === "dynamic-tool") {
+              const t = p as ToolPart;
+              return <Tool key={idx} className="mb-1" defaultOpen={t.state === "output-error"}>{t.type === "dynamic-tool" ? <ToolHeader type={t.type} state={t.state} toolName={t.toolName} title={toolTitles[t.toolName] ?? t.toolName}/> : <ToolHeader type={t.type} state={t.state} title={toolTitles[t.type.slice(5)] ?? t.type.slice(5)}/>}<ToolContent><ToolInput input={t.input}/><ToolOutput output={t.state === "output-available" ? t.output : undefined} errorText={t.state === "output-error" ? t.errorText : undefined}/></ToolContent></Tool>;
+            }
+            return null;
+          })}
           {text && <Message from={m.role} className="max-w-full"><MessageContent style={style} className={isAgent ? "w-full text-[length:var(--message-size)] leading-[1.85]" : "max-w-[86%] rounded-xl rounded-tr-sm bg-secondary px-4 py-3 text-[length:var(--message-size)] leading-[1.75]"}><MessageResponse>{text}</MessageResponse></MessageContent></Message>}
           {isAgent && text && !streamingThis && <MessageActions className="mt-3 opacity-70"><MessageAction tooltip="复制内容" onClick={() => { navigator.clipboard.writeText(text); onNotice("已复制到剪贴板"); }}><Copy className="size-3.5"/></MessageAction>{i === messages.length - 1 && <MessageAction tooltip="重新生成" onClick={() => { setError(""); regenerate(); }}><RotateCcw className="size-3.5"/></MessageAction>}</MessageActions>}
         </div>;
