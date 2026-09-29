@@ -315,9 +315,6 @@ body { font-size: calc(16px * var(--relay-type-scale)); }
   --sidebar: #F7F7F9;
   --sidebar-foreground: #1C1C22;
 }
-.relay-settings-light, .relay-settings-light * {
-  background-color: initial;
-}
 .relay-settings-light [role="dialog"], .relay-settings-light [data-slot="dropdown-menu-content"],
 [role="dialog"].relay-settings-light, [data-slot="dropdown-menu-content"].relay-settings-light {
   background: #FFFFFF !important;
