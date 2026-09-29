@@ -16,3 +16,4 @@
 - Agent 编排在 /api/chat 内完成：选中 Agent 覆盖提示词/工具/模型，委派通过 delegate_to_agent 工具的流式预览输出回传子 Agent 执行记录——前端只消费统一的 UI 消息流，无需额外协议。
 - Agent/MCP/Skills 编排在 /studio/* 页面管理；MCP 密钥用 MCP_ENC_KEY 做 AES-GCM 加密后只在服务端解密，/api/chat 按 Agent 绑定临时建 MCP 客户端并在流结束时关闭——避免令牌进入浏览器或长连接泄漏。
 - Skills 渐进加载：系统提示只放名称+描述，正文用 load_skill/read_skill_file 按需读取（远程文件从 GitHub raw 拉取、只读）——节省上下文且不执行脚本。
+- Scripts run in two sandboxes: run_js (browser Web Worker, user-confirmed client tool) and run_skill_script (E2B cloud sandbox via E2B_API_KEY, server toolApproval) — the Worker runtime cannot spawn processes or eval.
