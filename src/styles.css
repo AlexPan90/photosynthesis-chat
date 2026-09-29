@@ -75,29 +75,29 @@
   --file-archive: oklch(0.55 0.025 255);
 }
 .dark {
-  --background: #171A18;
+  --background: #111412;
   --foreground: #F4F5F1;
-  --card: #202521;
+  --card: #1A1E1B;
   --card-foreground: var(--foreground);
-  --popover: #262C27;
+  --popover: #202521;
   --popover-foreground: var(--foreground);
   --primary: #C9ED55;
   --primary-foreground: #171A18;
-  --secondary: #2A302B;
+  --secondary: #252B27;
   --secondary-foreground: var(--foreground);
-  --muted: #262C27;
+  --muted: #202521;
   --muted-foreground: #9AA79D;
-  --accent: #353D33;
+  --accent: #30382F;
   --accent-foreground: var(--foreground);
   --destructive: oklch(0.72 0.14 25);
   --destructive-foreground: oklch(0.19 0 0);
-  --border: #39433A;
+  --border: #343D35;
   --input: #59645D;
   --ring: #C9ED55;
   --success: #C9ED55;
   --warning: oklch(0.76 0.1 75);
   --info: oklch(0.74 0.07 235);
-  --sidebar: #141715;
+  --sidebar: #0E110F;
   --sidebar-foreground: var(--foreground);
   --file-code: oklch(0.73 0.075 245);
   --file-data: oklch(0.73 0.07 165);

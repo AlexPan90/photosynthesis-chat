@@ -23,4 +23,4 @@
 - [x] Refresh chat surfaces, typography, status accents, code blocks and composer in the selected dark technical direction; preserve existing flows and light theme.
 - [x] Recompose the complete chat workspace into a narrower navigation rail, aligned transcript and composer, quieter header, and contextual file pane; verify desktop and mobile.
 
-- [ ] Apply the selected Glass paned command center direction across the full chat workspace and verify desktop, workspace, and mobile states.
+- [x] Apply the selected Glass paned command center direction across the full chat workspace and verify desktop, workspace, and mobile states.
