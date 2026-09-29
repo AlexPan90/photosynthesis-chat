@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { MessageResponse } from "@/components/ai-elements/message";
 import { supabase } from "@/integrations/supabase/client";
-import { installSkills, readSkillIndex, scanSkillSource } from "@/lib/orchestra.functions";
+import { installSkillDefs, installSkills, readSkillIndex, scanSkillSource, type SkillDef } from "@/lib/orchestra.functions";
 import { useSkills, type Skill } from "./data";
 
 type Remote = { name: string; description: string; path: string; files: string[] };
@@ -21,13 +21,14 @@ export function SkillsPage() {
   const scan = useServerFn(scanSkillSource);
   const install = useServerFn(installSkills);
   const readIndex = useServerFn(readSkillIndex);
+  const installDefs = useServerFn(installSkillDefs);
   const [sel, setSel] = useState<string | "add" | null>(null);
   const [mode, setMode] = useState<"repo" | "hub" | "manual">("repo");
   const [repo, setRepo] = useState("");
   const [found, setFound] = useState<{ source: string; ref: string; skills: Remote[] } | null>(null);
   const [picked, setPicked] = useState<string[]>([]);
   const [indexUrl, setIndexUrl] = useState("");
-  const [hub, setHub] = useState<{ name: string; description: string; repo: string; path: string }[] | null>(null);
+  const [hub, setHub] = useState<SkillDef[] | null>(null);
   const [q, setQ] = useState("");
   const [draft, setDraft] = useState(TEMPLATE);
   const [busy, setBusy] = useState(false);
@@ -38,10 +39,10 @@ export function SkillsPage() {
   const run = async (fn: () => Promise<void>) => { setBusy(true); setMsg(""); try { await fn(); } catch (e) { setMsg((e as Error).message || "操作失败"); } setBusy(false); };
   const doScan = (r = repo) => run(async () => { setRepo(r); const res = await scan({ data: { repo: r } }); setFound(res); setPicked(res.skills.filter(s => !installedPaths.has(`${res.source}#${s.path}`)).map(s => s.path)); if (!res.skills.length) setMsg("这个仓库里没有找到 SKILL.md"); });
   const doInstall = () => run(async () => { if (!found) return; const r = await install({ data: { repo: found.source.replace("https://github.com/", ""), items: picked.map(path => ({ path })) } }); await reload(); setMsg(`已安装 ${r.installed} 个 Skill`); setPicked([]); });
-  const installOne = (r: string, path: string) => run(async () => { await install({ data: { repo: r, items: [{ path }] } }); await reload(); setMsg("已安装"); });
   const loadHub = () => run(async () => setHub(await readIndex({ data: { url: indexUrl } })));
   const saveManual = () => run(async () => { const m = meta(draft); if (!m.name) throw new Error("SKILL.md 开头需要 name 字段"); const { data, error } = await supabase.from("skills").insert({ name: m.name.slice(0, 60), description: m.description.slice(0, 500), source_type: "manual", content: draft }).select("id").single(); if (error) throw new Error("保存失败"); await reload(); setSel(data.id); });
-  const refresh = (s: Skill) => run(async () => { if (!s.source_url) return; await install({ data: { repo: s.source_url.replace("https://github.com/", ""), items: [{ path: s.path ?? "" }] } }); await reload(); setMsg("已拉取最新版本"); });
+  const installHub = (h: SkillDef) => run(async () => { if (h.repo) await install({ data: { repo: h.repo, items: [{ path: h.path }] } }); else await installDefs({ data: { url: indexUrl, names: [h.name] } }); await reload(); setMsg("已安装"); });
+  const refresh = (s: Skill) => run(async () => { if (!s.source_url) return; if (s.source_type === "url") { await installDefs({ data: { url: s.source_url, names: [s.path ?? s.name] } }); await reload(); setMsg("已拉取最新版本"); return; } await install({ data: { repo: s.source_url.replace("https://github.com/", ""), items: [{ path: s.path ?? "" }] } }); await reload(); setMsg("已拉取最新版本"); });
   const toggle = async (s: Skill, enabled: boolean) => { await supabase.from("skills").update({ enabled }).eq("id", s.id); await reload(); };
   const remove = async (s: Skill) => { if (!confirm(`删除 Skill「${s.name}」？`)) return; await supabase.from("skills").delete().eq("id", s.id); setSel(null); await reload(); };
   const saveEdit = (s: Skill, content: string) => run(async () => { const m = meta(content); await supabase.from("skills").update({ content, name: (m.name || s.name).slice(0, 60), description: (m.description || s.description).slice(0, 500) }).eq("id", s.id); await reload(); setMsg("已保存"); });
@@ -77,11 +78,11 @@ export function SkillsPage() {
         </>}
 
         {mode === "hub" && <>
-          <p className="text-xs text-muted-foreground">订阅源是一个 JSON 列表地址，格式：<code className="font-mono text-[11px]">{`[{"name","description","repo","path"}]`}</code>，团队可以自建自己的 Skills 市场。</p>
+          <p className="text-xs leading-5 text-muted-foreground">填一个返回 JSON 的远程地址（数组或 <code className="font-mono text-[11px]">{`{"skills":[…]}`}</code>）。每项含 <code className="font-mono text-[11px]">name</code>、<code className="font-mono text-[11px]">description</code>，再任选其一：<code className="font-mono text-[11px]">repo</code>+<code className="font-mono text-[11px]">path</code>（GitHub 仓库）、<code className="font-mono text-[11px]">url</code>（SKILL.md 链接）或 <code className="font-mono text-[11px]">content</code>（直接写正文）。</p>
           <div className="flex gap-2"><Input value={indexUrl} onChange={e => setIndexUrl(e.target.value)} placeholder="https://…/skills-index.json" className="h-8 font-mono text-xs"/><Button size="sm" className="text-xs" disabled={busy || !indexUrl} onClick={loadHub}>{busy && <LoaderCircle className="size-3.5 animate-spin"/>}加载</Button></div>
           {hub && <><Input value={q} onChange={e => setQ(e.target.value)} placeholder="搜索" className="h-8 text-xs"/>
-            <div className="divide-y rounded-lg border">{hub.filter(h => !q || (h.name + h.description).toLowerCase().includes(q.toLowerCase())).map(h => { const has = installedPaths.has(`https://github.com/${h.repo.replace(/^https:\/\/github\.com\//, "")}#${h.path}`);
-              return <div key={h.repo + h.path} className="flex items-center gap-3 px-3 py-2.5"><span className="min-w-0 flex-1"><span className="block text-xs font-medium">{h.name}</span><span className="block truncate text-[11px] text-muted-foreground">{h.description}</span></span>{has ? <span className="flex items-center gap-1 text-[11px] text-muted-foreground"><Check className="size-3"/>已安装</span> : <Button size="sm" variant="outline" className="h-7 text-xs" disabled={busy} onClick={() => installOne(h.repo, h.path)}>安装</Button>}</div>; })}</div></>}
+            <div className="divide-y rounded-lg border">{hub.filter(h => !q || (h.name + h.description).toLowerCase().includes(q.toLowerCase())).map(h => { const has = h.repo ? installedPaths.has(`https://github.com/${h.repo.replace(/^https:\/\/github\.com\//, "")}#${h.path}`) : installedPaths.has(`${indexUrl}#${h.name}`);
+              return <div key={(h.repo ?? h.url ?? "inline") + h.path + h.name} className="flex items-center gap-3 px-3 py-2.5"><span className="min-w-0 flex-1"><span className="flex items-center gap-1.5 text-xs font-medium">{h.name}<span className="rounded bg-secondary px-1 font-mono text-[10px] font-normal text-muted-foreground">{h.repo ? "GitHub" : h.url ? "链接" : "内联"}</span></span><span className="block truncate text-[11px] text-muted-foreground">{h.description}</span></span>{has ? <span className="flex items-center gap-1 text-[11px] text-muted-foreground"><Check className="size-3"/>已安装</span> : <Button size="sm" variant="outline" className="h-7 text-xs" disabled={busy} onClick={() => installHub(h)}>安装</Button>}</div>; })}</div></>}
         </>}
 
         {mode === "manual" && <>
