@@ -111,6 +111,7 @@ export async function handleChat(request: Request) {
   const skills = ((skillRows ?? []) as SkillRow[]).filter(s => !active || (active.skill_ids ?? []).includes(s.id));
   const others = agents.filter(a => a.id !== active?.id);
   const delegates = active && !active.builtin && (active.delegate_ids ?? []).length ? others.filter(a => active.delegate_ids!.includes(a.id)) : active && !active.builtin ? [] : others;
+  const subRes = { mcpRows: (mcpRows ?? []) as McpRow[], skillRows: (skillRows ?? []) as SkillRow[], store: { supabase, userId } };
   let closed = false;
   const closeMcp = () => { if (!closed) { closed = true; void mcp.close(); } };
   request.signal.addEventListener("abort", closeMcp);
@@ -118,7 +119,7 @@ export async function handleChat(request: Request) {
     model: provider.responses(model),
     system: `${systemFor(active)}${skillsPrompt(skills)}${delegates.length ? "\n当子任务明显更适合某个专门 Agent 时，调用 delegate_to_agent 委派，然后整合结果回答。" : ""}`,
     messages: await convertToModelMessages(messages),
-    tools: { ...pickTools(toolIds), ...mcp.tools, ...skillTools(skills), ...(delegates.length ? { delegate_to_agent: delegateTool(provider, delegates, request.signal, { mcpRows: (mcpRows ?? []) as McpRow[], skillRows: (skillRows ?? []) as SkillRow[] }), delegate_action: delegateActionTool(delegates, { mcpRows: (mcpRows ?? []) as McpRow[], skillRows: [] }) } : {}) },
+    tools: { ...pickTools(toolIds), ...mcp.tools, ...skillTools(skills), ...(delegates.length ? { delegate_to_agent: delegateTool(provider, delegates, request.signal, subRes), delegate_action: delegateActionTool(provider, delegates, request.signal, subRes) } : {}) },
     stopWhen: stepCountIs(50),
     // 人工批准：MCP 写操作（删除、发送、创建、修改……）暂停，等待用户在卡片上确认。
     toolApproval: ({ toolCall }) => {
@@ -127,7 +128,7 @@ export async function handleChat(request: Request) {
       if (toolCall.toolName === "delegate_action") {
         const i = toolCall.input as { agent_id?: string; tool?: string } | undefined;
         const who = delegates.find(a => a.id === i?.agent_id)?.name ?? "子 Agent";
-        return { type: "user-approval", reason: `「${who}」请求执行「${(i?.tool ?? "").replace(/^m\d+_/, "")}」，会修改外部数据，需要你确认` };
+        return { type: "user-approval", reason: `「${who}」请求执行「${(i?.tool ?? "").replace(/^m\d+_/, "")}」，会修改外部数据，批准后子任务会继续执行后续步骤` };
       }
       if (toolCall.toolName === "delegate_to_agent") {
         const target = delegates.find(a => a.id === (toolCall.input as { agent_id?: string } | undefined)?.agent_id);
