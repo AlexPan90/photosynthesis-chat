@@ -1,0 +1,31 @@
+name: Sync to GitLab
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Mirror push to GitLab
+        env:
+          GITLAB_REPO_URL: ${{ secrets.GITLAB_REPO_URL }}
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+        run: |
+          if [ -z "$GITLAB_REPO_URL" ] || [ -z "$GITLAB_TOKEN" ]; then
+            echo "::error::请在 GitHub 仓库 Settings → Secrets and variables → Actions 中配置 GITLAB_REPO_URL 和 GITLAB_TOKEN"
+            exit 1
+          fi
+
+          # 把 https://gitlab.com/user/repo.git 转成带凭证的地址
+          AUTHED_URL=$(echo "$GITLAB_REPO_URL" | sed "s#https://#https://oauth2:${GITLAB_TOKEN}@#")
+
+          git remote add gitlab "$AUTHED_URL"
+          git push gitlab "HEAD:${GITHUB_REF_NAME}" --force
