@@ -146,6 +146,47 @@ export type Database = {
         }
         Relationships: []
       }
+      message_feedback: {
+        Row: {
+          comment: string
+          created_at: string
+          message_id: string
+          model: string | null
+          rating: number
+          thread_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          comment?: string
+          created_at?: string
+          message_id: string
+          model?: string | null
+          rating: number
+          thread_id: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          comment?: string
+          created_at?: string
+          message_id?: string
+          model?: string | null
+          rating?: number
+          thread_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_feedback_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           created_at: string
@@ -242,6 +283,7 @@ export type Database = {
         Row: {
           agent_id: string | null
           created_at: string
+          goal: string | null
           group_name: string
           id: string
           model: string
@@ -256,6 +298,7 @@ export type Database = {
         Insert: {
           agent_id?: string | null
           created_at?: string
+          goal?: string | null
           group_name?: string
           id?: string
           model?: string
@@ -270,6 +313,7 @@ export type Database = {
         Update: {
           agent_id?: string | null
           created_at?: string
+          goal?: string | null
           group_name?: string
           id?: string
           model?: string
