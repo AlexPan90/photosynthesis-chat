@@ -110,7 +110,10 @@ type CodeBlockProps = HTMLAttributes<HTMLDivElement> & {
   code: string;
   language: BundledLanguage;
   showLineNumbers?: boolean;
+  /** Shiki theme; defaults to Monokai. Skills source uses "dark-plus". */
+  theme?: CodeTheme;
 };
+export type CodeTheme = "monokai" | "dark-plus";
 
 interface TokenizedCode {
   tokens: ThemedToken[][];
@@ -139,10 +142,10 @@ const tokensCache = new Map<string, TokenizedCode>();
 // Subscribers for async token updates
 const subscribers = new Map<string, Set<(result: TokenizedCode) => void>>();
 
-const getTokensCacheKey = (code: string, language: BundledLanguage) => {
+const getTokensCacheKey = (code: string, language: BundledLanguage, theme: CodeTheme = "monokai") => {
   const start = code.slice(0, 100);
   const end = code.length > 100 ? code.slice(-100) : "";
-  return `${language}:${code.length}:${start}:${end}`;
+  return `${theme}:${language}:${code.length}:${start}:${end}`;
 };
 
 const getHighlighter = (
@@ -155,7 +158,7 @@ const getHighlighter = (
 
   const highlighterPromise = createHighlighter({
     langs: [language],
-    themes: ["monokai"],
+    themes: ["monokai", "dark-plus"],
   });
 
   highlighterCache.set(language, highlighterPromise);
@@ -183,9 +186,10 @@ export const highlightCode = (
   code: string,
   language: BundledLanguage,
   // oxlint-disable-next-line eslint-plugin-promise(prefer-await-to-callbacks)
-  callback?: (result: TokenizedCode) => void
+  callback?: (result: TokenizedCode) => void,
+  theme: CodeTheme = "monokai"
 ): TokenizedCode | null => {
-  const tokensCacheKey = getTokensCacheKey(code, language);
+  const tokensCacheKey = getTokensCacheKey(code, language, theme);
 
   // Return cached result if available
   const cached = tokensCache.get(tokensCacheKey);
@@ -210,7 +214,7 @@ export const highlightCode = (
 
       const result = highlighter.codeToTokens(code, {
         lang: langToUse,
-        theme: "monokai",
+        theme,
       });
 
       const tokenized: TokenizedCode = {
@@ -370,10 +374,12 @@ export const CodeBlockContent = ({
   code,
   language,
   showLineNumbers = false,
+  theme = "monokai",
 }: {
   code: string;
   language: BundledLanguage;
   showLineNumbers?: boolean;
+  theme?: CodeTheme;
 }) => {
   // Memoized raw tokens for immediate display
   const rawTokens = useMemo(() => createRawTokens(code), [code]);
@@ -398,13 +404,13 @@ export const CodeBlockContent = ({
       if (!cancelled) {
         setAsyncTokens(result);
       }
-    });
+    }, theme);
     if (cachedResult) setAsyncTokens(cachedResult);
 
     return () => {
       cancelled = true;
     };
-  }, [code, language]);
+  }, [code, language, theme]);
 
   // First render is always raw tokens on BOTH server and client, so SSR and
   // hydration match; colors stream in right after mount via the effect above.
@@ -421,6 +427,7 @@ export const CodeBlock = ({
   code,
   language,
   showLineNumbers = false,
+  theme,
   className,
   children,
   ...props
@@ -435,6 +442,7 @@ export const CodeBlock = ({
           code={code}
           language={language}
           showLineNumbers={showLineNumbers}
+          theme={theme}
         />
       </CodeBlockContainer>
     </CodeBlockContext.Provider>
