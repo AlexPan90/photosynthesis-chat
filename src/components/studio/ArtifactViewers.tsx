@@ -1,49 +1,95 @@
 import { useMemo, useRef, useState } from "react";
-import { Archive, ChevronRight, FileCode2, FileText, Image as ImageIcon, Pause, Play } from "lucide-react";
+import { Archive, Check, ChevronLeft, ChevronRight, Copy, ScanText, FileCode2, FileText, Image as ImageIcon, Pause, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { StudioFile } from "./files";
 import { ArtifactVisual } from "./ArtifactVisual";
 
-/** Image viewer: stage with backdrop switch, palette and dimension facts. */
+const inline = (t: string) => t.split(/(\*\*[^*]+\*\*)/).map((x, i) => x.startsWith("**") ? <strong key={i} className="font-semibold text-foreground">{x.slice(2, -2)}</strong> : x);
+const plain = (t: string) => t.replace(/\*\*/g, "").replace(/^(## |> |- )/gm, "");
+
+function CopyText({ text, label = "复制文本" }: { text: string; label?: string }) {
+  const [done, setDone] = useState(false);
+  return <button type="button" onClick={() => { navigator.clipboard.writeText(text); setDone(true); setTimeout(() => setDone(false), 1400); }} className={`flex h-6 items-center gap-1 rounded-md border px-2 text-[10.5px] transition ${done ? "border-success/40 text-success" : "text-muted-foreground hover:text-foreground"}`}>{done ? <Check className="size-3"/> : <Copy className="size-3"/>}{done ? "已复制" : label}</button>;
+}
+
+/** Image viewer: stage, backdrop thumbnails, facts, palette and extracted text. */
 export function ImageViewer({ file }: { file: StudioFile }) {
   const [bg, setBg] = useState<"grid" | "dark" | "light">("grid");
   const image = file.image;
   if (!image) return null;
   const ratio = (() => { const g = (a: number, b: number): number => b ? g(b, a % b) : a; const d = g(image.width, image.height); return `${image.width / d}:${image.height / d}`; })();
+  const text = image.text ?? [image.caption];
   return <div className="space-y-3">
     <div className={`relay-stage relay-stage-${bg} rounded-lg border p-3`}><ArtifactVisual file={file}/></div>
-    <div className="flex items-center gap-1 rounded-lg border bg-card p-1 text-[10.5px]">
-      {(["grid", "dark", "light"] as const).map(k => <button key={k} type="button" onClick={() => setBg(k)} className={`flex-1 rounded-md px-2 py-1 font-mono uppercase ${bg === k ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground"}`}>{k === "grid" ? "透明格" : k === "dark" ? "深底" : "浅底"}</button>)}
+    <div className="grid grid-cols-3 gap-2" role="tablist" aria-label="预览背景">
+      {(["grid", "dark", "light"] as const).map(k => <button key={k} type="button" role="tab" aria-selected={bg === k} onClick={() => setBg(k)} className={`relay-thumb group overflow-hidden rounded-lg border text-left transition ${bg === k ? "relay-thumb-active" : ""}`}>
+        <div className={`relay-stage relay-stage-${k} pointer-events-none h-16 p-1.5`}><div className="origin-top-left scale-[.5] w-[200%]"><ArtifactVisual file={file} compact/></div></div>
+        <div className="border-t bg-card px-2 py-1 font-mono text-[10px] text-muted-foreground group-aria-selected:text-foreground">{k === "grid" ? "透明格" : k === "dark" ? "深底" : "浅底"}</div>
+      </button>)}
     </div>
     <div className="grid grid-cols-3 gap-2">
-      {[["尺寸", `${image.width}×${image.height}`], ["比例", ratio], ["大小", file.size]].map(([k, v]) => <div key={k} className="rounded-lg border bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">{k}</div><div className="mt-0.5 truncate font-mono text-[12px] font-semibold">{v}</div></div>)}
+      {[["尺寸", `${image.width}×${image.height}`], ["比例", ratio], ["大小", file.size]].map(([k, v]) => <div key={k} className="rounded-lg border bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">{k}</div><div className="mt-0.5 truncate font-mono text-[12px] font-semibold text-foreground">{v}</div></div>)}
     </div>
     {image.palette.length > 0 && <div className="rounded-lg border bg-card p-3">
       <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">配色</div>
-      <div className="flex gap-2">{image.palette.map(c => <button key={c} type="button" title={`复制 ${c}`} onClick={() => navigator.clipboard.writeText(c)} className="group min-w-0 flex-1"><span className="block h-8 rounded-md border" style={{ background: c }}/><span className="mt-1 block truncate font-mono text-[9.5px] text-muted-foreground group-hover:text-foreground">{c}</span></button>)}</div>
+      <div className="flex gap-2">{image.palette.map(c => { const name = c.replace(/^var\(--color-|\)$/g, ""); return <button key={c} type="button" title={`复制 ${name}`} onClick={() => navigator.clipboard.writeText(name)} className="group min-w-0 flex-1"><span className="block h-8 rounded-md border border-foreground/10 shadow-sm" style={{ background: c }}/><span className="mt-1 block truncate font-mono text-[9.5px] text-muted-foreground group-hover:text-foreground">{name}</span></button>; })}</div>
     </div>}
+    <div className="rounded-lg border bg-card">
+      <div className="flex items-center justify-between border-b px-3 py-2"><span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"><ScanText className="size-3.5"/>提取文本 · {text.length} 行</span><CopyText text={text.join("\n")}/></div>
+      <ol className="relay-extract px-3 py-2 font-mono text-[11.5px] leading-6">{text.map((t, i) => <li key={i} className="flex gap-3"><span className="w-4 shrink-0 text-right text-muted-foreground/60">{i + 1}</span><span className="text-foreground/90">{t}</span></li>)}</ol>
+    </div>
   </div>;
 }
 
-/** Document viewer: reading column with jumpable outline. */
+/** Document viewer: page thumbnails, one page per section, pager and plain-text extraction. */
 export function DocViewer({ file }: { file: StudioFile }) {
-  const doc = file.doc, ref = useRef<HTMLElement>(null);
+  const doc = file.doc;
+  const [page, setPage] = useState(0);
+  const [mode, setMode] = useState<"read" | "text">("read");
+  const pages = useMemo(() => {
+    if (!doc) return [];
+    const out: string[][] = [];
+    for (const b of doc.excerpt.split("\n\n")) { if (b.startsWith("## ") || !out.length) out.push([]); out[out.length - 1]!.push(b); }
+    return out;
+  }, [doc]);
   if (!doc) return null;
-  const blocks = doc.excerpt.split("\n\n");
-  const words = doc.excerpt.replace(/\s/g, "").length;
-  const jump = (t: string) => ref.current?.querySelector<HTMLElement>(`[data-h="${CSS.escape(t)}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  return <div className="space-y-3">
-    <div className="flex items-center gap-3 font-mono text-[10.5px] text-muted-foreground"><span className="rounded border border-file-doc/30 bg-file-doc/10 px-1.5 py-0.5 text-file-doc">DOC</span>{doc.pages} 页 · 约 {words.toLocaleString()} 字 · 阅读 {Math.max(1, Math.round(words / 400))} 分钟</div>
-    <nav className="rounded-lg border bg-card p-3">
-      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">大纲</p>
-      <ol className="space-y-0.5">{doc.toc.map((t, i) => <li key={t}><button type="button" onClick={() => jump(t)} className="flex w-full items-baseline gap-2 rounded px-1.5 py-1 text-left text-[11.5px] text-muted-foreground hover:bg-accent/60 hover:text-foreground"><span className="font-mono text-[10px] text-file-doc/80">{String(i + 1).padStart(2, "0")}</span>{t}</button></li>)}</ol>
-    </nav>
-    <article ref={ref} className="relay-doc rounded-lg border bg-background px-6 py-6 text-[13px] leading-[1.9]">
-      {blocks.map((b, i) => b.startsWith("## ") ? <h3 key={i} data-h={b.slice(3)} className="mb-3 mt-6 scroll-mt-4 border-b pb-2 text-[15px] font-semibold first:mt-0">{b.slice(3)}</h3>
-        : b.startsWith("> ") ? <blockquote key={i} className="my-4 rounded-r-md border-l-2 border-file-doc bg-file-doc/5 px-4 py-2 text-foreground/80">{b.slice(2)}</blockquote>
-        : b.split("\n").every(l => l.startsWith("- ")) ? <ul key={i} className="my-3 space-y-1 pl-4">{b.split("\n").map(l => <li key={l} className="list-disc text-foreground/80 marker:text-file-doc">{l.slice(2)}</li>)}</ul>
-        : <p key={i} className="mb-3 text-foreground/80">{b}</p>)}
-    </article>
+  const total = pages.length;
+  const cur = pages[Math.min(page, total - 1)] ?? [];
+  const allText = pages.map(p => p.map(plain).join("\n")).join("\n\n");
+  const words = allText.replace(/\s/g, "").length;
+  const go = (n: number) => setPage(Math.max(0, Math.min(total - 1, n)));
+  const renderBlock = (b: string, i: number) => b.startsWith("## ") ? <h3 key={i} className="mb-3 border-b pb-2 text-[15px] font-semibold text-foreground">{b.slice(3)}</h3>
+    : b.startsWith("> ") ? <blockquote key={i} className="my-4 rounded-r-md border-l-2 border-file-doc bg-file-doc/8 px-4 py-2 text-foreground/85">{inline(b.slice(2))}</blockquote>
+    : b.split("\n").every(l => l.startsWith("- ")) ? <ul key={i} className="my-3 space-y-1 pl-4">{b.split("\n").map(l => <li key={l} className="list-disc text-foreground/85 marker:text-file-doc">{inline(l.slice(2))}</li>)}</ul>
+    : <p key={i} className="mb-3 text-foreground/85">{inline(b)}</p>;
+  return <div className="space-y-3" onKeyDown={e => { if (e.key === "ArrowRight") go(page + 1); if (e.key === "ArrowLeft") go(page - 1); }}>
+    <div className="flex flex-wrap items-center gap-2 font-mono text-[10.5px] text-muted-foreground">
+      <span className="rounded border border-file-doc/30 bg-file-doc/10 px-1.5 py-0.5 text-file-doc">DOC</span>{total} 页 · 约 {words.toLocaleString()} 字 · 阅读 {Math.max(1, Math.round(words / 400))} 分钟
+      <div className="ml-auto flex rounded-md border bg-card p-0.5">{(["read", "text"] as const).map(m => <button key={m} type="button" onClick={() => setMode(m)} className={`rounded px-2 py-0.5 ${mode === m ? "bg-accent text-foreground" : "hover:text-foreground"}`}>{m === "read" ? "阅读" : "纯文本"}</button>)}</div>
+    </div>
+    {mode === "read" ? <>
+      <div className="soft-scroll flex gap-2 overflow-x-auto pb-1" aria-label="页面缩略图">
+        {pages.map((p, i) => <button key={i} type="button" onClick={() => go(i)} aria-label={`第 ${i + 1} 页`} aria-current={i === page} className={`relay-thumb relay-page-thumb shrink-0 ${i === page ? "relay-thumb-active" : ""}`}>
+          <div className="relay-page-mini">
+            <div className="line-clamp-2 text-[6.5px] font-semibold leading-[1.3] text-foreground">{p[0]?.replace(/^## /, "")}</div>
+            {Array.from({ length: 6 }).map((_, j) => <span key={j} className="mt-1 block h-[2px] rounded-full bg-foreground/15" style={{ width: `${60 + ((i * 7 + j * 13) % 38)}%` }}/>)}
+          </div>
+          <span className="block py-0.5 text-center font-mono text-[9.5px] text-muted-foreground">{i + 1}</span>
+        </button>)}
+      </div>
+      <article className="relay-doc relay-page rounded-lg border px-6 py-6 text-[13px] leading-[1.9]">
+        {cur.map(renderBlock)}
+        <div className="mt-6 text-right font-mono text-[10px] text-muted-foreground">— {page + 1} / {total} —</div>
+      </article>
+      <div className="flex items-center justify-between">
+        <Button type="button" variant="outline" size="sm" className="h-7 gap-1 text-xs" disabled={page === 0} onClick={() => go(page - 1)}><ChevronLeft className="size-3.5"/>上一页</Button>
+        <span className="font-mono text-[11px] text-muted-foreground"><span className="text-foreground">{page + 1}</span> / {total}</span>
+        <Button type="button" variant="outline" size="sm" className="h-7 gap-1 text-xs" disabled={page >= total - 1} onClick={() => go(page + 1)}>下一页<ChevronRight className="size-3.5"/></Button>
+      </div>
+    </> : <div className="rounded-lg border bg-card">
+      <div className="flex items-center justify-between border-b px-3 py-2"><span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"><ScanText className="size-3.5"/>提取文本 · {allText.split("\n").filter(Boolean).length} 行</span><CopyText text={allText}/></div>
+      <pre className="relay-extract soft-scroll max-h-[520px] overflow-auto whitespace-pre-wrap px-3 py-3 font-mono text-[11.5px] leading-6 text-foreground/90">{allText}</pre>
+    </div>}
   </div>;
 }
 
