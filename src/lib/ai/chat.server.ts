@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { createOpenAI } from "@ai-sdk/openai";
-import { convertToModelMessages, streamText, type UIMessage } from "ai";
+import { convertToModelMessages, stepCountIs, streamText, type UIMessage } from "ai";
+import { chatTools } from "./tools.server";
 import { z } from "zod";
 import type { Database, Json } from "@/integrations/supabase/types";
 import {
@@ -11,7 +12,7 @@ import {
 
 export const CHAT_MODELS = ["openai/gpt-6-astra", "openai/gpt-6-sol", "openai/gpt-6-luna"] as const;
 const GATEWAY = "https://ai.gateway.lovable.dev/v1";
-const SYSTEM = "你是 Relay Studio 中的 AI 助手。默认使用简体中文回答，表达简洁清晰，适当使用 Markdown（标题、列表、表格、代码块）。";
+const SYSTEM = "你是 Relay Studio 中的 AI 助手。默认使用简体中文回答，表达简洁清晰，适当使用 Markdown（标题、列表、表格、代码块）。你可以调用工具：read_webpage（读取网页）、get_current_time（当前时间）、calculate（精确计算）。需要时主动使用，然后基于结果回答。";
 
 const bodySchema = z.object({
   threadId: z.string().uuid(),
@@ -80,6 +81,8 @@ export async function handleChat(request: Request) {
     model: provider.responses(model),
     system: SYSTEM,
     messages: await convertToModelMessages(messages),
+    tools: chatTools,
+    stopWhen: stepCountIs(6),
     abortSignal: request.signal,
     providerOptions: {
       openai: {
