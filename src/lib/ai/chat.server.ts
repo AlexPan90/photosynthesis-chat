@@ -5,7 +5,7 @@ import { allAgents, delegateTool, OPENAI_OPTIONS, pickTools, systemFor } from ".
 import { needsApproval, TOOL_CATALOG, type AgentConfig } from "./agents.shared";
 import { z } from "zod";
 import { loadMcpTools, type McpRow } from "./mcp.server";
-import { skillsPrompt, skillTools, type SkillRow } from "./skills.server";
+import { runnableSkills, skillsPrompt, skillTools, type SkillRow } from "./skills.server";
 import type { Database, Json } from "@/integrations/supabase/types";
 import {
   createLovableAiGatewayRunIdFetch,
