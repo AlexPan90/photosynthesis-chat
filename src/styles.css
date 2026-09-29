@@ -408,13 +408,13 @@ body { font-size: calc(16px * var(--relay-type-scale)); }
   --popover: #1A1B21;
   color-scheme: dark;
 }
-[role="dialog"].relay-settings-surface,
-[data-slot="dropdown-menu-content"].relay-settings-surface {
+.relay-settings-surface[role="dialog"],
+.relay-settings-surface[role="menu"] {
   background: var(--background) !important;
   border-color: var(--border) !important;
   backdrop-filter: none !important;
 }
-[data-slot="dropdown-menu-content"].relay-settings-surface { background: var(--popover) !important; }
+.relay-settings-surface[role="menu"] { background: var(--popover) !important; }
 .relay-settings-surface > nav,
 .relay-settings-surface > section,
 .relay-settings-surface > section > header,
