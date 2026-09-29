@@ -144,38 +144,48 @@
 @utility stream-cursor { &::after { content: ""; display: inline-block; width: 5px; height: 1em; margin-left: 3px; vertical-align: -2px; background: var(--color-success); animation: cursor-blink 1s step-end infinite; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; } }
 
-/* Relay's chat shell uses surface separation rather than decorative panels. */
+/* Monolithic technical workspace: one aligned reading and input plane. */
 .relay-shell { background: var(--color-background); }
-.relay-sidebar { border-right: 1px solid color-mix(in oklab, var(--color-border) 60%, transparent); }
-.relay-chat-plane { background: var(--color-background); }
-.relay-chat-header { background: color-mix(in oklab, var(--color-background) 90%, var(--color-card)); border-color: color-mix(in oklab, var(--color-border) 60%, transparent); }
-.relay-composer-wrap { background: var(--color-background); }
-.relay-composer { box-shadow: 0 10px 35px -22px color-mix(in oklab, var(--color-foreground) 38%, transparent), 0 0 0 1px color-mix(in oklab, var(--color-border) 35%, transparent); }
-.relay-composer:focus-within { box-shadow: 0 12px 40px -24px color-mix(in oklab, var(--color-primary) 45%, transparent), 0 0 0 1px color-mix(in oklab, var(--color-primary) 55%, transparent); }
-.dark .relay-chat-plane { background: #1A1E1B; }
-.dark .relay-chat-header { background: #1C211D; }
-.dark .relay-composer-wrap { background: #1A1E1B; }
-.dark .relay-composer { background: #202521; }
-.dark .relay-shell :not(pre) > code { color: var(--color-primary); }
-
-/* The selected technical workspace is composed as a single continuous reading plane. */
+.relay-sidebar { background: var(--color-sidebar); border-right: 1px solid var(--color-border); }
 .relay-sidebar-brand { border-bottom: 1px solid var(--color-border); }
+.relay-sidebar .soft-scroll { scrollbar-gutter: stable; }
+.relay-chat-plane { background: var(--color-background); }
+.relay-chat-header {
+  background: var(--color-background);
+  border-color: var(--color-border);
+  box-shadow: 0 1px 0 color-mix(in oklab, var(--color-foreground) 3%, transparent);
+}
 .relay-conversation { background: var(--color-background); }
-.relay-transcript { min-height: 100%; counter-reset: relay-message; }
+.relay-transcript {
+  min-height: 100%;
+  counter-reset: relay-message;
+  background: color-mix(in oklab, var(--color-card) 18%, var(--color-background));
+}
 .relay-message { counter-increment: relay-message; }
+.relay-composer-wrap {
+  background: var(--color-background);
+  border-top: 1px solid color-mix(in oklab, var(--color-border) 64%, transparent);
+  box-shadow: 0 -12px 28px -28px color-mix(in oklab, var(--color-foreground) 45%, transparent);
+}
+.relay-composer {
+  background: var(--color-card);
+  box-shadow: 0 12px 32px -26px color-mix(in oklab, var(--color-foreground) 55%, transparent), inset 0 1px 0 color-mix(in oklab, var(--color-foreground) 5%, transparent);
+}
+.relay-composer:focus-within { box-shadow: 0 0 0 1px color-mix(in oklab, var(--color-primary) 45%, transparent), 0 12px 32px -26px color-mix(in oklab, var(--color-foreground) 55%, transparent); }
+.dark .relay-shell :not(pre) > code { color: var(--color-primary); }
 @media (min-width: 768px) {
   .relay-transcript {
-    border-left: 1px solid color-mix(in oklab, var(--color-border) 62%, transparent);
-    border-right: 1px solid color-mix(in oklab, var(--color-border) 62%, transparent);
+    border-left: 1px solid color-mix(in oklab, var(--color-border) 40%, transparent);
+    border-right: 1px solid color-mix(in oklab, var(--color-border) 40%, transparent);
   }
   .relay-message { position: relative; }
   .relay-message::before {
     content: counter(relay-message, decimal-leading-zero);
     position: absolute;
-    right: calc(100% + 17px);
+    right: calc(100% + 13px);
     top: 4px;
     color: var(--color-muted-foreground);
     font: 10px var(--font-mono);
-    opacity: .65;
+    opacity: .55;
   }
 }
