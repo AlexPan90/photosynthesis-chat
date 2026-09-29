@@ -316,8 +316,7 @@ body { font-size: calc(16px * var(--relay-type-scale)); }
   --sidebar: #F7F7F9;
   --sidebar-foreground: #1C1C22;
 }
-.relay-settings-light [role="dialog"], .relay-settings-light [data-slot="dropdown-menu-content"],
-[role="dialog"].relay-settings-light, [data-slot="dropdown-menu-content"].relay-settings-light {
+[role="dialog"].relay-settings-light, .relay-settings-light,
   background: #FFFFFF !important;
   border-color: rgba(15, 15, 30, 0.08) !important;
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 24px 60px -18px rgba(15, 15, 40, 0.22), 0 10px 40px -10px rgba(79, 70, 229, 0.16) !important;
