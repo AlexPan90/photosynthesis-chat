@@ -61,7 +61,7 @@ export const callMcpTool = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({
     id: z.string().uuid(), name: z.string().min(1).max(200),
-    args: z.record(z.unknown()),
+    args: z.record(z.unknown()), confirmed: z.boolean().default(false),
   }).parse(d))
   .handler(async ({ data, context }) => {
     if (JSON.stringify(data.args).length > 16000) throw new Error("参数过长");
@@ -71,6 +71,7 @@ export const callMcpTool = createServerFn({ method: "POST" })
     if (error || !row || row.state !== "ready") throw new Error("连接未就绪");
     const available = Array.isArray(row.tools) && row.tools.some(t => t && typeof t === "object" && "name" in t && t.name === data.name);
     if (!available || row.disabled_tools.includes(data.name)) throw new Error("工具不可用或已停用");
+    if (!data.confirmed && /(?:delete|remove|send|write|create|update|edit|post|publish|execute|run|drop|put|patch|modify|submit|deploy|transfer|purchase|cancel|revoke|archive)/i.test(data.name)) throw new Error("此操作需要先确认");
     const { runMcpTool } = await import("@/lib/ai/mcp.server");
     return runMcpTool(row, data.name, data.args);
   });
