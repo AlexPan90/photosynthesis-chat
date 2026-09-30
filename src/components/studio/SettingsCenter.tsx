@@ -37,26 +37,21 @@ function Row({ title, desc, children }: { title: string; desc?: string; children
 
 export function SettingsCenter(p: Props) {
   const [tab, setTab] = useState<(typeof tabs)[number]["id"]>("general");
-  const current = tabs.find(t => t.id === tab)!;
   return <Dialog open={p.open} onOpenChange={p.onOpenChange}>
-    <DialogContent className="relay-settings-surface flex h-[min(820px,92vh)] w-[min(1040px,94vw)] max-w-none gap-0 overflow-hidden rounded-2xl p-0 [&>button:last-child]:hidden">
-      <nav className="flex w-14 shrink-0 flex-col border-r border-border/60 bg-sidebar/60 p-2 sm:w-56 sm:p-3">
-        <DialogTitle className="flex items-center justify-center gap-2 px-1 pb-4 pt-2 text-[15px] font-semibold sm:justify-start sm:px-2.5"><Settings2 className="size-4 shrink-0"/><span className="hidden sm:inline">设置中心</span></DialogTitle>
-        {tabs.map(t => <Button key={t.id} variant="ghost" size="sm" title={t.label} aria-label={t.label} onClick={() => setTab(t.id)} className={`mb-0.5 flex h-9 w-full items-center justify-center gap-2.5 rounded-lg px-2.5 text-[13px] sm:justify-start ${tab === t.id ? "bg-accent font-medium text-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"}`}><t.icon className="size-4 shrink-0"/><span className="hidden sm:inline">{t.label}</span></Button>)}
-        <div className="mt-auto hidden rounded-lg border border-border/60 bg-background/60 p-3 text-[11.5px] sm:block">
-          <p className="truncate font-medium">{p.userEmail ?? "未登录"}</p>
-          <p className="mt-0.5 text-muted-foreground">{p.userEmail ? "云端同步" : "示例对话仅本地展示"}</p>
-        </div>
+    <DialogContent className="relay-settings-surface flex h-[min(666px,92vh)] w-[min(668px,94vw)] max-w-none gap-0 overflow-hidden rounded-[20px] p-0 [&>button:last-child]:hidden">
+      <nav className="flex w-12 shrink-0 flex-col bg-sidebar p-2 sm:w-[164px] sm:p-2.5">
+        <DialogTitle className="flex h-12 items-center justify-center gap-2 px-1 text-[14px] font-medium sm:justify-start sm:px-2"><Settings2 className="size-4 shrink-0 sm:hidden"/><span className="hidden sm:inline">Settings</span></DialogTitle>
+        {tabs.map(t => <Button key={t.id} variant="ghost" size="sm" title={t.label} aria-label={t.label} onClick={() => setTab(t.id)} className={`mb-0.5 flex h-8 w-full items-center justify-center gap-2.5 rounded-md px-2 text-[12px] sm:justify-start ${tab === t.id ? "bg-accent font-medium text-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"}`}><t.icon className="size-4 shrink-0"/><span className="hidden sm:inline">{t.label}</span></Button>)}
+
       </nav>
       <section className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center justify-between border-b border-border/60 px-7">
-          <h3 className="text-[14px] font-semibold">{current.label}</h3>
-          <div className="flex items-center gap-2">
-            <Button asChild variant="outline" size="sm" className="hidden h-8 text-xs sm:inline-flex"><Link to="/studio/agents" onClick={() => p.onOpenChange(false)}>打开编排中心<ArrowUpRight className="size-3.5"/></Link></Button>
-            <Button variant="ghost" size="icon" className="size-8" onClick={() => p.onOpenChange(false)} aria-label="关闭"><X className="size-4"/></Button>
+        <header className="flex h-12 shrink-0 items-center justify-end px-3">
+          <div className="flex items-center gap-1">
+            {tab !== "models" && <Button asChild variant="outline" size="sm" className="hidden h-7 text-[11px] sm:inline-flex"><Link to="/studio/agents" onClick={() => p.onOpenChange(false)}>打开编排中心<ArrowUpRight className="size-3.5"/></Link></Button>}
+            <Button variant="ghost" size="icon" className="size-7" onClick={() => p.onOpenChange(false)} aria-label="关闭"><X className="size-4"/></Button>
           </div>
         </header>
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 sm:px-7">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-5 pt-0 sm:px-3 sm:pr-5">
           {tab === "general" && <>
             <Row title="界面语言"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="h-8 gap-1.5">{p.language}<ChevronDown className="size-3"/></Button></DropdownMenuTrigger><DropdownMenuContent className="relay-settings-surface">{["简体中文", "English"].map(l => <DropdownMenuItem key={l} onClick={() => p.setLanguage(l)}>{l}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu></Row>
             <Row title="账号" desc={p.userEmail ? `对话已保存到云端（${p.userEmail}）` : "登录后对话会保存到云端"}>{p.userEmail ? <Button variant="outline" size="sm" className="h-8" onClick={p.onSignOut}>退出登录</Button> : <Button asChild size="sm" className="h-8"><Link to="/auth">去登录</Link></Button>}</Row>

@@ -1,153 +1,146 @@
-import { useEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronRight, LoaderCircle, Plus, Trash2, RefreshCw } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ChevronDown, ChevronRight, LoaderCircle, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SUPPORTED_MODELS, type ConfiguredModel } from "@/lib/ai/model-catalog";
+import { type ConfiguredModel } from "@/lib/ai/model-catalog";
 import { saveModel, removeModel, fetchProviderModels } from "@/lib/ai/model-management.functions";
 import { getOpenAIConnection, testOpenAIConnection } from "@/lib/ai/openai-connection.functions";
 import { notifyModelsChanged, useModels } from "./useModels";
 
 type Draft = { id?: string; modelId: string; label: string; version: string; description: string; reasoningEffort: "low" | "medium" | "high"; connectionType: "gateway" | "direct"; providerName: string; baseUrl: string; apiKey: string };
-const initialDraft = (providerName = "OpenAI", baseUrl = ""): Draft => ({ modelId: "", label: "", version: "", description: "", reasoningEffort: "medium", connectionType: "direct", providerName, baseUrl, apiKey: "" });
+const fresh = (providerName: string, baseUrl = ""): Draft => ({ modelId: "", label: "", version: "", description: "", reasoningEffort: "medium", connectionType: providerName === "OpenAI" ? "gateway" : "direct", providerName, baseUrl, apiKey: "" });
 const fromModel = (m: ConfiguredModel): Draft => ({ id: m.id, modelId: m.model_id, label: m.label, version: m.version ?? "", description: m.description ?? "", reasoningEffort: m.parameters?.reasoningEffort ?? "medium", connectionType: m.connection_type === "direct" ? "direct" : "gateway", providerName: m.provider, baseUrl: m.base_url ?? "", apiKey: "" });
 
 export function ModelSettings({ userId }: { userId: string | undefined }) {
-  const { models, reload, loaded } = useModels(userId);
-  const saved = models.filter(m => m.enabled && (m.connection_type !== "direct" || m.verified_at));
-  const providers = [...new Set(["OpenAI", ...models.map(m => m.provider)])];
-  const [provider, setProvider] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
-  const [draft, setDraft] = useState<Draft | null>(null);
-  const [expanded, setExpanded] = useState(false);
+  const { models, loaded, reload } = useModels(userId);
+  const [active, setActive] = useState<string | null>(null);
+  const [custom, setCustom] = useState(false);
+  const [rows, setRows] = useState<Draft[]>([]);
+  const [removed, setRemoved] = useState<ConfiguredModel[]>([]);
+  const [details, setDetails] = useState<number | null>(null);
   const [advanced, setAdvanced] = useState(false);
+  const [key, setKey] = useState("");
+  const [connected, setConnected] = useState(false);
+  const [directory, setDirectory] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
-  const [catalog, setCatalog] = useState<string[] | null>(null);
-  const [catalogBusy, setCatalogBusy] = useState(false);
-  const [openAIKey, setOpenAIKey] = useState("");
-  const [openAITesting, setOpenAITesting] = useState(false);
-  const [openAIConnected, setOpenAIConnected] = useState(false);
-  const [openAIModels, setOpenAIModels] = useState<string[]>([]);
-  const lastDiscovery = useRef("");
-  const patch = (p: Partial<Draft>) => { setDraft(v => v ? { ...v, ...p } : v); if ("baseUrl" in p || "apiKey" in p || "providerName" in p) setCatalog(null); };
+  const [fetching, setFetching] = useState(false);
+  const [catalog, setCatalog] = useState<string[]>([]);
+  const [providerName, setProviderName] = useState("");
+  const [providerId, setProviderId] = useState("");
+  const [baseUrl, setBaseUrl] = useState("");
+  const [protocol, setProtocol] = useState("openai-completions");
+  const [customKey, setCustomKey] = useState("");
+  const [connectionChecked, setConnectionChecked] = useState(false);
+  const providers = [...new Set(["OpenAI", ...models.map(m => m.provider)])];
+  const canSee = active !== "OpenAI" || connected;
+  const inputStyle = "relay-model-input h-8 text-[12px]";
+  const label = (text: string, children: React.ReactNode) => <label className="relay-model-field">{text}{children}</label>;
   const refresh = async () => { await reload(); notifyModelsChanged(); };
-
+  const patchRow = (index: number, patch: Partial<Draft>) => setRows(prev => prev.map((r, i) => i === index ? { ...r, ...patch } : r));
+  function reset() { setActive(null); setCustom(false); setRows([]); setRemoved([]); setDetails(null); setCatalog([]); setKey(""); setAdvanced(false); setConnectionChecked(false); setProviderId(""); setProviderName(""); setBaseUrl(""); setCustomKey(""); }
+  function open(name: string) {
+    if (active === name) { reset(); return; }
+    setActive(name); setCustom(false); setRows(models.filter(m => m.provider === name && m.enabled).map(fromModel)); setRemoved([]); setCatalog([]); setDetails(null); setAdvanced(false); setKey("");
+    setBaseUrl(models.find(m => m.provider === name)?.base_url ?? "");
+    setConnectionChecked(false);
+  }
   useEffect(() => {
-    if (!userId || provider !== "OpenAI") return;
+    if (active !== "OpenAI" || !userId) return;
     let current = true;
-    void getOpenAIConnection().then(result => { if (current) { setOpenAIConnected(result.connected); setOpenAIModels(result.models); } }).catch(() => { if (current) { setOpenAIConnected(false); setOpenAIModels([]); } });
+    void getOpenAIConnection().then(r => { if (current) { setConnected(r.connected); setDirectory(r.models); setConnectionChecked(true); } }).catch(() => { if (current) { setConnected(false); setDirectory([]); setConnectionChecked(true); } });
     return () => { current = false; };
-  }, [userId, provider]);
-  useEffect(() => {
-    if (!draft || draft.connectionType !== "direct" || !draft.baseUrl.startsWith("https://") || (!draft.apiKey && !draft.id)) return;
-    const signature = `${draft.id ?? ""}|${draft.baseUrl}|${draft.apiKey}`;
-    if (lastDiscovery.current === signature) return;
-    const timer = window.setTimeout(() => { lastDiscovery.current = signature; void loadCatalog(); }, 900);
-    return () => window.clearTimeout(timer);
-  }, [draft?.id, draft?.connectionType, draft?.baseUrl, draft?.apiKey]);
-
-  async function testOpenAI() {
-    if (!openAIKey.trim()) { toast.error("请填写 OpenAI API Key"); return; }
-    setOpenAITesting(true); setOpenAIConnected(false); setOpenAIModels([]);
-    try { const result = await testOpenAIConnection({ data: { apiKey: openAIKey } }); setOpenAIConnected(true); setOpenAIModels(result.models); setOpenAIKey(""); await refresh(); toast.success(`连接成功，发现 ${result.models.length} 个模型`); }
-    catch (error) { await refresh(); toast.error((error as Error).message || "连接失败"); }
-    finally { setOpenAITesting(false); }
-  }
-  async function loadCatalog() {
-    if (!draft?.baseUrl) { toast.error("请填写服务地址"); return; }
-    setCatalogBusy(true);
-    try { const result = await fetchProviderModels({ data: { id: draft.id, baseUrl: draft.baseUrl, apiKey: draft.apiKey || undefined } }); setCatalog(result.models); if (!result.models.length) toast.message("目录为空，可手动添加模型 ID"); }
-    catch (e) { setCatalog(null); toast.error((e as Error).message || "无法读取目录，可手动添加"); }
-    finally { setCatalogBusy(false); }
-  }
-  async function save() {
-    if (!draft || busy) return;
-    if (draft.connectionType === "direct" && draft.providerName === "OpenAI" && !draft.baseUrl && !openAIConnected) { toast.error("请先测试 OpenAI 连接"); return; }
-    if (!draft.modelId.trim() || !draft.label.trim()) { toast.error("请填写模型 ID 和显示名称"); return; }
-    if (draft.connectionType === "direct" && !draft.apiKey && !draft.id && !(draft.providerName === "OpenAI" && openAIConnected)) { toast.error("请先测试连接或填写 API Key"); return; }
+  }, [active, userId]);
+  async function testConnection() {
+    if (!key.trim()) return;
     setBusy(true);
-    try { await saveModel({ data: draft }); await refresh(); setDraft(null); setCreating(false); toast.success("已验证并保存，模型现在可在对话中切换"); }
-    catch (e) { toast.error((e as Error).message || "保存失败"); }
+    try { const r = await testOpenAIConnection({ data: { apiKey: key } }); setConnected(true); setDirectory(r.models); setKey(""); setConnectionChecked(true); await refresh(); toast.success(`已连接 OpenAI，发现 ${r.models.length} 个模型`); }
+    catch (e) { setConnected(false); setDirectory([]); setConnectionChecked(true); await refresh(); toast.error((e as Error).message || "连接失败"); }
     finally { setBusy(false); }
   }
-  async function remove(m: ConfiguredModel) {
-    if (!window.confirm(`从模型菜单移除「${m.label}」？已有对话不会删除。`)) return;
+  async function fetchModels() {
+    if (active === "OpenAI") {
+      if (!connected) { toast.error("请先测试 OpenAI 连接"); return; }
+      setFetching(true);
+      try { const r = await getOpenAIConnection(); setConnected(r.connected); setDirectory(r.models); toast.success(`发现 ${r.models.length} 个模型`); }
+      catch (e) { toast.error((e as Error).message || "无法读取模型目录"); }
+      finally { setFetching(false); }
+      return;
+    }
+    const url = custom ? baseUrl : baseUrl || rows[0]?.baseUrl;
+    const apiKey = custom ? customKey : key || rows[0]?.apiKey;
+    if (!url) { toast.error("请填写 Base URL"); return; }
+    setFetching(true);
+    try { const r = await fetchProviderModels({ data: { id: custom ? undefined : rows.find(x => x.id)?.id, baseUrl: url, apiKey: apiKey || undefined } }); setCatalog(r.models); toast.success(`发现 ${r.models.length} 个模型`); }
+    catch (e) { toast.error((e as Error).message || "无法读取目录，可以手动添加模型"); }
+    finally { setFetching(false); }
+  }
+  async function apply() {
+    if (busy) return;
+    if (custom && (!providerName.trim() || !baseUrl.trim() || !customKey.trim())) { toast.error("请填写服务商名称、Base URL 和 API Key"); return; }
+    if (active === "OpenAI" && !connected && rows.some(r => r.connectionType === "direct")) { toast.error("请先测试 OpenAI 连接"); return; }
+    const dirty = rows.filter(r => !r.id || JSON.stringify({ modelId:r.modelId, label:r.label, version:r.version, description:r.description, reasoningEffort:r.reasoningEffort, connectionType:r.connectionType, providerName:r.providerName, baseUrl:r.baseUrl }) !== JSON.stringify((() => { const old = models.find(m => m.id === r.id); if (!old) return {}; const x = fromModel(old); return { modelId:x.modelId, label:x.label, version:x.version, description:x.description, reasoningEffort:x.reasoningEffort, connectionType:x.connectionType, providerName:x.providerName, baseUrl:x.baseUrl }; })()));
+    if (dirty.some(r => !r.modelId.trim() || !r.label.trim())) { toast.error("请填写模型 ID 和显示名称"); return; }
+    if (custom && !rows.length) { toast.error("请先添加至少一个模型"); return; }
     setBusy(true);
-    try { await removeModel({ data: { id: m.id } }); await refresh(); setDraft(null); toast.success("已从模型菜单移除"); }
-    catch (e) { toast.error((e as Error).message || "移除失败"); }
+    try {
+      for (const m of removed) await removeModel({ data: { id: m.id } });
+      for (const r of dirty) await saveModel({ data: { ...r, providerName: custom ? providerName.trim() : r.providerName, baseUrl: r.connectionType === "direct" ? (custom ? baseUrl : baseUrl || r.baseUrl) : "", apiKey: r.connectionType === "direct" ? (custom ? customKey : key || r.apiKey) : "" } });
+      await refresh(); reset(); toast.success("模型配置已保存");
+    } catch (e) { await refresh(); toast.error((e as Error).message || "保存失败，请检查模型配置"); }
     finally { setBusy(false); }
   }
-  const directOpenAI = provider === "OpenAI";
-  const visible = saved.filter(m => m.provider === provider && (m.connection_type !== "direct" || !directOpenAI || openAIConnected));
-  const inputClass = "relay-model-input h-8 text-[12px]";
-  const field = (name: string, child: React.ReactNode) => <label className="relay-model-field">{name}{child}</label>;
-  const openProvider = (name: string) => { setProvider(provider === name ? null : name); setCreating(false); setDraft(null); setAdvanced(false); };
-
-  return <div className="relay-models py-4">
-    <h4 className="text-[14px] font-medium">Models</h4>
-    <p className="mt-2 mb-5 text-[12px] text-muted-foreground">Enter your API keys to use models from the following providers.</p>
-    {!userId && <p className="mb-4 text-xs text-muted-foreground">登录后可管理模型。</p>}
-    {loaded && providers.map(name => {
-      const count = saved.filter(m => m.provider === name && (m.connection_type !== "direct" || name !== "OpenAI" || openAIConnected)).length;
-      return <div key={name} className="mb-3">
-        <div className="relay-model-provider flex h-11 items-center gap-2 px-3">
-          <span className="truncate text-[12px] font-medium">{name === "OpenAI" && count > 0 ? "OpenAI" : name}</span>
-          {(count > 0 || (name === "OpenAI" && openAIConnected)) && <span className="size-1.5 shrink-0 rounded-full bg-success" aria-label="已连接"/>}
-          <Button variant="outline" size="sm" className="ml-auto h-7 px-2 text-[11px]" disabled={!userId} onClick={() => openProvider(name)}>{provider === name ? "Done" : "Edit"}</Button>
+  const editRows = canSee ? rows : [];
+  const renderRows = () => <>
+    {editRows.length === 0 && <div className="relay-model-empty">{active === "OpenAI" && !connected ? "Connect your API key to view and manage models." : "No models yet. Add one manually or fetch available models."}</div>}
+    <div className="space-y-1.5">{editRows.map(r => {
+      const index = rows.indexOf(r);
+      return <div key={r.id ?? `new-${index}`} className="relay-model-row-wrap">
+        <div className="relay-model-row">
+          <Input aria-label={`模型 ID ${index + 1}`} className={`${inputStyle} min-w-0 flex-[1.35]`} placeholder="Model ID" value={r.modelId} onChange={e => patchRow(index, { modelId: e.target.value })}/>
+          <Input aria-label={`显示名称 ${index + 1}`} className={`${inputStyle} min-w-0 flex-1`} placeholder="Display name" value={r.label} onChange={e => patchRow(index, { label: e.target.value })}/>
+          <Button variant="ghost" size="icon-sm" className="size-7 shrink-0" aria-label={`更多模型参数 ${index + 1}`} onClick={() => setDetails(details === index ? null : index)}>{details === index ? <ChevronDown className="size-3.5"/> : <ChevronRight className="size-3.5"/>}</Button>
+          <Button variant="ghost" size="icon-sm" className="size-7 shrink-0 text-muted-foreground hover:text-destructive" aria-label={`移除模型 ${index + 1}`} onClick={() => { if (r.id) { const m = models.find(m => m.id === r.id); if (m) setRemoved(prev => [...prev, m]); } setRows(prev => prev.filter((_, i) => i !== index)); setDetails(null); }}><Trash2 className="size-3.5"/></Button>
         </div>
-        {provider === name && <div className="relay-model-editor mt-2 p-3 sm:p-3.5">
-          <div className="flex items-center gap-2 text-[12px] font-medium">{name}<span className="text-[11px] font-normal text-muted-foreground">{name === "OpenAI" ? "official · gateway" : "custom provider"}</span></div>
-          {directOpenAI ? <div className="mt-4">
-            {field("API key", <div className="flex flex-wrap gap-2 sm:flex-nowrap"><Input aria-label="OpenAI API Key" type="password" autoComplete="new-password" placeholder={openAIConnected ? "Connected · enter a new key to replace" : "Enter an API key"} className={`${inputClass} flex-1`} value={openAIKey} onChange={e => { setOpenAIKey(e.target.value); setOpenAIConnected(false); setOpenAIModels([]); }}/><Button variant="outline" size="sm" className="h-8 shrink-0 text-[11px]" disabled={openAITesting || !openAIKey.trim()} onClick={() => void testOpenAI()}>{openAITesting ? <LoaderCircle className="size-3 animate-spin"/> : <RefreshCw className="size-3"/>}Test connection</Button></div>)}
-            <p className="mt-1 text-[11px] text-muted-foreground">{openAIConnected ? `Verified · ${openAIModels.length} models available` : "Connect to show direct OpenAI models. Keys are stored securely."}</p>
-          </div> : <div className="mt-4 space-y-3">{field("Base URL", <Input aria-label="服务地址" className={inputClass} placeholder="https://api.example.com/v1" value={draft?.baseUrl ?? models.find(m => m.provider === name)?.base_url ?? ""} onChange={e => { if (!draft) setDraft(initialDraft(name, e.target.value)); else patch({ baseUrl: e.target.value }); }}/>)}</div>}
-          <div className="relay-model-divider mt-3 pt-2">
-            <Button variant="ghost" size="sm" className="-ml-2 h-7 px-2 text-[11px] text-muted-foreground" onClick={() => setAdvanced(v => !v)}>{advanced ? <ChevronDown className="size-3"/> : <ChevronRight className="size-3"/>}Customized settings</Button>
-            {advanced && <p className="pb-2 text-[11px] text-muted-foreground">{name === "OpenAI" ? "OpenAI API · https://api.openai.com/v1" : "OpenAI-compatible API · /v1/models"}</p>}
-          </div>
-          <div className="relay-model-divider mt-1 pt-3">
-            <div className="flex items-center justify-between gap-2 text-[11px]"><span>Models</span><Button variant="ghost" size="sm" className="h-6 px-1.5 text-[11px] text-muted-foreground" disabled={!directOpenAI && !draft?.baseUrl || catalogBusy} onClick={() => { if (directOpenAI) { void getOpenAIConnection().then(r => { setOpenAIConnected(r.connected); setOpenAIModels(r.models); }); } else void loadCatalog(); }}>{catalogBusy ? <LoaderCircle className="size-3 animate-spin"/> : null}Fetch available models</Button></div>
-            <p className="mb-2 text-[11px] text-muted-foreground">{directOpenAI ? (openAIConnected ? "Connected model catalog" : "Connect to reveal available models") : catalog ? `${catalog.length} available from provider` : "Customized model catalog"}</p>
-            {visible.length ? <div className="space-y-1.5">{visible.map(m => <div key={m.id} className="relay-model-row">
-              <div className="min-w-0 flex-1"><div className="truncate text-[11px]" title={m.model_id}>{m.model_id}</div></div>
-              <div className="min-w-0 flex-1"><div className="truncate text-[11px]" title={m.label}>{m.label}</div></div>
-              <Button variant="ghost" size="icon-sm" title={`编辑 ${m.label}`} aria-label={`编辑 ${m.label}`} className="size-6 shrink-0 text-muted-foreground" onClick={() => { setDraft(fromModel(m)); setExpanded(false); }}><ChevronRight className="size-3"/></Button>
-              <Button variant="ghost" size="icon-sm" aria-label={`移除 ${m.label}`} title={`移除 ${m.label}`} className="size-6 shrink-0 text-muted-foreground hover:text-destructive" disabled={busy} onClick={() => void remove(m)}><Trash2 className="size-3"/></Button>
-            </div>)}</div> : <div className="relay-model-empty">No models will be shown in the selector. Add a model or connect a provider.</div>}
-            {draft && <div className="relay-model-draft mt-2 space-y-3 p-2.5">
-              <div className="flex items-center justify-between text-[11px] font-medium">{draft.id ? "Edit model" : "New model"}<Button variant="ghost" size="sm" className="h-6 px-1.5 text-[11px]" onClick={() => setDraft(null)}>Cancel</Button></div>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">{field("Model ID", draft.connectionType === "gateway" ? <select aria-label="模型 ID" className="relay-model-select h-8 w-full rounded-md px-2 text-[11px]" value={draft.modelId} onChange={e => { const found = SUPPORTED_MODELS.find(m => m.model_id === e.target.value); patch({ modelId: e.target.value, label: draft.label || found?.label || "" }); }}><option value="">Select model</option>{SUPPORTED_MODELS.map(m => <option key={m.model_id} value={m.model_id}>{m.model_id}</option>)}</select> : <Input aria-label="模型 ID" className={inputClass} placeholder="Model ID" value={draft.modelId} onChange={e => patch({ modelId: e.target.value })}/>)}
-              {field("Display name", <Input aria-label="显示名称" className={inputClass} placeholder="Display name" maxLength={80} value={draft.label} onChange={e => patch({ label: e.target.value })}/>)}</div>
-              {draft.connectionType === "direct" && ((directOpenAI && openAIConnected) || catalog) && <select aria-label="已发现模型" className="relay-model-select h-8 w-full rounded-md px-2 text-[11px]" value={(directOpenAI ? openAIModels : catalog ?? []).includes(draft.modelId) ? draft.modelId : ""} onChange={e => patch({ modelId: e.target.value, label: draft.label || e.target.value })}><option value="">Select a discovered model, or enter an ID above</option>{(directOpenAI ? openAIModels : catalog ?? []).map(id => <option key={id} value={id}>{id}</option>)}</select>}
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">{field("Version", <Input aria-label="版本" className={inputClass} placeholder="Version" value={draft.version} onChange={e => patch({ version: e.target.value })}/>)}{field("Reasoning", <select aria-label="推理强度" className="relay-model-select h-8 w-full rounded-md px-2 text-[11px]" value={draft.reasoningEffort} onChange={e => patch({ reasoningEffort: e.target.value as Draft["reasoningEffort"] })}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select>)}</div>
-              {field("Description", <Input aria-label="描述" className={inputClass} placeholder="What this model is best for" maxLength={500} value={draft.description} onChange={e => patch({ description: e.target.value })}/>)}
-              {draft.connectionType === "direct" && !directOpenAI && field("API key", <Input aria-label="API Key" type="password" autoComplete="new-password" className={inputClass} placeholder={draft.id ? "Leave blank to keep saved key" : "Enter provider API key"} value={draft.apiKey} onChange={e => patch({ apiKey: e.target.value })}/>)}
-              {directOpenAI && <label className="flex items-center gap-2 text-[11px] text-muted-foreground"><input type="checkbox" checked={draft.connectionType === "gateway"} onChange={e => patch({ connectionType: e.target.checked ? "gateway" : "direct", modelId: "" })}/>Use application service instead of provider API</label>}
-              <div className="flex justify-end"><Button size="sm" className="h-7 px-3 text-[11px]" disabled={busy || !draft.modelId || !draft.label} onClick={() => void save()}>{busy ? <LoaderCircle className="size-3 animate-spin"/> : null}Apply</Button></div>
-            </div>}
-            {!draft && <Button variant="outline" size="sm" className="mt-2 h-7 px-2 text-[11px]" onClick={() => { setDraft(initialDraft(name, models.find(m => m.provider === name)?.base_url ?? "")); setExpanded(false); }}><Plus className="size-3"/>Add model</Button>}
-            {!directOpenAI && draft?.baseUrl && <Button variant="ghost" size="sm" className="ml-1 h-7 text-[11px] text-muted-foreground" disabled={catalogBusy || (!draft.apiKey && !draft.id)} onClick={() => void loadCatalog()}>Refresh catalog</Button>}
-          </div>
-          <div className="mt-3 flex justify-end gap-2"><Button variant="outline" size="sm" className="h-8 text-[11px]" onClick={() => { setProvider(null); setDraft(null); }}>Cancel</Button><Button size="sm" className="h-8 text-[11px]" onClick={() => { if (draft) void save(); else setProvider(null); }} disabled={busy}>{draft ? "Apply model" : "Apply"}</Button></div>
+        {details === index && <div className="grid grid-cols-2 gap-2 px-2 pb-2 pt-1">
+          {label("Version", <Input aria-label={`版本 ${index + 1}`} className={inputStyle} placeholder="e.g. 2026-09" value={r.version} onChange={e => patchRow(index, { version: e.target.value })}/>)}
+          {label("Reasoning", <select aria-label={`推理强度 ${index + 1}`} className="relay-model-select h-8 w-full rounded-md px-2 text-[12px]" value={r.reasoningEffort} onChange={e => patchRow(index, { reasoningEffort: e.target.value as Draft["reasoningEffort"] })}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select>)}
+          <div className="col-span-2">{label("Description", <Input aria-label={`描述 ${index + 1}`} className={inputStyle} placeholder="What this model is best for" value={r.description} onChange={e => patchRow(index, { description: e.target.value })}/>)}</div>
+          {active === "OpenAI" && <div className="col-span-2">{label("Connection", <select aria-label={`连接方式 ${index + 1}`} className="relay-model-select h-8 w-full rounded-md px-2 text-[12px]" value={r.connectionType} onChange={e => patchRow(index, { connectionType: e.target.value as Draft["connectionType"], modelId: "" })}><option value="gateway">Application service</option><option value="direct" disabled={!connected}>OpenAI API</option></select>)}</div>}
         </div>}
       </div>;
-    })}
-    {loaded && !creating && <div className="grid gap-2 sm:grid-cols-2"><Button variant="outline" className="relay-model-add h-9 border-dashed text-[12px]" disabled={!userId} onClick={() => { setCreating(true); setProvider(null); setDraft(initialDraft("Custom")); }}><Plus className="size-3.5"/>Add provider</Button><Button variant="outline" className="relay-model-add h-9 border-dashed text-[12px]" disabled={!userId} onClick={() => { setCreating(true); setProvider(null); setDraft(initialDraft("Custom")); }}><Plus className="size-3.5"/>Add a custom provider</Button></div>}
-    {creating && draft && <div className="relay-model-editor p-3.5">
-      <h5 className="text-[12px] font-medium">Custom provider</h5>
-      <div className="mt-3 space-y-3">{field("Display name", <Input aria-label="新厂商名称" className={inputClass} placeholder="Provider name" value={draft.providerName === "Custom" ? "" : draft.providerName} onChange={e => patch({ providerName: e.target.value })}/>)}
-        {field("Base URL", <Input aria-label="新服务地址" className={inputClass} placeholder="https://gateway.example/v1" value={draft.baseUrl} onChange={e => patch({ baseUrl: e.target.value })}/>)}
-        {field("API protocol", <select className="relay-model-select h-8 w-full rounded-md px-2 text-[11px]" aria-label="API protocol" defaultValue="openai-completions"><option value="openai-completions">openai-completions</option></select>)}
-        {field("API key", <Input aria-label="新 API Key" type="password" autoComplete="new-password" className={inputClass} placeholder="Enter your API key" value={draft.apiKey} onChange={e => patch({ apiKey: e.target.value })}/>)}
-        <div className="relay-model-divider pt-3"><div className="flex justify-between text-[11px]"><span>Models</span><Button variant="ghost" size="sm" className="h-6 px-1 text-[11px]" disabled={!draft.baseUrl || !draft.apiKey || catalogBusy} onClick={() => void loadCatalog()}>Fetch available models</Button></div>
-          {catalog && <select aria-label="已发现模型" className="relay-model-select my-2 h-8 w-full rounded-md px-2 text-[11px]" value={catalog.includes(draft.modelId) ? draft.modelId : ""} onChange={e => patch({ modelId: e.target.value, label: e.target.value })}><option value="">Select a model</option>{catalog.map(id => <option key={id} value={id}>{id}</option>)}</select>}
-          <div className="mt-2 grid gap-2 sm:grid-cols-2"><Input aria-label="新模型 ID" className={inputClass} placeholder="Model ID" value={draft.modelId} onChange={e => patch({ modelId: e.target.value })}/><Input aria-label="新模型名称" className={inputClass} placeholder="Display name" value={draft.label} onChange={e => patch({ label: e.target.value })}/></div>
-          <div className="mt-2 grid gap-2 sm:grid-cols-2"><Input aria-label="新模型版本" className={inputClass} placeholder="Version (optional)" value={draft.version} onChange={e => patch({ version: e.target.value })}/><select aria-label="新模型推理强度" className="relay-model-select h-8 w-full rounded-md px-2 text-[11px]" value={draft.reasoningEffort} onChange={e => patch({ reasoningEffort: e.target.value as Draft["reasoningEffort"] })}><option value="low">Low reasoning</option><option value="medium">Medium reasoning</option><option value="high">High reasoning</option></select></div>
-          <Input aria-label="新模型描述" className={`${inputClass} mt-2`} placeholder="Description (optional)" value={draft.description} onChange={e => patch({ description: e.target.value })}/>
-          <p className="mt-2 text-[11px] text-muted-foreground">Add a model to create this provider. Its connection will be verified before it appears in chat.</p>
+    })}</div>
+    {catalog.length > 0 && <select aria-label="已发现模型" className="relay-model-select mt-2 h-8 w-full rounded-md px-2 text-[12px]" value="" onChange={e => { if (e.target.value && !rows.some(r => r.modelId === e.target.value)) setRows(prev => [...prev, { ...fresh(custom ? providerName : active ?? "OpenAI", baseUrl), modelId:e.target.value, label:e.target.value, apiKey: custom ? customKey : key }]); }}><option value="">Choose a discovered model to add</option>{catalog.map(id => <option key={id} value={id}>{id}</option>)}</select>}
+    <Button variant="outline" size="sm" className="mt-2 h-7 rounded-full px-2 text-[11px]" disabled={active === "OpenAI" && !connected} onClick={() => setRows(prev => [...prev, { ...fresh(custom ? providerName : active ?? "OpenAI", baseUrl), connectionType: "direct", apiKey: custom ? customKey : key }])}><Plus className="size-3"/>Add model</Button>
+  </>;
+  return <div className="relay-models py-3">
+    <h4 className="text-[14px] font-medium">Models</h4>
+    <p className="mb-5 mt-2 text-[12px] text-muted-foreground">Enter your API keys to use models from the following providers.</p>
+    {loaded && providers.map(name => <div key={name} className="mb-2.5">
+      <div className="relay-model-provider flex h-11 items-center gap-2 px-3"><span className="truncate text-[12px] font-medium">{name}</span>{(name === "OpenAI" ? connected : models.some(m => m.provider === name && m.connection_type === "direct" && m.enabled && m.verified_at)) && <span className="size-1.5 shrink-0 rounded-full bg-success" aria-label="已连接"/>}<Button variant="outline" size="sm" className="ml-auto h-7 px-2 text-[11px]" disabled={!userId} onClick={() => open(name)}>Edit</Button></div>
+      {active === name && <div className="relay-model-editor mt-2 p-3.5">
+        {name === "OpenAI" ? <><div className="text-[12px] font-medium">OpenAI <span className="ml-1 text-[11px] font-normal text-muted-foreground">{connected ? "Connected" : "Not connected"}</span></div>
+          {label("API key", <div className="flex gap-2"><Input aria-label="OpenAI API Key" type="password" autoComplete="new-password" className={`${inputStyle} min-w-0 flex-1`} placeholder={connected ? "Enter a new key to replace the saved one" : "Enter OpenAI API key"} value={key} onChange={e => setKey(e.target.value)}/><Button variant="outline" size="sm" className="h-8 shrink-0 text-[11px]" disabled={!key.trim() || busy} onClick={() => void testConnection()}>{busy ? <LoaderCircle className="size-3 animate-spin"/> : "Test connection"}</Button></div>)}
+          <p className="mt-1.5 text-[11px] text-muted-foreground">{connected ? `${directory.length} models available · key saved securely` : connectionChecked ? "Direct OpenAI models stay hidden until the key is verified." : "Checking connection…"}</p></> : <>{label("API key", <Input aria-label="厂商 API Key" type="password" autoComplete="new-password" className={inputStyle} placeholder="Leave blank to keep the saved key" value={key} onChange={e => setKey(e.target.value)}/>)}</>}
+        <div className="relay-model-divider mt-3 pt-2"><Button variant="ghost" size="sm" className="-ml-2 h-7 px-2 text-[11px] text-muted-foreground" onClick={() => setAdvanced(v => !v)}>{advanced ? <ChevronDown className="size-3"/> : <ChevronRight className="size-3"/>}Customized settings</Button>
+          {advanced && <div className="pb-2">{label("Base URL", <Input aria-label="服务地址" className={inputStyle} value={name === "OpenAI" ? "https://api.openai.com/v1" : baseUrl} readOnly={name === "OpenAI"} onChange={e => setBaseUrl(e.target.value)}/>)}</div>}
         </div>
-        <div className="flex justify-end gap-2"><Button variant="outline" size="sm" className="h-8" onClick={() => { setCreating(false); setDraft(null); }}>Cancel</Button><Button size="sm" className="h-8" disabled={busy || !draft.providerName.trim() || draft.providerName === "Custom" || !draft.baseUrl || !draft.apiKey || !draft.modelId || !draft.label} onClick={() => void save()}>{busy ? <LoaderCircle className="size-3 animate-spin"/> : null}Create provider</Button></div>
-      </div>
-    </div>}
+        <div className="relay-model-divider mt-1 pt-3"><div className="flex items-center justify-between gap-2 text-[11px]"><span>Models</span><Button variant="ghost" size="sm" className="h-6 px-1 text-[11px] text-muted-foreground" disabled={fetching || name === "OpenAI" && !connected} onClick={() => void fetchModels()}>{fetching ? <LoaderCircle className="size-3 animate-spin"/> : null}Fetch available models</Button></div>
+          <p className="mb-2 text-[11px] text-muted-foreground">{name === "OpenAI" ? connected ? "Connected model catalog" : "Connect to reveal direct models" : "Customized model catalog"}</p>{renderRows()}
+        </div>
+        <div className="mt-3 flex justify-end gap-2"><Button variant="outline" size="sm" className="h-8 text-[11px]" onClick={reset}>Cancel</Button><Button size="sm" className="relay-model-apply h-8 text-[11px]" disabled={busy} onClick={() => void apply()}>{busy ? <LoaderCircle className="size-3 animate-spin"/> : null}Apply</Button></div>
+      </div>}
+    </div>)}
+    {loaded && !custom && !active && <div className="grid gap-2 sm:grid-cols-2"><Button variant="outline" className="relay-model-add h-9 border-dashed text-[12px]" disabled={!userId} onClick={() => { reset(); setCustom(true); }}><Plus className="size-3.5"/>Add provider</Button><Button variant="outline" className="relay-model-add h-9 border-dashed text-[12px]" disabled={!userId} onClick={() => { reset(); setCustom(true); }}><Plus className="size-3.5"/>Add a custom provider</Button></div>}
+    {custom && <div className="relay-model-editor p-3.5"><h5 className="text-[12px] font-medium">Custom provider</h5><div className="mt-3 space-y-3">
+      {label("Provider ID", <Input aria-label="Provider ID" className={inputStyle} placeholder="acme-gateway" value={providerId} onChange={e => setProviderId(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))}/>)}
+      <p className="-mt-2 text-[11px] text-muted-foreground">A lowercase identifier for this provider.</p>
+      {label("Display name", <Input aria-label="Display name" className={inputStyle} placeholder="Provider name" value={providerName} onChange={e => setProviderName(e.target.value)}/>)}
+      {label("Base URL", <Input aria-label="Base URL" className={inputStyle} placeholder="https://gateway.example/v1" value={baseUrl} onChange={e => setBaseUrl(e.target.value)}/>)}
+      {label("API protocol", <select aria-label="API protocol" className="relay-model-select h-8 w-full max-w-52 rounded-md px-2 text-[12px]" value={protocol} onChange={e => setProtocol(e.target.value)}><option value="openai-completions">openai-completions</option></select>)}
+      {label("API key", <Input aria-label="API key" type="password" autoComplete="new-password" className={inputStyle} placeholder="Enter your API key" value={customKey} onChange={e => setCustomKey(e.target.value)}/>)}
+      <div className="relay-model-divider pt-3"><div className="flex items-center justify-between text-[11px]"><span>Models</span><Button variant="ghost" size="sm" className="h-6 px-1 text-[11px] text-muted-foreground" disabled={!baseUrl || !customKey || fetching} onClick={() => void fetchModels()}>{fetching ? <LoaderCircle className="size-3 animate-spin"/> : null}Fetch available models</Button></div><p className="mb-2 text-[11px] text-muted-foreground">Customized model catalog</p>{renderRows()}</div>
+      <div className="flex justify-end gap-2"><Button variant="outline" size="sm" className="h-8 text-[11px]" onClick={reset}>Cancel</Button><Button size="sm" className="relay-model-apply h-8 text-[11px]" disabled={busy || !providerId.trim() || !providerName.trim() || !baseUrl || !customKey || !rows.length} onClick={() => void apply()}>{busy ? <LoaderCircle className="size-3 animate-spin"/> : null}Create provider</Button></div>
+    </div></div>}
   </div>;
 }
