@@ -103,7 +103,6 @@ export async function handleChat(request: Request) {
   if (!parsed.success) return json(400, "请求格式不正确");
   const { threadId, agentId } = parsed.data;
   let model: string = parsed.data.model;
-  if (!isSupportedModel(model)) return json(400, "模型尚未接入当前服务");
   const messages = parsed.data.messages as UIMessage[];
 
   const { data: thread } = await supabase.from("threads").select("id,title,summary,summary_upto,permission,plan_mode,goal").eq("id", threadId).maybeSingle();
@@ -114,8 +113,9 @@ export async function handleChat(request: Request) {
   const active = agentId ? agents.find(a => a.id === agentId) ?? null : null;
   if (agentId && !active) return json(404, "Agent 不存在或已被删除");
   if (active && isSupportedModel(active.model)) model = active.model;
-  const { data: configured } = await supabase.from("ai_models").select("model_id").eq("model_id", model).eq("enabled", true).not("verified_at", "is", null).maybeSingle();
+  const { data: configured } = await supabase.from("ai_models").select("id,model_id,connection_type,parameters").eq("model_id", model).eq("enabled", true).not("verified_at", "is", null).maybeSingle();
   if (!configured) return json(400, "模型未配置或尚未通过验证");
+  if (configured.connection_type === "gateway" && !isSupportedModel(model)) return json(400, "模型尚未接入当前服务");
 
   const last = messages[messages.length - 1];
   // 消息分支：每个回复挂在它回答的提问下（parent_id），同一提问下多个回复即多个版本。
@@ -144,12 +144,19 @@ export async function handleChat(request: Request) {
     parentId = idx >= 0 && messages[idx]?.role === "user" ? messages[idx]!.id : null;
   }
 
-  const apiKey = process.env["LOVABLE_API_KEY"];
+  let apiKey = process.env["LOVABLE_API_KEY"];
+  const direct = configured.connection_type === "direct";
+  if (direct) {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: credential } = await supabaseAdmin.from("ai_model_credentials").select("secret_enc").eq("model_id", configured.id).eq("user_id", userId).maybeSingle();
+    if (!credential) return json(400, "该模型缺少 API Key，请在设置中重新保存");
+    const { decryptSecret } = await import("./crypto.server");
+    apiKey = await decryptSecret(credential.secret_enc);
+  }
   if (!apiKey) return json(500, "AI 服务未配置");
   const runIdFetch = createLovableAiGatewayRunIdFetch(getLovableAiGatewayRunId(request));
-  const provider = createOpenAI({
-    baseURL: GATEWAY,
-    apiKey,
+  const provider = createOpenAI(direct ? { apiKey } : {
+    baseURL: GATEWAY, apiKey,
     headers: { "Lovable-API-Key": apiKey, "X-Lovable-AIG-SDK": "vercel-ai-sdk" },
     fetch: runIdFetch.fetch,
   });
@@ -201,7 +208,7 @@ export async function handleChat(request: Request) {
     },
     ...(process.env["MCP_ENC_KEY"] ? { experimental_toolApprovalSecret: `approval:${process.env["MCP_ENC_KEY"]}` } : {}),
     abortSignal: request.signal,
-    providerOptions: OPENAI_OPTIONS,
+    providerOptions: { openai: { ...OPENAI_OPTIONS.openai, reasoningEffort: (["low", "medium", "high"].includes((configured.parameters as { reasoningEffort?: string } | null)?.reasoningEffort ?? "") ? (configured.parameters as { reasoningEffort: "low" | "medium" | "high" }).reasoningEffort : "medium") } },
     onFinish: closeMcp,
     onError: closeMcp,
   });
@@ -233,8 +240,9 @@ export async function handleChat(request: Request) {
       const status = (error as { statusCode?: number })?.statusCode;
       if (status === 402) return "AI 额度不足，请在 设置 → 套餐与额度 中充值后再试。";
       if (status === 429) return "请求过于频繁，请稍后再试。";
-      if (status === 403) return "当前模型暂不可用（访问被拒绝）。";
-      return "生成回复时出错，请稍后重试。";
+       if (status === 403) return "当前模型访问被拒绝，请检查此账户的使用权限。";
+       if (status === 401) return "模型密钥无效，请在设置中更新。";
+       return (error as Error)?.message || "生成回复时出错，请稍后重试。";
     },
   });
   return withLovableAiGatewayRunIdHeader(response, runIdFetch);

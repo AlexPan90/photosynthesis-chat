@@ -178,6 +178,8 @@ export const updateThreadModel = createServerFn({ method: "POST" })
     agentId: z.string().uuid().nullable().optional(),
   }).parse(d))
   .handler(async ({ data, context }) => {
+    const { data: configured } = await context.supabase.from("ai_models").select("id").eq("model_id", data.model).eq("enabled", true).not("verified_at", "is", null).maybeSingle();
+    if (!configured) throw new Error("请选择已验证的模型");
     const { error } = await context.supabase.from("threads").update({ model: data.model, agent_id: data.agentId ?? null }).eq("id", data.threadId);
     if (error) throw new Error("保存失败：" + error.message);
     return { ok: true };
