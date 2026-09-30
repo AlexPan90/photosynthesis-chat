@@ -14,7 +14,7 @@ const fromModel = (m: ConfiguredModel): Draft => ({ id: m.id, modelId: m.model_i
 
 export function ModelSettings({ userId }: { userId: string | undefined }) {
   const { models, reload, loaded } = useModels(userId);
-  const saved = models.filter(m => m.enabled);
+  const saved = models.filter(m => m.enabled && (m.connection_type !== "direct" || m.verified_at));
   const [editing, setEditing] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -98,7 +98,7 @@ export function ModelSettings({ userId }: { userId: string | undefined }) {
         <div className="mb-4 border-b border-border pb-4">
           <div className="flex items-center gap-2 text-[12px] font-semibold">OpenAI <span className={openAIConnected ? "text-success" : "text-muted-foreground"}>{openAIConnected ? "已连接" : "未连接"}</span></div>
           <div className="mt-2 flex flex-col gap-2 sm:flex-row"><Input aria-label="OpenAI API Key" type="password" autoComplete="new-password" placeholder="输入 OpenAI API Key" className="relay-model-input h-9 flex-1" value={openAIKey} onChange={e => { setOpenAIKey(e.target.value); setOpenAIConnected(false); setOpenAIModels([]); }}/><Button variant="outline" size="sm" className="h-9" disabled={openAITesting || !openAIKey.trim()} onClick={() => void testOpenAI()}>{openAITesting ? <LoaderCircle className="size-3.5 animate-spin"/> : <RefreshCw className="size-3.5"/>}测试连接</Button></div>
-          <p className="mt-2 text-[11px] text-muted-foreground">{openAIConnected ? `已验证 · ${openAIModels.length} 个模型可用` : "连接成功后显示 OpenAI 模型；密钥仅在服务端加密保存。"}</p>
+          <p className="mt-2 text-[11px] text-muted-foreground">{openAIConnected ? `已验证 · ${openAIModels.length} 个模型可访问` : "连接成功后显示 OpenAI 模型；密钥仅在服务端加密保存。"}</p>
           {openAIConnected && <div className="mt-2 max-h-40 overflow-auto rounded-md border border-border p-2 text-[11px]"><div className="grid grid-cols-2 gap-1 sm:grid-cols-3">{openAIModels.map(id => <span key={id} className="truncate px-1 py-0.5 font-mono" title={id}>{id}</span>)}</div></div>}
         </div>
         <div className="mb-3 flex items-center gap-2 text-[12px] font-medium">已配置模型 <span className="text-muted-foreground">{saved.filter(m => m.connection_type !== "direct" || m.provider !== "OpenAI" || openAIConnected).length}</span></div>

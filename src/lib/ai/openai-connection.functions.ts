@@ -19,15 +19,13 @@ export const testOpenAIConnection = createServerFn({ method: "POST" })
       await context.supabase.from("ai_models").update({ verified_at: null }).eq("provider", "OpenAI").eq("connection_type", "direct");
       throw error;
     }
-    {
-      const { encryptSecret } = await import("./crypto.server");
-      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const { error } = await supabaseAdmin.from("ai_provider_connections").upsert({
-        user_id: context.userId, provider: "OpenAI", secret_enc: await encryptSecret(data.apiKey), verified_at: new Date().toISOString(),
-      }, { onConflict: "user_id,provider" });
-      if (error) throw new Error("连接已验证，但凭证保存失败");
-      return { models };
-    }
+    const { encryptSecret } = await import("./crypto.server");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("ai_provider_connections").upsert({
+      user_id: context.userId, provider: "OpenAI", secret_enc: await encryptSecret(data.apiKey), verified_at: new Date().toISOString(),
+    }, { onConflict: "user_id,provider" });
+    if (error) throw new Error("连接已验证，但凭证保存失败");
+    return { models };
   });
 
 export const getOpenAIConnection = createServerFn({ method: "GET" })

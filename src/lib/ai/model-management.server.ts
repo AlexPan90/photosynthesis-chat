@@ -19,7 +19,7 @@ export async function discoverModels(baseUrl: string, key: string) {
 }
 
 export async function fetchOpenAIModels(key: string) {
-  const response = await fetch("https://api.openai.com/v1/models", { headers: { Authorization: `Bearer ${key}`, Accept: "application/json" }, redirect: "error" });
+  const response = await fetch("https://api.openai.com/v1/models", { headers: { Authorization: `Bearer ${key}`, Accept: "application/json" }, redirect: "error", signal: AbortSignal.timeout(12000) });
   if (!response.ok) {
     if (response.status === 401 || response.status === 403) throw new Error("API Key 无效或无权访问 OpenAI");
     throw new Error(`OpenAI 连接失败（${response.status}）`);
