@@ -423,13 +423,21 @@ body { font-size: calc(16px * var(--relay-type-scale)); }
 .relay-settings-surface > section > div { background-color: var(--background); }
 .dark .relay-extract { background: rgba(0,0,0,.25); }
 
-/* Settings model list: clear outlines and restrained status light. */
-.relay-settings-surface { --model-outline: color-mix(in oklab, var(--foreground) 18%, transparent); --model-editor: var(--muted); }
-.dark .relay-settings-surface { --model-outline: color-mix(in oklab, var(--foreground) 24%, transparent); --model-editor: #202126; }
-.relay-model-card { border: 1px solid var(--model-outline); border-radius: 12px; background-color: var(--background); }
-.relay-model-row { border: 1px solid transparent; }
-.relay-model-row:hover { background: var(--accent); border-color: var(--model-outline); }
-.relay-model-row + .relay-model-row { border-top: 1px solid var(--border); border-top-left-radius: 0; border-top-right-radius: 0; }
-.relay-model-editor { background: var(--model-editor); border: 1px solid var(--model-outline); }
-.relay-model-select { background: var(--background); border-color: var(--model-outline); }
-.relay-model-status { box-shadow: 0 0 0 3px color-mix(in oklab, var(--success) 17%, transparent); }
+/* Model settings: nested provider / edit surface and quiet, readable form fields. */
+.relay-settings-surface {
+  --model-outline: color-mix(in oklab, var(--foreground) 19%, transparent);
+  --model-editor: color-mix(in oklab, var(--foreground) 4%, var(--background));
+  --model-input: var(--background);
+}
+.dark .relay-settings-surface {
+  --model-outline: color-mix(in oklab, var(--foreground) 22%, transparent);
+  --model-editor: #24252A;
+  --model-input: #1B1C20;
+}
+.relay-model-card { border: 1px solid var(--model-outline); border-radius: 12px; background: var(--background); }
+.relay-model-editor { background: var(--model-editor); }
+.relay-model-readonly, .relay-model-select, .relay-model-input { background: var(--model-input); border: 1px solid var(--model-outline); color: var(--foreground); }
+.relay-model-summary, .relay-model-edit-row { background: color-mix(in oklab, var(--foreground) 3%, var(--background)); }
+.relay-model-add { border-color: var(--model-outline); }
+.relay-model-add:hover { border-color: var(--foreground); }
+.relay-model-status { box-shadow: 0 0 0 3px color-mix(in oklab, var(--success) 19%, transparent), 0 0 10px color-mix(in oklab, var(--success) 40%, transparent); }
