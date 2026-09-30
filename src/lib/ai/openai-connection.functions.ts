@@ -21,10 +21,26 @@ export const testOpenAIConnection = createServerFn({ method: "POST" })
     }
     const { encryptSecret } = await import("./crypto.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const encryptedKey = await encryptSecret(data.apiKey);
     const { error } = await supabaseAdmin.from("ai_provider_connections").upsert({
-      user_id: context.userId, provider: "OpenAI", secret_enc: await encryptSecret(data.apiKey), verified_at: new Date().toISOString(),
+      user_id: context.userId, provider: "OpenAI", secret_enc: encryptedKey, verified_at: new Date().toISOString(),
     }, { onConflict: "user_id,provider" });
     if (error) throw new Error("连接已验证，但凭证保存失败");
+    const { data: configured, error: readError } = await context.supabase.from("ai_models")
+      .select("id,model_id").eq("provider", "OpenAI").eq("connection_type", "direct");
+    if (readError) throw new Error("连接成功，但无法更新已有模型状态");
+    const available = new Set(models);
+    for (const model of configured ?? []) {
+      const verified = available.has(model.model_id);
+      if (verified) {
+        const { error: credentialError } = await supabaseAdmin.from("ai_model_credentials")
+          .upsert({ model_id: model.id, user_id: context.userId, secret_enc: encryptedKey });
+        if (credentialError) throw new Error("连接成功，但无法更新模型凭证");
+      }
+      const { error: modelError } = await context.supabase.from("ai_models")
+        .update({ verified_at: verified ? new Date().toISOString() : null }).eq("id", model.id);
+      if (modelError) throw new Error("连接成功，但无法更新已有模型状态");
+    }
     return { models };
   });
 
