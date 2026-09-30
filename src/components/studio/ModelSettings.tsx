@@ -91,7 +91,7 @@ export function ModelSettings({ userId }: { userId: string | undefined }) {
     } catch (e) { await refresh(); toast.error((e as Error).message || "保存失败，请检查模型配置"); }
     finally { setBusy(false); }
   }
-  const editRows = rows.filter(r => canSee || r.connectionType !== "direct");
+  const editRows = canSee ? rows : [];
   const renderRows = () => <>
     {editRows.length === 0 && <div className="relay-model-empty">No models will be shown in the selector. Unlisted IDs can still be sent directly.</div>}
     <div className="space-y-1.5">{editRows.map(r => {
@@ -112,13 +112,13 @@ export function ModelSettings({ userId }: { userId: string | undefined }) {
       </div>;
     })}</div>
     {catalog.length > 0 && <select aria-label="已发现模型" className="relay-model-select mt-2 h-8 w-full rounded-md px-2 text-[12px]" value="" onChange={e => { if (e.target.value && !rows.some(r => r.modelId === e.target.value)) setRows(prev => [...prev, { ...fresh(custom ? providerName : active ?? "OpenAI", baseUrl), modelId:e.target.value, label:e.target.value, apiKey: custom ? customKey : key }]); }}><option value="">Choose a discovered model to add</option>{catalog.map(id => <option key={id} value={id}>{id}</option>)}</select>}
-    <Button variant="outline" size="sm" className="mt-2 h-7 rounded-full px-2 text-[11px]" onClick={() => setRows(prev => [...prev, { ...fresh(custom ? providerName : active ?? "OpenAI", baseUrl), connectionType: active === "OpenAI" && connected ? "direct" : active === "OpenAI" ? "gateway" : "direct", apiKey: custom ? customKey : key }])}><Plus className="size-3"/>Add model</Button>
+    <Button variant="outline" size="sm" className="mt-2 h-7 rounded-full px-2 text-[11px]" disabled={active === "OpenAI" && !connected} onClick={() => setRows(prev => [...prev, { ...fresh(custom ? providerName : active ?? "OpenAI", baseUrl), connectionType: "direct", apiKey: custom ? customKey : key }])}><Plus className="size-3"/>Add model</Button>
   </>;
   return <div className="relay-models py-3">
     <h4 className="text-[14px] font-medium">Models</h4>
     <p className="mb-5 mt-2 text-[12px] text-muted-foreground">Enter your API keys to use models from the following providers.</p>
     {loaded && providers.map(name => <div key={name} className="mb-2.5">
-      <div className="relay-model-provider flex h-11 items-center gap-2 px-3"><span className="truncate text-[12px] font-medium">{name}</span>{(models.some(m => m.provider === name && m.enabled && m.verified_at) || name === "OpenAI" && connected) && <span className="size-1.5 shrink-0 rounded-full bg-success" aria-label="已连接"/>}<Button variant="outline" size="sm" className="ml-auto h-7 px-2 text-[11px]" disabled={!userId} onClick={() => open(name)}>Edit</Button></div>
+      <div className="relay-model-provider flex h-11 items-center gap-2 px-3"><span className="truncate text-[12px] font-medium">{name}</span>{(name === "OpenAI" ? connected : models.some(m => m.provider === name && m.connection_type === "direct" && m.enabled && m.verified_at)) && <span className="size-1.5 shrink-0 rounded-full bg-success" aria-label="已连接"/>}<Button variant="outline" size="sm" className="ml-auto h-7 px-2 text-[11px]" disabled={!userId} onClick={() => open(name)}>Edit</Button></div>
       {active === name && <div className="relay-model-editor mt-2 p-3.5">
         {name === "OpenAI" ? <><div className="text-[12px] font-medium">OpenAI <span className="ml-1 text-[11px] font-normal text-muted-foreground">{connected ? "Connected" : "Not connected"}</span></div>
           {label("API key", <div className="flex gap-2"><Input aria-label="OpenAI API Key" type="password" autoComplete="new-password" className={`${inputStyle} min-w-0 flex-1`} placeholder={connected ? "Enter a new key to replace the saved one" : "Enter OpenAI API key"} value={key} onChange={e => setKey(e.target.value)}/><Button variant="outline" size="sm" className="h-8 shrink-0 text-[11px]" disabled={!key.trim() || busy} onClick={() => void testConnection()}>{busy ? <LoaderCircle className="size-3 animate-spin"/> : "Test connection"}</Button></div>)}
@@ -132,7 +132,7 @@ export function ModelSettings({ userId }: { userId: string | undefined }) {
         <div className="mt-3 flex justify-end gap-2"><Button variant="outline" size="sm" className="h-8 text-[11px]" onClick={reset}>Cancel</Button><Button size="sm" className="relay-model-apply h-8 text-[11px]" disabled={busy} onClick={() => void apply()}>{busy ? <LoaderCircle className="size-3 animate-spin"/> : null}Apply</Button></div>
       </div>}
     </div>)}
-    {loaded && !custom && <div className="grid gap-2 sm:grid-cols-2"><Button variant="outline" className="relay-model-add h-9 border-dashed text-[12px]" disabled={!userId} onClick={() => { reset(); setCustom(true); }}><Plus className="size-3.5"/>Add provider</Button><Button variant="outline" className="relay-model-add h-9 border-dashed text-[12px]" disabled={!userId} onClick={() => { reset(); setCustom(true); }}><Plus className="size-3.5"/>Add a custom provider</Button></div>}
+    {loaded && !custom && !active && <div className="grid gap-2 sm:grid-cols-2"><Button variant="outline" className="relay-model-add h-9 border-dashed text-[12px]" disabled={!userId} onClick={() => { reset(); setCustom(true); }}><Plus className="size-3.5"/>Add provider</Button><Button variant="outline" className="relay-model-add h-9 border-dashed text-[12px]" disabled={!userId} onClick={() => { reset(); setCustom(true); }}><Plus className="size-3.5"/>Add a custom provider</Button></div>}
     {custom && <div className="relay-model-editor p-3.5"><h5 className="text-[12px] font-medium">Custom provider</h5><div className="mt-3 space-y-3">
       {label("Provider ID", <Input aria-label="Provider ID" className={inputStyle} placeholder="acme-gateway" value={providerId} onChange={e => setProviderId(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))}/>)}
       <p className="-mt-2 text-[11px] text-muted-foreground">A lowercase identifier for this provider.</p>
