@@ -37,7 +37,6 @@ function Row({ title, desc, children }: { title: string; desc?: string; children
 
 export function SettingsCenter(p: Props) {
   const [tab, setTab] = useState<(typeof tabs)[number]["id"]>("general");
-  const current = tabs.find(t => t.id === tab)!;
   return <Dialog open={p.open} onOpenChange={p.onOpenChange}>
     <DialogContent className="relay-settings-surface flex h-[min(666px,92vh)] w-[min(668px,94vw)] max-w-none gap-0 overflow-hidden rounded-[20px] p-0 [&>button:last-child]:hidden">
       <nav className="flex w-12 shrink-0 flex-col bg-sidebar p-2 sm:w-[164px] sm:p-2.5">
@@ -46,11 +45,10 @@ export function SettingsCenter(p: Props) {
 
       </nav>
       <section className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center justify-between border-b border-border/60 px-7">
-          <h3 className="text-[14px] font-semibold">{current.label}</h3>
-          <div className="flex items-center gap-2">
-            <Button asChild variant="outline" size="sm" className="hidden h-8 text-xs sm:inline-flex"><Link to="/studio/agents" onClick={() => p.onOpenChange(false)}>打开编排中心<ArrowUpRight className="size-3.5"/></Link></Button>
-            <Button variant="ghost" size="icon" className="size-8" onClick={() => p.onOpenChange(false)} aria-label="关闭"><X className="size-4"/></Button>
+        <header className="flex h-12 shrink-0 items-center justify-end px-3">
+          <div className="flex items-center gap-1">
+            {tab !== "models" && <Button asChild variant="outline" size="sm" className="hidden h-7 text-[11px] sm:inline-flex"><Link to="/studio/agents" onClick={() => p.onOpenChange(false)}>打开编排中心<ArrowUpRight className="size-3.5"/></Link></Button>}
+            <Button variant="ghost" size="icon" className="size-7" onClick={() => p.onOpenChange(false)} aria-label="关闭"><X className="size-4"/></Button>
           </div>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-5 pt-0 sm:px-3 sm:pr-5">
