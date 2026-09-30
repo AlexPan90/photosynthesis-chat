@@ -28,4 +28,4 @@
 - [x] Refine markdown tables, image/chart previews and delivered files by content type; verify light/dark and narrow layouts.
 - [x] Add model metadata and secure OpenAI API-key setup; verify edits and model switching in a real conversation.
 - [x] Add authenticated model discovery for OpenAI-compatible providers and manual entry fallback; verify the settings flow.
-- [ ] Add OpenAI API Key connection testing in model editing; hide its direct-model list until verified, while preserving application-service models; verify in the UI.
+- [x] Add OpenAI API Key connection testing in model editing; hide its direct-model list until verified, while preserving application-service models; verify in the UI.
