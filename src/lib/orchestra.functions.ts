@@ -69,7 +69,7 @@ export const callMcpTool = createServerFn({ method: "POST" })
       .select("id,name,url,auth_type,header_name,proxy_url,secret_enc,state,disabled_tools,tools")
       .eq("id", data.id).maybeSingle();
     if (error || !row || row.state !== "ready") throw new Error("连接未就绪");
-    const available = Array.isArray(row.tools) && row.tools.some(t => t && typeof t === "object" && "name" in t && t.name === data.name);
+    const available = Array.isArray(row.tools) && row.tools.some(t => t && typeof t === "object" && "name" in t && t['name'] === data.name);
     if (!available || row.disabled_tools.includes(data.name)) throw new Error("工具不可用或已停用");
     if (!data.confirmed && /(?:delete|remove|send|write|create|update|edit|post|publish|execute|run|drop|put|patch|modify|submit|deploy|transfer|purchase|cancel|revoke|archive)/i.test(data.name)) throw new Error("此操作需要先确认");
     const { runMcpTool } = await import("@/lib/ai/mcp.server");
