@@ -27,6 +27,7 @@ export function ModelSettings({ userId }: { userId: string | undefined }) {
   const [fetching, setFetching] = useState(false);
   const [catalog, setCatalog] = useState<string[]>([]);
   const [providerName, setProviderName] = useState("");
+  const [providerId, setProviderId] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
   const [protocol, setProtocol] = useState("openai-completions");
   const [customKey, setCustomKey] = useState("");
@@ -38,7 +39,7 @@ export function ModelSettings({ userId }: { userId: string | undefined }) {
   const label = (text: string, children: React.ReactNode) => <label className="relay-model-field">{text}{children}</label>;
   const refresh = async () => { await reload(); notifyModelsChanged(); };
   const patchRow = (index: number, patch: Partial<Draft>) => setRows(prev => prev.map((r, i) => i === index ? { ...r, ...patch } : r));
-  function reset() { setActive(null); setCustom(false); setRows([]); setRemoved([]); setDetails(null); setCatalog([]); setKey(""); setAdvanced(false); setConnectionChecked(false); }
+  function reset() { setActive(null); setCustom(false); setRows([]); setRemoved([]); setDetails(null); setCatalog([]); setKey(""); setAdvanced(false); setConnectionChecked(false); setProviderId(""); setProviderName(""); setBaseUrl(""); setCustomKey(""); }
   function open(name: string) {
     if (active === name) { reset(); return; }
     setActive(name); setCustom(false); setRows(models.filter(m => m.provider === name && m.enabled).map(fromModel)); setRemoved([]); setCatalog([]); setDetails(null); setAdvanced(false); setKey("");
@@ -133,13 +134,14 @@ export function ModelSettings({ userId }: { userId: string | undefined }) {
     </div>)}
     {loaded && !custom && <div className="grid gap-2 sm:grid-cols-2"><Button variant="outline" className="relay-model-add h-9 border-dashed text-[12px]" disabled={!userId} onClick={() => { reset(); setCustom(true); }}><Plus className="size-3.5"/>Add provider</Button><Button variant="outline" className="relay-model-add h-9 border-dashed text-[12px]" disabled={!userId} onClick={() => { reset(); setCustom(true); }}><Plus className="size-3.5"/>Add a custom provider</Button></div>}
     {custom && <div className="relay-model-editor p-3.5"><h5 className="text-[12px] font-medium">Custom provider</h5><div className="mt-3 space-y-3">
-      {label("Provider ID", <Input aria-label="Provider ID" className={inputStyle} placeholder="acme-gateway" value={providerName.toLowerCase().trim().replace(/[^a-z0-9-]/g, "-")} onChange={e => setProviderName(e.target.value)}/>)}
+      {label("Provider ID", <Input aria-label="Provider ID" className={inputStyle} placeholder="acme-gateway" value={providerId} onChange={e => setProviderId(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))}/>)}
+      <p className="-mt-2 text-[11px] text-muted-foreground">A lowercase identifier for this provider.</p>
       {label("Display name", <Input aria-label="Display name" className={inputStyle} placeholder="Provider name" value={providerName} onChange={e => setProviderName(e.target.value)}/>)}
       {label("Base URL", <Input aria-label="Base URL" className={inputStyle} placeholder="https://gateway.example/v1" value={baseUrl} onChange={e => setBaseUrl(e.target.value)}/>)}
       {label("API protocol", <select aria-label="API protocol" className="relay-model-select h-8 w-full max-w-52 rounded-md px-2 text-[12px]" value={protocol} onChange={e => setProtocol(e.target.value)}><option value="openai-completions">openai-completions</option></select>)}
       {label("API key", <Input aria-label="API key" type="password" autoComplete="new-password" className={inputStyle} placeholder="Enter your API key" value={customKey} onChange={e => setCustomKey(e.target.value)}/>)}
       <div className="relay-model-divider pt-3"><div className="flex items-center justify-between text-[11px]"><span>Models</span><Button variant="ghost" size="sm" className="h-6 px-1 text-[11px] text-muted-foreground" disabled={!baseUrl || !customKey || fetching} onClick={() => void fetchModels()}>{fetching ? <LoaderCircle className="size-3 animate-spin"/> : null}Fetch available models</Button></div><p className="mb-2 text-[11px] text-muted-foreground">Customized model catalog</p>{renderRows()}</div>
-      <div className="flex justify-end gap-2"><Button variant="outline" size="sm" className="h-8 text-[11px]" onClick={reset}>Cancel</Button><Button size="sm" className="relay-model-apply h-8 text-[11px]" disabled={busy || !providerName.trim() || !baseUrl || !customKey || !rows.length} onClick={() => void apply()}>{busy ? <LoaderCircle className="size-3 animate-spin"/> : null}Create provider</Button></div>
+      <div className="flex justify-end gap-2"><Button variant="outline" size="sm" className="h-8 text-[11px]" onClick={reset}>Cancel</Button><Button size="sm" className="relay-model-apply h-8 text-[11px]" disabled={busy || !providerId.trim() || !providerName.trim() || !baseUrl || !customKey || !rows.length} onClick={() => void apply()}>{busy ? <LoaderCircle className="size-3 animate-spin"/> : null}Create provider</Button></div>
     </div></div>}
   </div>;
 }
