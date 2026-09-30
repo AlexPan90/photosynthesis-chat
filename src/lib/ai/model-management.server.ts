@@ -9,9 +9,10 @@ export async function verifyDirectModel(modelId: string, directKey?: string) {
     headers: { "Lovable-API-Key": key, "X-Lovable-AIG-SDK": "vercel-ai-sdk" },
   });
   try {
+    const reasoning = modelId.startsWith("openai/gpt-6-") || /^gpt-[56]/.test(modelId);
     const result = streamText({
       model: provider.responses(modelId), prompt: "Reply with OK.",
-      providerOptions: { openai: { forceReasoning: true, reasoningEffort: "low", reasoningSummary: "auto", store: false, include: ["reasoning.encrypted_content"] } },
+      providerOptions: { openai: reasoning ? { forceReasoning: true, reasoningEffort: "low", reasoningSummary: "auto", store: false, include: ["reasoning.encrypted_content"] } : { store: false } },
     });
     if (!(await result.text).trim()) throw new Error("模型返回空内容");
   } catch (e) {

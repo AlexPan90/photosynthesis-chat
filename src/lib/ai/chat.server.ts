@@ -208,7 +208,7 @@ export async function handleChat(request: Request) {
     },
     ...(process.env["MCP_ENC_KEY"] ? { experimental_toolApprovalSecret: `approval:${process.env["MCP_ENC_KEY"]}` } : {}),
     abortSignal: request.signal,
-    providerOptions: { openai: { ...OPENAI_OPTIONS.openai, reasoningEffort: (["low", "medium", "high"].includes((configured.parameters as { reasoningEffort?: string } | null)?.reasoningEffort ?? "") ? (configured.parameters as { reasoningEffort: "low" | "medium" | "high" }).reasoningEffort : "medium") } },
+    providerOptions: { openai: (direct && !/^gpt-[56]/.test(model)) ? { store: false } : { ...OPENAI_OPTIONS.openai, reasoningEffort: (["low", "medium", "high"].includes((configured.parameters as { reasoningEffort?: string } | null)?.reasoningEffort ?? "") ? (configured.parameters as { reasoningEffort: "low" | "medium" | "high" }).reasoningEffort : "medium") } },
     onFinish: closeMcp,
     onError: closeMcp,
   });
