@@ -42,6 +42,7 @@ export function ModelSettings({ userId }: { userId: string | undefined }) {
   const [customKey, setCustomKey] = useState("");
   const [connectionChecked, setConnectionChecked] = useState(false);
   const providers = [...new Set(["OpenAI", ...models.map(m => m.provider)])];
+  const availablePresets = providerPresets.filter(p => !providers.includes(p.name));
   const canSee = active !== "OpenAI" || connected;
   const inputStyle = "relay-model-input h-8 text-[12px]";
   const label = (text: string, children: React.ReactNode) => <label className="relay-model-field">{text}{children}</label>;
@@ -141,10 +142,10 @@ export function ModelSettings({ userId }: { userId: string | undefined }) {
         <div className="mt-3 flex justify-end gap-2"><Button variant="outline" size="sm" className="h-8 text-[11px]" onClick={reset}>Cancel</Button><Button size="sm" className="relay-model-apply h-8 text-[11px]" disabled={busy} onClick={() => void apply()}>{busy ? <LoaderCircle className="size-3 animate-spin"/> : null}Apply</Button></div>
       </div>}
     </div>)}
-    {loaded && !custom && !preset && !active && <div className="grid gap-2 sm:grid-cols-2"><Button variant="outline" className="relay-model-add h-9 border-dashed text-[12px]" disabled={!userId} onClick={() => { reset(); setPreset(true); setSelectedPreset(providerPresets[0].name); setBaseUrl(providerPresets[0].url); }}><Plus className="size-3.5"/>Add provider</Button><Button variant="outline" className="relay-model-add h-9 border-dashed text-[12px]" disabled={!userId} onClick={() => { reset(); setCustom(true); }}><Plus className="size-3.5"/>Add a custom provider</Button></div>}
+    {loaded && !custom && !preset && !active && <div className="grid gap-2 sm:grid-cols-2"><Button variant="outline" className="relay-model-add h-9 border-dashed text-[12px]" disabled={!userId || availablePresets.length === 0} onClick={() => { const first = availablePresets[0]; if (!first) return; reset(); setPreset(true); setSelectedPreset(first.name); setBaseUrl(first.url); }}><Plus className="size-3.5"/>Add provider</Button><Button variant="outline" className="relay-model-add h-9 border-dashed text-[12px]" disabled={!userId} onClick={() => { reset(); setCustom(true); }}><Plus className="size-3.5"/>Add a custom provider</Button></div>}
     {preset && <div className="relay-model-editor p-3.5"><div className="space-y-3">
       {label("Provider", <select aria-label="Provider" className="relay-model-select h-8 w-full max-w-52 px-2 text-[12px]" value={selectedPreset} onChange={e => { const next = providerPresets.find(p => p.name === e.target.value); if (!next) return; setSelectedPreset(next.name); setBaseUrl(next.url); setRows([]); setCatalog([]); setAdvanced(false); }}>
-        {providerPresets.filter(p => p.name === selectedPreset || !providers.includes(p.name)).map(p => <option key={p.name} value={p.name}>{p.name}</option>)}
+        {availablePresets.map(p => <option key={p.name} value={p.name}>{p.name}</option>)}
       </select>)}
       {label("API key", <Input aria-label="Provider API key" type="password" autoComplete="new-password" className={inputStyle} placeholder="Enter an API key" value={customKey} onChange={e => setCustomKey(e.target.value)}/>)}
       <div className="relay-model-divider pt-2"><Button variant="ghost" size="sm" className="-ml-2 h-7 px-2 text-[11px] text-muted-foreground" onClick={() => setAdvanced(v => !v)}>{advanced ? <ChevronDown className="size-3"/> : <ChevronRight className="size-3"/>}Customized settings</Button></div>
