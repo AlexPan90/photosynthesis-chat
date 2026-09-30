@@ -22,6 +22,7 @@ export const testOpenAIConnection = createServerFn({ method: "POST" })
     } catch (error) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       await supabaseAdmin.from("ai_provider_connections").delete().eq("user_id", context.userId).eq("provider", "OpenAI");
+      await context.supabase.from("ai_models").update({ verified_at: null }).eq("provider", "OpenAI").eq("connection_type", "direct");
       throw error;
     }
   });
