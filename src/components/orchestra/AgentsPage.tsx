@@ -20,7 +20,7 @@ const KIND_LABEL: Record<Kind, string> = { tool: "内置工具", mcp: "MCP 工�
 const MIME = "application/x-relay-cap";
 const toForm = (a?: AgentConfig): Form => ({ name: a?.name ?? "", description: a?.description ?? "", system_prompt: a?.system_prompt ?? "", model: a?.model ?? "openai/gpt-6-astra", tool_ids: a?.tool_ids ?? [], mcp_tool_ids: a?.mcp_tool_ids ?? [], skill_ids: a?.skill_ids ?? [], delegate_ids: a?.delegate_ids ?? [] });
 
-export function AgentsPage() {
+export function AgentsPage({ mode = "all" }: { mode?: "all" | "manage" | "compose" }) {
   const { user } = useAuth();
   const { available } = useModels(user?.id);
   const models = available.map(m => ({ id: m.model_id, label: m.label }));
@@ -108,7 +108,7 @@ export function AgentsPage() {
 
   const chips = (Object.keys(FIELD) as Kind[]).flatMap(k => (form[FIELD[k]] as string[]).map(id => ({ ...capLabel(k, id), kind: k })));
 
-  return <div className="grid h-full grid-cols-[240px_1fr_280px]">
+  return <div className={`grid h-full ${mode === "compose" ? "grid-cols-[220px_1fr_260px]" : mode === "manage" ? "grid-cols-[220px_1fr]" : "grid-cols-[240px_1fr_280px]"}`}>
     {/* 左：Agent 列表 */}
     <aside className="soft-scroll overflow-y-auto border-r p-2">
       <div className="flex items-center px-2 py-1.5 text-[11px] font-medium text-muted-foreground">我的 Agent<button onClick={() => pick("new")} className="ml-auto rounded p-1 hover:bg-secondary" aria-label="新建 Agent"><Plus className="size-3.5"/></button></div>
@@ -121,7 +121,7 @@ export function AgentsPage() {
       </div>)}
       <div className="px-2 pb-1.5 pt-4 text-[11px] font-medium text-muted-foreground">内置</div>
       {BUILTIN_AGENTS.map(a => <div key={a.id} onClick={() => pick(a)} className={`mb-0.5 cursor-pointer rounded-md px-2 py-2 text-xs hover:bg-secondary ${sel === a.id ? "bg-secondary" : ""}`}><span className="block truncate font-medium">{a.name}</span><span className="block truncate text-[11px] text-muted-foreground">{a.description}</span></div>)}
-      <p className="px-2 pt-4 text-[10.5px] leading-5 text-muted-foreground/80">拖动左侧手柄调整顺序，输入框模型菜单按此顺序显示。</p>
+      {mode !== "compose" && <p className="px-2 pt-4 text-[10.5px] leading-5 text-muted-foreground/80">拖动左侧手柄调整顺序。</p>}
     </aside>
 
     {/* 中：编辑区 */}
@@ -139,15 +139,15 @@ export function AgentsPage() {
           </div>
         </div>
         {msg && <p className={`text-xs ${msg === "已保存" ? "text-success" : "text-destructive"}`}>{msg}</p>}
-        <fieldset disabled={readOnly} className="space-y-4">
+        {mode !== "compose" && <fieldset disabled={readOnly} className="space-y-4">
           <div className="grid grid-cols-[1fr_180px] gap-3">
             <label className="space-y-1 text-xs"><span className="text-muted-foreground">名称</span><Input value={form.name} onChange={e => patch({ name: e.target.value })} placeholder="例如：周报助手" className="h-8 text-xs"/></label>
             <label className="space-y-1 text-xs"><span className="text-muted-foreground">默认模型</span><select value={form.model} onChange={e => patch({ model: e.target.value })} className="block h-8 w-full rounded-md border bg-background px-2 text-xs">{models.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}</select></label>
           </div>
           <label className="block space-y-1 text-xs"><span className="text-muted-foreground">一句话职责（委派时 AI 据此判断）</span><Input value={form.description} onChange={e => patch({ description: e.target.value })} className="h-8 text-xs"/></label>
           <label className="block space-y-1 text-xs"><span className="text-muted-foreground">系统提示词</span><Textarea value={form.system_prompt} onChange={e => patch({ system_prompt: e.target.value })} rows={7} className="text-xs leading-5"/></label>
-        </fieldset>
-        <div>
+        </fieldset>}
+        {mode !== "manage" && <div>
           <div className="mb-1.5 flex items-baseline text-xs"><span className="font-medium">能力</span><span className="ml-2 text-[11px] text-muted-foreground">从右侧拖入，或点击 + 添加；拖动卡片调整顺序</span></div>
           <div onDragOver={e => { if (!readOnly) { e.preventDefault(); setOver(true); } }} onDragLeave={() => setOver(false)} onDrop={e => onDropCap(e)}
             className={`min-h-[120px] rounded-lg border border-dashed p-2 transition-colors ${over ? "border-primary bg-primary/5" : ""}`}>
@@ -160,12 +160,12 @@ export function AgentsPage() {
               </div></div>; })}
           </div>
           {!readOnly && form.delegate_ids.length === 0 && <p className="mt-1.5 text-[11px] text-muted-foreground">未添加可委派 Agent 时，这个 Agent 不会把任务交给别人。</p>}
-        </div>
+        </div>}
       </div>}
     </section>
 
     {/* 右：能力库 */}
-    <aside className="soft-scroll overflow-y-auto border-l p-3">
+    {mode !== "manage" && <aside className="soft-scroll overflow-y-auto border-l p-3">
       <div className="pb-2 text-[11px] font-medium text-muted-foreground">能力库</div>
       {palette.map(g => { const Icon = ICON[g.kind]; return <div key={g.kind} className="mb-4">
         <div className="mb-1 flex items-center gap-1.5 text-[11px] font-medium"><Icon className="size-3 text-muted-foreground"/>{g.title}<span className="text-muted-foreground">{g.items.length}</span></div>
@@ -177,6 +177,6 @@ export function AgentsPage() {
             {sel && !readOnly && (added ? <span className="text-[10px] text-muted-foreground">已添加</span> : <button onClick={() => add(c)} className="rounded p-0.5 opacity-0 hover:bg-background group-hover:opacity-100" aria-label={`添加 ${c.label}`}><Plus className="size-3.5"/></button>)}
           </div>; })}
       </div>; })}
-    </aside>
+    </aside>}
   </div>;
 }
