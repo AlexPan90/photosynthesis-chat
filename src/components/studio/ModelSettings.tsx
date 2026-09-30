@@ -3,7 +3,7 @@ import { ChevronDown, ChevronRight, LoaderCircle, Plus, Trash2 } from "lucide-re
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SUPPORTED_MODELS, type ConfiguredModel } from "@/lib/ai/model-catalog";
+import { type ConfiguredModel } from "@/lib/ai/model-catalog";
 import { saveModel, removeModel, fetchProviderModels } from "@/lib/ai/model-management.functions";
 import { getOpenAIConnection, testOpenAIConnection } from "@/lib/ai/openai-connection.functions";
 import { notifyModelsChanged, useModels } from "./useModels";
@@ -33,7 +33,6 @@ export function ModelSettings({ userId }: { userId: string | undefined }) {
   const [customKey, setCustomKey] = useState("");
   const [connectionChecked, setConnectionChecked] = useState(false);
   const providers = [...new Set(["OpenAI", ...models.map(m => m.provider)])];
-  const forProvider = active ? models.filter(m => m.provider === active && m.enabled && (m.connection_type !== "direct" || m.verified_at)) : [];
   const canSee = active !== "OpenAI" || connected;
   const inputStyle = "relay-model-input h-8 text-[12px]";
   const label = (text: string, children: React.ReactNode) => <label className="relay-model-field">{text}{children}</label>;
@@ -93,7 +92,7 @@ export function ModelSettings({ userId }: { userId: string | undefined }) {
   }
   const editRows = canSee ? rows : [];
   const renderRows = () => <>
-    {editRows.length === 0 && <div className="relay-model-empty">No models will be shown in the selector. Unlisted IDs can still be sent directly.</div>}
+    {editRows.length === 0 && <div className="relay-model-empty">{active === "OpenAI" && !connected ? "Connect your API key to view and manage models." : "No models yet. Add one manually or fetch available models."}</div>}
     <div className="space-y-1.5">{editRows.map(r => {
       const index = rows.indexOf(r);
       return <div key={r.id ?? `new-${index}`} className="relay-model-row-wrap">
