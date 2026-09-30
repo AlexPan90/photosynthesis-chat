@@ -434,10 +434,11 @@ body { font-size: calc(16px * var(--relay-type-scale)); }
   --model-editor: #24252A;
   --model-input: #1B1C20;
 }
-.relay-model-card { border: 1px solid var(--model-outline); border-radius: 12px; background: var(--background); }
+.relay-model-card { border: 1px solid var(--model-outline); border-radius: 12px; background: var(--model-editor); }
 .relay-model-editor { background: var(--model-editor); }
 .relay-model-readonly, .relay-model-select, .relay-model-input { background: var(--model-input); border: 1px solid var(--model-outline); color: var(--foreground); }
-.relay-model-summary, .relay-model-edit-row { background: color-mix(in oklab, var(--foreground) 3%, var(--background)); }
-.relay-model-add { border-color: var(--model-outline); }
+.relay-model-edit-row { background: color-mix(in oklab, var(--foreground) 3%, var(--background)); }
+.relay-model-add { border-color: var(--model-outline); background: var(--model-editor); }
 .relay-model-add:hover { border-color: var(--foreground); }
+.relay-model-add:disabled { opacity: .68; }
 .relay-model-status { box-shadow: 0 0 0 3px color-mix(in oklab, var(--success) 19%, transparent), 0 0 10px color-mix(in oklab, var(--success) 40%, transparent); }
