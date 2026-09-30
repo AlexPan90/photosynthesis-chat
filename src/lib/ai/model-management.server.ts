@@ -18,6 +18,17 @@ export async function discoverModels(baseUrl: string, key: string) {
   return [...new Set(payload.data.map(item => item?.id).filter((id): id is string => typeof id === "string" && id.length >= 2 && id.length <= 120))].sort().slice(0, 500);
 }
 
+export async function fetchOpenAIModels(key: string) {
+  const response = await fetch("https://api.openai.com/v1/models", { headers: { Authorization: `Bearer ${key}`, Accept: "application/json" }, redirect: "error", signal: AbortSignal.timeout(12000) });
+  if (!response.ok) {
+    if (response.status === 401 || response.status === 403) throw new Error("API Key 无效或无权访问 OpenAI");
+    throw new Error(`OpenAI 连接失败（${response.status}）`);
+  }
+  const payload = await response.json() as { data?: Array<{ id?: unknown }> };
+  if (!Array.isArray(payload.data)) throw new Error("OpenAI 未返回模型目录");
+  return [...new Set(payload.data.map(item => item?.id).filter((id): id is string => typeof id === "string" && id.length >= 2 && id.length <= 120))].sort().slice(0, 500);
+}
+
 export async function verifyDirectModel(modelId: string, directKey?: string, baseUrl = "", providerName = "OpenAI") {
   const key = directKey ?? process.env["LOVABLE_API_KEY"];
   if (!key) throw new Error("缺少模型服务凭证");

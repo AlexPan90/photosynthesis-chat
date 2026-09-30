@@ -38,13 +38,24 @@ export const saveModel = createServerFn({ method: "POST" })
     if (data.id && !existing) throw new Error("模型不存在");
     if (data.connectionType === "direct" && data.providerName !== "OpenAI" && !data.baseUrl) throw new Error("请填写服务地址");
     if (data.connectionType === "direct" && existing?.base_url !== data.baseUrl && !data.apiKey) throw new Error("服务地址已改变，请重新输入 API Key");
-    if (data.connectionType === "direct" && !data.apiKey && (!existing || existing.connection_type !== "direct")) throw new Error("请输入 OpenAI API Key");
+    if (data.connectionType === "direct" && data.providerName === "OpenAI" && !data.baseUrl) {
+      const { data: connection } = await supabase.from("ai_provider_connections").select("verified_at").eq("provider", "OpenAI").maybeSingle();
+      if (!connection?.verified_at) throw new Error("请先测试 OpenAI 连接");
+    }
+    if (data.connectionType === "direct" && !data.apiKey && (!existing || existing.connection_type !== "direct") && data.providerName !== "OpenAI") throw new Error("请输入 API Key");
     const mustVerify = !!data.apiKey || !existing?.verified_at || existing.model_id !== data.modelId || existing.connection_type !== data.connectionType || existing.base_url !== data.baseUrl;
     let key = data.apiKey;
     if (mustVerify && data.connectionType === "direct" && !key && existing) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { data: credential } = await supabaseAdmin.from("ai_model_credentials").select("secret_enc").eq("model_id", existing.id).eq("user_id", userId).maybeSingle();
       if (credential) { const { decryptSecret } = await import("./crypto.server"); key = await decryptSecret(credential.secret_enc); }
+    }
+    if (data.connectionType === "direct" && !key && data.providerName === "OpenAI") {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: connection } = await supabaseAdmin.from("ai_provider_connections").select("secret_enc,verified_at").eq("user_id", userId).eq("provider", "OpenAI").maybeSingle();
+      if (!connection?.verified_at) throw new Error("请先测试 OpenAI 连接");
+      const { decryptSecret } = await import("./crypto.server");
+      key = await decryptSecret(connection.secret_enc);
     }
     if (mustVerify) {
       const { verifyDirectModel } = await import("./model-management.server");
@@ -61,9 +72,9 @@ export const saveModel = createServerFn({ method: "POST" })
     const { data: saved, error } = await query;
     if (error || !saved) throw new Error(error?.message ?? "保存失败");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    if (data.connectionType === "direct" && data.apiKey) {
+    if (data.connectionType === "direct" && key) {
       const { encryptSecret } = await import("./crypto.server");
-      const { error: secretError } = await supabaseAdmin.from("ai_model_credentials").upsert({ model_id: saved.id, user_id: userId, secret_enc: await encryptSecret(data.apiKey) });
+      const { error: secretError } = await supabaseAdmin.from("ai_model_credentials").upsert({ model_id: saved.id, user_id: userId, secret_enc: await encryptSecret(key) });
       if (secretError) { await supabase.from("ai_models").update({ enabled: false, verified_at: null }).eq("id", saved.id); throw new Error("密钥未能安全保存，模型已停用"); }
     } else if (data.connectionType === "gateway") {
       await supabaseAdmin.from("ai_model_credentials").delete().eq("model_id", saved.id).eq("user_id", userId);
