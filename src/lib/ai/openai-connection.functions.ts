@@ -9,9 +9,17 @@ export const testOpenAIConnection = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => input.parse(data))
   .handler(async ({ data, context }) => {
     const { fetchOpenAIModels } = await import("./model-management.server");
+    let models: string[];
     try {
-      const models = await fetchOpenAIModels(data.apiKey);
+      models = await fetchOpenAIModels(data.apiKey);
       if (!models.length) throw new Error("连接成功，但该密钥没有可用模型");
+    } catch (error) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await supabaseAdmin.from("ai_provider_connections").delete().eq("user_id", context.userId).eq("provider", "OpenAI");
+      await context.supabase.from("ai_models").update({ verified_at: null }).eq("provider", "OpenAI").eq("connection_type", "direct");
+      throw error;
+    }
+    {
       const { encryptSecret } = await import("./crypto.server");
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { error } = await supabaseAdmin.from("ai_provider_connections").upsert({
@@ -19,11 +27,6 @@ export const testOpenAIConnection = createServerFn({ method: "POST" })
       }, { onConflict: "user_id,provider" });
       if (error) throw new Error("连接已验证，但凭证保存失败");
       return { models };
-    } catch (error) {
-      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      await supabaseAdmin.from("ai_provider_connections").delete().eq("user_id", context.userId).eq("provider", "OpenAI");
-      await context.supabase.from("ai_models").update({ verified_at: null }).eq("provider", "OpenAI").eq("connection_type", "direct");
-      throw error;
     }
   });
 
