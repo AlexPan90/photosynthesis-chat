@@ -50,7 +50,6 @@ export function McpPage() {
   const [confirmRun, setConfirmRun] = useState(false);
   const current = items.find(item => item.id === selected);
   const tool = current?.tools.find(t => t.name === activeTool);
-  const isWrite = /(?:delete|remove|send|write|create|update|edit|post|publish|execute|run|drop|put|patch|modify|submit|deploy|transfer|purchase|cancel|revoke|archive)/i.test(tool?.name ?? "");
   const filteredTools = current?.tools.filter(t => `${t.name} ${t.description}`.toLowerCase().includes(toolSearch.toLowerCase())) ?? [];
 
   function start(formValue: Form = empty) { setForm(formValue); setError(""); setEditor(true); }
@@ -94,7 +93,7 @@ export function McpPage() {
     let parsed: unknown;
     try { parsed = JSON.parse(args); if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") throw new Error(); }
     catch { setResult("参数必须是 JSON 对象"); return; }
-    if (isWrite && !confirmRun) { setConfirmRun(true); return; }
+    if (!confirmRun) { setConfirmRun(true); return; }
     setRunning(true); setResult("");
     try { const r = await call({ data: { id: current.id, name: tool.name, args: parsed as Record<string, unknown>, confirmed: confirmRun } }); setResult((r.isError ? "工具返回错误\n" : "") + r.content); }
     catch (e) { setResult(`调用失败：${(e as Error).message}`); }
@@ -131,8 +130,7 @@ export function McpPage() {
             <div className="flex items-start gap-3 border-b border-border pb-4"><div className="min-w-0 flex-1"><h4 className="break-all font-mono text-sm font-semibold">{tool.name}</h4><p className="mt-1 text-xs leading-5 text-muted-foreground">{tool.description || "此工具没有描述"}</p></div><Switch checked={!current.disabled_tools.includes(tool.name)} onCheckedChange={on => void toggleTool(current, tool.name, on)} aria-label={`启用 ${tool.name}`}/></div>
             <div className="space-y-3 pt-4"><p className="text-xs font-semibold">调用测试</p>{Object.entries(tool.inputSchema?.properties ?? {}).map(([key, prop]) => <div key={key} className="flex flex-wrap gap-2 text-[11px]"><code className="font-mono text-foreground">{key}{tool.inputSchema?.required?.includes(key) && <span className="text-destructive"> *</span>}</code><span className="text-muted-foreground">{prop.type ?? "any"}{prop.description ? ` · ${prop.description}` : ""}</span></div>)}
               <Field title="参数 (JSON)" note="按上方字段填写；对象、数组等复杂参数也可直接编辑。"><textarea aria-label="参数 (JSON)" value={args} onChange={e => { setArgs(e.target.value); setConfirmRun(false); }} spellCheck={false} className="h-36 w-full resize-y rounded-md border border-input bg-background px-3 py-2 font-mono text-xs leading-5 text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"/></Field>
-              {isWrite && <p className="text-[11px] text-muted-foreground">此工具可能修改远程数据，运行前需再次确认。</p>}
-              {confirmRun && <div role="alert" className="flex flex-wrap items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-xs"><CircleAlert className="size-4 text-destructive"/><span className="flex-1">确认执行 {tool.name}？远程操作可能无法撤销。</span><Button size="sm" variant="ghost" onClick={() => setConfirmRun(false)}>取消</Button><Button size="sm" variant="destructive" onClick={() => void run()}>确认执行</Button></div>}
+              {confirmRun && <div role="alert" className="flex flex-wrap items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-xs"><CircleAlert className="size-4 text-destructive"/><span className="flex-1">确认调用 {tool.name}？此工具可能修改远程数据，操作可能无法撤销。</span><Button size="sm" variant="ghost" onClick={() => setConfirmRun(false)}>取消</Button><Button size="sm" variant="destructive" onClick={() => void run()}>确认执行</Button></div>}
               {!confirmRun && <Button size="sm" disabled={running || current.disabled_tools.includes(tool.name) || current.state !== "ready"} onClick={() => void run()}>{running ? <LoaderCircle className="animate-spin"/> : <Play/>}运行测试</Button>}
               {result && <div className="space-y-2"><div className="flex items-center justify-between"><p className="text-xs font-semibold">返回结果</p><Button size="icon-sm" variant="ghost" title="复制结果" aria-label="复制结果" onClick={() => void navigator.clipboard.writeText(result)}><Copy/></Button></div><pre className="soft-scroll max-h-64 overflow-auto rounded-md bg-secondary p-3 font-mono text-[11px] leading-5 whitespace-pre-wrap break-all">{result}</pre></div>}
             </div>
