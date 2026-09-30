@@ -6,6 +6,7 @@
 <!-- LOVABLE:END -->
 
 - Model CRUD is user-owned, not provider-catalog CRUD; gateway uses workspace key, direct models use encrypted credentials and per-model HTTPS endpoints; /models discovery is server-only with manual fallback, so keys stay private.
+- Test OpenAI connections against its model directory before showing direct models; keep provider credentials encrypted and scoped to the owner so unverified keys cannot advertise availability.
 - Use AI Elements for transcript, tools and composer; preserve reusable Select, motion and icon-button compatibility.
 - Keep thread IDs in `/chat/$threadId`; sample story/reader state is client-side and narration uses browser speech synthesis, not recorded audio.
 - Use near-black/white surfaces with indigo accent and Sora/Manrope per the Monolithic Technical Glass reference.

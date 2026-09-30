@@ -62,6 +62,7 @@ export function ModelSettings({ userId }: { userId: string | undefined }) {
 
   async function save() {
     if (!draft || busy) return;
+    if (draft.connectionType === "direct" && draft.providerName === "OpenAI" && !draft.baseUrl && !openAIConnected) { toast.error("请先测试 OpenAI 连接"); return; }
     if (!draft.modelId.trim() || !draft.label.trim()) { toast.error("请填写模型 ID 和显示名称"); return; }
     if (draft.connectionType === "direct" && !draft.apiKey && !draft.id && !(draft.providerName === "OpenAI" && openAIConnected)) { toast.error("请先测试连接或填写 API Key"); return; }
     setBusy(true);
@@ -100,7 +101,7 @@ export function ModelSettings({ userId }: { userId: string | undefined }) {
           <p className="mt-2 text-[11px] text-muted-foreground">{openAIConnected ? `已验证 · ${openAIModels.length} 个模型可用` : "连接成功后显示 OpenAI 模型；密钥仅在服务端加密保存。"}</p>
           {openAIConnected && <div className="mt-2 max-h-40 overflow-auto rounded-md border border-border p-2 text-[11px]"><div className="grid grid-cols-2 gap-1 sm:grid-cols-3">{openAIModels.map(id => <span key={id} className="truncate px-1 py-0.5 font-mono" title={id}>{id}</span>)}</div></div>}
         </div>
-        <div className="mb-3 flex items-center gap-2 text-[12px] font-medium">已配置模型 <span className="text-muted-foreground">{saved.length}</span></div>
+        <div className="mb-3 flex items-center gap-2 text-[12px] font-medium">已配置模型 <span className="text-muted-foreground">{saved.filter(m => m.connection_type !== "direct" || m.provider !== "OpenAI" || openAIConnected).length}</span></div>
         <div className="space-y-1.5">{saved.filter(m => m.connection_type !== "direct" || m.provider !== "OpenAI" || openAIConnected).map(m => <div key={m.id} className="relay-model-edit-row flex min-w-0 items-center gap-3 rounded-md border border-border/60 p-2.5">
           <span className="relay-model-status size-1.5 shrink-0 rounded-full bg-success"/>
           <div className="min-w-0 flex-1"><div className="truncate text-[12px] font-medium">{m.label} <span className="font-normal text-muted-foreground">{m.version}</span></div><div className="truncate font-mono text-[10.5px] text-muted-foreground">{m.model_id} · {m.connection_type === "direct" ? m.provider : "应用服务"}</div></div>
