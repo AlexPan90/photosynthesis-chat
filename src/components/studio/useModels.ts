@@ -10,11 +10,11 @@ export function useModels(userId?: string) {
   const [loaded, setLoaded] = useState(false);
   const reload = useCallback(async () => {
     if (!userId) { setModels([]); setLoaded(true); return; }
-    const { data, error } = await supabase.from("ai_models").select("id,model_id,label,provider,verified_at,enabled,connection_type,version,description,parameters").eq("user_id", userId).order("created_at");
+    const { data, error } = await supabase.from("ai_models").select("id,model_id,label,provider,base_url,verified_at,enabled,connection_type,version,description,parameters").eq("user_id", userId).order("created_at");
     if (error) { setLoaded(true); return; }
     if (!data?.length) {
       await supabase.from("ai_models").upsert(SUPPORTED_MODELS.map(m => ({ ...m, user_id: userId, verified_at: new Date().toISOString() })), { onConflict: "user_id,model_id", ignoreDuplicates: true });
-      const { data: seeded } = await supabase.from("ai_models").select("id,model_id,label,provider,verified_at,enabled,connection_type,version,description,parameters").eq("user_id", userId).order("created_at");
+      const { data: seeded } = await supabase.from("ai_models").select("id,model_id,label,provider,base_url,verified_at,enabled,connection_type,version,description,parameters").eq("user_id", userId).order("created_at");
       setModels((seeded ?? []) as unknown as ConfiguredModel[]);
     } else setModels(data as unknown as ConfiguredModel[]);
     setLoaded(true);

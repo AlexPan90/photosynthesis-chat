@@ -6,6 +6,6 @@ export const SUPPORTED_MODELS = [
 
 export type LiveModel = string;
 export type ModelParameters = { reasoningEffort: "low" | "medium" | "high" };
-export type ConfiguredModel = { id: string; model_id: string; label: string; provider: string; verified_at: string | null; enabled: boolean; connection_type: string; version: string; description: string; parameters: ModelParameters | null };
+export type ConfiguredModel = { id: string; model_id: string; label: string; provider: string; base_url: string; verified_at: string | null; enabled: boolean; connection_type: string; version: string; description: string; parameters: ModelParameters | null };
 export const modelLabel = (id: string) => SUPPORTED_MODELS.find(m => m.model_id === id)?.label ?? id;
 export const isSupportedModel = (id: string) => SUPPORTED_MODELS.some(m => m.model_id === id);
