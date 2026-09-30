@@ -105,6 +105,7 @@ export function ModelSettings({ userId }: { userId: string | undefined }) {
         <div className="mt-4 border-t border-border/60 pt-3">
           <Button variant="ghost" size="sm" className="-ml-2 h-7 gap-1 text-[11px] text-muted-foreground" onClick={() => setExpanded(v => !v)}>{expanded ? <ChevronDown className="size-3.5"/> : <ChevronRight className="size-3.5"/>}自定义设置</Button>
           {expanded && <div className="pt-3">
+            <div className="mb-4 space-y-1.5"><span className="text-[11px] text-muted-foreground">服务地址</span><div className="relay-model-readonly flex min-h-9 items-center rounded-md px-3 font-mono text-[11px]">https://ai.gateway.lovable.dev/v1 <span className="ml-auto font-sans text-[10px] text-muted-foreground">只读</span></div></div>
             <div className="mb-2 text-[11px] text-muted-foreground">模型 <span className="ml-2">添加、重命名或移除已接入的模型</span></div>
             <div className="space-y-2">{rows.map((row, i) => <div className="relay-model-edit-row flex min-w-0 flex-wrap items-center gap-2 rounded-md p-1.5 sm:flex-nowrap" key={row.modelId}>
               <div className="min-w-0 flex-[1.2]">
@@ -122,9 +123,8 @@ export function ModelSettings({ userId }: { userId: string | undefined }) {
           <Button size="sm" className="h-8" onClick={() => void apply()} disabled={busy || rows.some(row => !row.label.trim())}>{busy && <LoaderCircle className="size-3.5 animate-spin"/>}应用</Button>
         </div>
       </div> : <div className="border-t border-border/60 px-4 py-3">
-        <div className="space-y-1.5">{saved.map(model => <div key={model.id} className="relay-model-summary flex min-w-0 items-center gap-3 rounded-md px-3 py-2.5">
-          <span className="min-w-0 flex-1 truncate text-[12px] font-medium">{model.label}</span>
-          <span className="min-w-0 max-w-[50%] truncate font-mono text-[11px] text-muted-foreground">{model.model_id}</span>
+        <div className="space-y-1.5">{saved.map(model => <div key={model.id} className="relay-model-summary flex min-w-0 items-center gap-1 rounded-md px-2 py-1.5">
+          <Button variant="ghost" size="sm" className="min-w-0 flex-1 justify-start gap-2 px-1.5 text-left text-[12px]" onClick={() => begin()}><span className="truncate font-medium">{model.label}</span><span className="ml-auto hidden min-w-0 max-w-[55%] truncate font-mono text-[11px] text-muted-foreground sm:block">{model.model_id}</span><ChevronRight className="size-3.5 shrink-0 text-muted-foreground"/></Button>
           <Button variant="ghost" size="icon-sm" title={`验证 ${model.label}`} aria-label={`验证 ${model.label}`} disabled={refreshing} className="size-6 shrink-0 text-success" onClick={() => void recheck(model)}>{refreshing ? <LoaderCircle className="size-3 animate-spin"/> : <Check className="size-3"/>}</Button>
         </div>)}</div>
       </div>}
