@@ -2,13 +2,15 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
-import { ArrowUpRight, Blocks, Bot, Keyboard, Moon, Plug, Settings2, SlidersHorizontal, Sparkles, Sun, X, Cpu, ChevronDown } from "lucide-react";
+import { Blocks, Bot, Keyboard, Moon, Plug, Settings2, SlidersHorizontal, Sparkles, Sun, X, Cpu, ChevronDown } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { SkillsDock } from "./SkillsDock";
 import { ModelSettings } from "./ModelSettings";
+import { AgentsPage } from "@/components/orchestra/AgentsPage";
+import { McpPage } from "@/components/orchestra/McpPage";
+import { SkillsPage } from "@/components/orchestra/SkillsPage";
 
 type Props = {
   open: boolean; onOpenChange: (v: boolean) => void;
@@ -37,21 +39,22 @@ function Row({ title, desc, children }: { title: string; desc?: string; children
 
 export function SettingsCenter(p: Props) {
   const [tab, setTab] = useState<(typeof tabs)[number]["id"]>("general");
+  const [orchestraTab, setOrchestraTab] = useState<"agents" | "mcp">("agents");
+  const management = tab === "skills" || tab === "orchestra";
   return <Dialog open={p.open} onOpenChange={p.onOpenChange}>
-    <DialogContent className="relay-settings-surface flex h-[min(666px,92vh)] w-[min(668px,94vw)] max-w-none gap-0 overflow-hidden rounded-[20px] p-0 [&>button:last-child]:hidden">
-      <nav className="flex w-12 shrink-0 flex-col bg-sidebar px-2 py-2.5 sm:w-[166px] sm:px-2.5 sm:py-3">
+    <DialogContent className="relay-settings-surface flex h-[min(860px,94dvh)] w-[min(1200px,96vw)] max-w-none gap-0 overflow-hidden rounded-[20px] p-0 [&>button:last-child]:hidden">
+      <nav className="flex w-12 shrink-0 flex-col border-r border-border/50 bg-sidebar px-2 py-3 sm:w-[178px] sm:px-3 sm:py-4">
         <DialogTitle className="flex h-9 items-center justify-center gap-2 px-1 text-[13px] font-medium sm:justify-start sm:px-2"><Settings2 className="size-4 shrink-0 sm:hidden"/><span className="hidden sm:inline">Settings</span></DialogTitle>
         {tabs.map(t => <Button key={t.id} variant="ghost" size="sm" title={t.label} aria-label={t.label} onClick={() => setTab(t.id)} className={`mb-0.5 flex h-8 w-full items-center justify-center gap-2.5 rounded-lg px-2 text-[12px] sm:justify-start ${tab === t.id ? "bg-accent font-medium text-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"}`}><t.icon className="size-3.5 shrink-0"/><span className="hidden sm:inline">{t.label}</span></Button>)}
 
       </nav>
       <section className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-8 shrink-0 items-center justify-end px-3">
+        <header className="flex h-12 shrink-0 items-center justify-end border-b border-border/50 px-4">
           <div className="flex items-center gap-1">
-            {tab !== "models" && <Button asChild variant="outline" size="sm" className="hidden h-7 text-[11px] sm:inline-flex"><Link to="/studio/agents" onClick={() => p.onOpenChange(false)}>打开编排中心<ArrowUpRight className="size-3.5"/></Link></Button>}
             <Button variant="ghost" size="icon" className="size-7" onClick={() => p.onOpenChange(false)} aria-label="关闭"><X className="size-4"/></Button>
           </div>
         </header>
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-5 pt-0 sm:px-2.5 sm:pr-5">
+        <div className={`${management ? "flex min-w-0 flex-col overflow-hidden" : "overflow-y-auto px-4 pb-5 pt-0 sm:px-6"} min-h-0 flex-1`}>
           {tab === "general" && <>
             <Row title="界面语言"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="h-8 gap-1.5">{p.language}<ChevronDown className="size-3"/></Button></DropdownMenuTrigger><DropdownMenuContent className="relay-settings-surface">{["简体中文", "English"].map(l => <DropdownMenuItem key={l} onClick={() => p.setLanguage(l)}>{l}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu></Row>
             <Row title="账号" desc={p.userEmail ? `对话已保存到云端（${p.userEmail}）` : "登录后对话会保存到云端"}>{p.userEmail ? <Button variant="outline" size="sm" className="h-8" onClick={p.onSignOut}>退出登录</Button> : <Button asChild size="sm" className="h-8"><Link to="/auth">去登录</Link></Button>}</Row>
@@ -70,16 +73,14 @@ export function SettingsCenter(p: Props) {
             </div>
           </>}
           {tab === "models" && <ModelSettings userId={p.userId}/>}
-          {tab === "skills" && <div className="py-3">
-            <p className="mb-2 text-[11.5px] text-muted-foreground">已启用的技能。点击 ▶ 在当前对话中调用；安装和管理请前往 Skills 页面。</p>
-            <div className="-mx-3 rounded-xl"><SkillsDock userId={p.userId} canInvoke={p.canInvoke}/></div>
-            <Button asChild variant="outline" size="sm" className="mt-3 h-8"><Link to="/studio/skills" onClick={() => p.onOpenChange(false)}>管理技能<ArrowUpRight className="size-3.5"/></Link></Button>
-          </div>}
-          {tab === "orchestra" && <div className="grid gap-3 py-4 sm:grid-cols-3">
-            {[{ to: "/studio/agents", t: "Agent", d: "提示词、模型与工具编排", I: Bot }, { to: "/studio/mcp", t: "MCP 连接", d: "远程服务地址、密钥与代理", I: Plug }, { to: "/studio/skills", t: "Skills", d: "安装、启用与预览技能", I: Sparkles }].map(c => <Link key={c.to} to={c.to} onClick={() => p.onOpenChange(false)} className="group rounded-xl border border-border/60 p-4 transition-colors hover:border-primary/50 hover:bg-accent/40">
-              <c.I className="size-5 text-primary"/><p className="mt-3 flex items-center text-[13px] font-medium">{c.t}<ArrowUpRight className="ml-auto size-3.5 opacity-0 transition-opacity group-hover:opacity-100"/></p><p className="mt-1 text-[11.5px] text-muted-foreground">{c.d}</p>
-            </Link>)}
-          </div>}
+          {tab === "skills" && (!p.userId ? <div className="flex flex-1 flex-col items-center justify-center gap-3 text-sm text-muted-foreground">登录后才能管理技能<Button asChild size="sm"><Link to="/auth" onClick={() => p.onOpenChange(false)}>去登录</Link></Button></div> : <div className="min-h-0 flex-1 overflow-x-auto"><div className="h-full min-w-[660px]"><SkillsPage/></div></div>)}
+          {tab === "orchestra" && <>
+            <div className="flex h-12 shrink-0 items-center gap-1 border-b border-border/50 px-4" role="tablist" aria-label="编排管理">
+              {([{ id: "agents", label: "Agent", icon: Bot }, { id: "mcp", label: "MCP 连接", icon: Plug }] as const).map(item => <Button key={item.id} role="tab" aria-selected={orchestraTab === item.id} variant={orchestraTab === item.id ? "secondary" : "ghost"} size="sm" className="h-8 gap-1.5 text-xs" onClick={() => setOrchestraTab(item.id)}><item.icon className="size-3.5"/>{item.label}</Button>)}
+            </div>
+            {!p.userId ? <div className="flex flex-1 flex-col items-center justify-center gap-3 text-sm text-muted-foreground">登录后才能管理 Agent、MCP 和 Skills<Button asChild size="sm"><Link to="/auth" onClick={() => p.onOpenChange(false)}>去登录</Link></Button></div> :
+              <div className="min-h-0 flex-1 overflow-x-auto" role="tabpanel"><div className={`h-full ${orchestraTab === "agents" ? "min-w-[850px]" : "min-w-[650px]"}`}>{orchestraTab === "agents" ? <AgentsPage/> : <McpPage/>}</div></div>}
+          </>}
           {tab === "keys" && [["发送消息", "Enter"], ["换行", "Shift + Enter"], ["新建对话", "⌘ K"], ["搜索对话", "⌘ F"], ["快捷指令", "/"]].map(([l, k]) => <Row key={l} title={l!}><kbd className="rounded-md border bg-muted px-2 py-0.5 font-mono text-[11px]">{k}</kbd></Row>)}
         </div>
       </section>
