@@ -161,7 +161,7 @@ export async function handleChat(request: Request) {
     headers: { "Lovable-API-Key": apiKey, "X-Lovable-AIG-SDK": "vercel-ai-sdk" },
     fetch: runIdFetch.fetch,
   });
-  const compatible = direct && !!configured.base_url && configured.provider !== "OpenAI";
+  const compatible = direct && !!configured.base_url;
   const compatibleProvider = compatible ? createOpenAICompatible({ name: "compatible", baseURL: configured.base_url, apiKey }) : null;
 
   // 编排：选中 Agent 时用它的提示词+工具+MCP+Skills，否则通用助手拥有全部能力；都可以委派给其他 Agent。

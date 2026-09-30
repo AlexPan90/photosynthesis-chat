@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, ChevronRight, LoaderCircle, Plus, Trash2, ArrowLeft, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -20,8 +20,16 @@ export function ModelSettings({ userId }: { userId: string | undefined }) {
   const [busy, setBusy] = useState(false);
   const [catalog, setCatalog] = useState<string[] | null>(null);
   const [catalogBusy, setCatalogBusy] = useState(false);
+  const lastDiscovery = useRef("");
   const patch = (p: Partial<Draft>) => { setDraft(v => v ? { ...v, ...p } : v); if ("baseUrl" in p || "apiKey" in p || "providerName" in p) setCatalog(null); };
-  const edit = (m: ConfiguredModel) => { setCatalog(null); setDraft(fromModel(m)); };
+  const edit = (m: ConfiguredModel) => { lastDiscovery.current = ""; setCatalog(null); setDraft(fromModel(m)); };
+  useEffect(() => {
+    if (!draft || draft.connectionType !== "direct" || !draft.baseUrl.startsWith("https://") || (!draft.apiKey && !draft.id)) return;
+    const signature = `${draft.id ?? ""}|${draft.baseUrl}|${draft.apiKey}`;
+    if (lastDiscovery.current === signature) return;
+    const timer = window.setTimeout(() => { lastDiscovery.current = signature; void loadCatalog(); }, 900);
+    return () => window.clearTimeout(timer);
+  }, [draft?.id, draft?.connectionType, draft?.baseUrl, draft?.apiKey]);
   async function loadCatalog() {
     if (!draft?.baseUrl) { toast.error("请填写服务地址"); return; }
     setCatalogBusy(true);
@@ -82,7 +90,7 @@ export function ModelSettings({ userId }: { userId: string | undefined }) {
             <label className="space-y-1.5 text-[11px] text-muted-foreground">版本<Input aria-label="版本" placeholder="例如 2026-09" className="relay-model-input h-9" maxLength={80} value={draft.version} onChange={e => patch({ version: e.target.value })}/></label>
           </div>
           {draft.connectionType === "direct" && <div className="mt-3 grid gap-3 sm:grid-cols-2"><label className="space-y-1.5 text-[11px] text-muted-foreground">厂商名称<Input aria-label="厂商名称" className="relay-model-input h-9" value={draft.providerName} maxLength={80} onChange={e => patch({ providerName: e.target.value })}/></label><label className="space-y-1.5 text-[11px] text-muted-foreground">服务地址（以 /v1 结尾）<Input aria-label="服务地址" placeholder="https://api.example.com/v1" className="relay-model-input h-9" value={draft.baseUrl} onChange={e => patch({ baseUrl: e.target.value })}/></label></div>}
-          {draft.connectionType === "direct" && draft.baseUrl && <div className="mt-3"><Button variant="outline" size="sm" disabled={catalogBusy || (!draft.apiKey && !draft.id)} onClick={() => void loadCatalog()}>{catalogBusy ? <LoaderCircle className="size-3.5 animate-spin"/> : <RefreshCw className="size-3.5"/>}自动拉取模型</Button>{catalog && <label className="mt-2 block space-y-1.5 text-[11px] text-muted-foreground">已发现 {catalog.length} 个模型<select aria-label="已发现模型" className="relay-model-select h-9 w-full rounded-md px-2.5 text-[12px]" value={catalog.includes(draft.modelId) ? draft.modelId : ""} onChange={e => patch({ modelId: e.target.value, label: draft.label || e.target.value })}><option value="">选择模型，或在上方手动填写 ID</option>{catalog.map(id => <option key={id} value={id}>{id}</option>)}</select></label>}</div>}
+          {draft.connectionType === "direct" && draft.baseUrl && <div className="mt-3"><Button variant="outline" size="sm" disabled={catalogBusy || (!draft.apiKey && !draft.id)} onClick={() => void loadCatalog()}>{catalogBusy ? <LoaderCircle className="size-3.5 animate-spin"/> : <RefreshCw className="size-3.5"/>}刷新模型目录</Button>{catalog && <label className="mt-2 block space-y-1.5 text-[11px] text-muted-foreground">已发现 {catalog.length} 个模型<select aria-label="已发现模型" className="relay-model-select h-9 w-full rounded-md px-2.5 text-[12px]" value={catalog.includes(draft.modelId) ? draft.modelId : ""} onChange={e => patch({ modelId: e.target.value, label: draft.label || e.target.value })}><option value="">选择模型，或在上方手动填写 ID</option>{catalog.map(id => <option key={id} value={id}>{id}</option>)}</select></label>}</div>}
           <label className="mt-3 block space-y-1.5 text-[11px] text-muted-foreground">描述<Input aria-label="描述" placeholder="模型用途与特点" className="relay-model-input h-9" maxLength={500} value={draft.description} onChange={e => patch({ description: e.target.value })}/></label>
           {draft.connectionType === "direct" ? <label className="mt-3 block space-y-1.5 text-[11px] text-muted-foreground">API Key<Input aria-label="API Key" type="password" autoComplete="new-password" placeholder={draft.id ? "留空沿用已保存的密钥" : "填写厂商 API Key"} className="relay-model-input h-9" value={draft.apiKey} onChange={e => patch({ apiKey: e.target.value })}/><span className="block text-[10px]">密钥只用于服务端拉取与验证，不会回显。目录不兼容时可手动填写模型 ID。</span></label> : <p className="mt-3 text-[11px] text-muted-foreground">应用服务使用现有连接，无需填写 API Key。</p>}
           <div className="mt-3 border-t border-border pt-2"><Button variant="ghost" size="sm" className="-ml-2 h-8 text-[11px]" onClick={() => setExpanded(v => !v)}>{expanded ? <ChevronDown className="size-3.5"/> : <ChevronRight className="size-3.5"/>}请求参数</Button>{expanded && <label className="mt-2 block space-y-1.5 text-[11px] text-muted-foreground">推理强度<select aria-label="推理强度" className="relay-model-select h-9 w-full rounded-md px-2.5 text-[12px]" value={draft.reasoningEffort} onChange={e => patch({ reasoningEffort: e.target.value as Draft["reasoningEffort"] })}><option value="low">低</option><option value="medium">中</option><option value="high">高</option></select></label>}</div>

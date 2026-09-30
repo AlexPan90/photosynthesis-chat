@@ -11,7 +11,7 @@ export function normalizeModelEndpoint(value: string) {
 
 export async function discoverModels(baseUrl: string, key: string) {
   const endpoint = normalizeModelEndpoint(baseUrl);
-  const response = await fetch(`${endpoint}/models`, { headers: { Authorization: `Bearer ${key}`, Accept: "application/json" }, signal: AbortSignal.timeout(12000) });
+  const response = await fetch(`${endpoint}/models`, { headers: { Authorization: `Bearer ${key}`, Accept: "application/json" }, redirect: "error", signal: AbortSignal.timeout(12000) });
   if (!response.ok) throw new Error(response.status === 401 || response.status === 403 ? "凭证无效或无权读取模型目录" : `无法读取模型目录（${response.status}），可改为手动添加`);
   const payload = await response.json() as { data?: Array<{ id?: unknown }> };
   if (!Array.isArray(payload.data)) throw new Error("该服务未返回标准模型列表，可改为手动添加");
@@ -27,7 +27,7 @@ export async function verifyDirectModel(modelId: string, directKey?: string, bas
   });
   try {
     const reasoning = modelId.startsWith("openai/gpt-6-") || /^gpt-[56]/.test(modelId);
-    const compatible = !!baseUrl && providerName !== "OpenAI";
+    const compatible = !!baseUrl;
     const result = streamText({
       model: compatible ? createOpenAICompatible({ name: "compatible", baseURL: normalizeModelEndpoint(baseUrl), apiKey: key }).chatModel(modelId) : provider.responses(modelId), prompt: "Reply with OK.",
       ...(compatible ? {} : { providerOptions: { openai: reasoning ? { forceReasoning: true, reasoningEffort: "low", reasoningSummary: "auto", store: false, include: ["reasoning.encrypted_content"] } : { store: false } } }),

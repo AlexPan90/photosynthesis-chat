@@ -37,6 +37,7 @@ export const saveModel = createServerFn({ method: "POST" })
     const { data: existing } = data.id ? await supabase.from("ai_models").select("id,model_id,connection_type,base_url,verified_at").eq("id", data.id).maybeSingle() : { data: null };
     if (data.id && !existing) throw new Error("模型不存在");
     if (data.connectionType === "direct" && data.providerName !== "OpenAI" && !data.baseUrl) throw new Error("请填写服务地址");
+    if (data.connectionType === "direct" && existing?.base_url !== data.baseUrl && !data.apiKey) throw new Error("服务地址已改变，请重新输入 API Key");
     if (data.connectionType === "direct" && !data.apiKey && (!existing || existing.connection_type !== "direct")) throw new Error("请输入 OpenAI API Key");
     const mustVerify = !!data.apiKey || !existing?.verified_at || existing.model_id !== data.modelId || existing.connection_type !== data.connectionType || existing.base_url !== data.baseUrl;
     let key = data.apiKey;
