@@ -32,4 +32,4 @@
 - [x] Separate preset provider setup (provider, key, optional advanced model settings) from custom provider setup (ID, name, endpoint, protocol, key and models).
 - [x] Enlarge the Settings window and embed complete Skills, Agent, and MCP management without page navigation.
 - [x] Separate Settings navigation into General, Appearance, Models, Agent, Skills, MCP, Orchestration, and Shortcuts; keep configuration separate from capability composition.
-- [ ] Rework MCP management around server cards, a focused connection form, connection settings, and live tool testing.
+- [x] Rework MCP management around server cards, a focused connection form, connection settings, and live tool testing.

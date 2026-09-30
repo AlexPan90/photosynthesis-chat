@@ -9,6 +9,7 @@ export function validateMcpUrl(url: string) {
   let u: URL;
   try { u = new URL(url); } catch { throw new Error("地址格式不正确"); }
   if (u.protocol !== "https:") throw new Error("只支持 https 地址");
+  if (u.username || u.password || u.port || /^(?:localhost|127\.|10\.|192\.168\.|169\.254\.|0\.|::1|\[|[^.]+$)/i.test(u.hostname) || /^172\.(?:1[6-9]|2\d|3[01])\./.test(u.hostname)) throw new Error("不支持本地或内网地址");
   return u.toString();
 }
 
@@ -46,7 +47,8 @@ export async function runMcpTool(row: McpRow, name: string, args: Record<string,
   try {
     client = await connect(withProxy(row.url, row.proxy_url), buildHeaders(row.auth_type, row.header_name, secret));
     const result = await client.callTool({ name, arguments: args, options: { timeout: 20000 } });
-    return { isError: result.isError === true, content: JSON.stringify(result.content).slice(0, 30000) };
+    const content = result.content.map(part => part.type === "text" ? part.text : JSON.stringify(part)).join("\n\n");
+    return { isError: result.isError === true, content: content.slice(0, 30000) };
   } finally { await client?.close().catch(() => {}); }
 }
 

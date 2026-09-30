@@ -51,7 +51,7 @@ export const testMcpConnection = createServerFn({ method: "POST" })
     const { data: row } = await context.supabase.from("mcp_connections").select("url,auth_type,header_name,proxy_url,secret_enc").eq("id", data.id).maybeSingle();
     if (!row) throw new Error("连接不存在");
     let state = "ready", last_error: string | null = null, tools: { name: string; description: string; inputSchema?: Record<string, unknown> }[] = [];
-    try { tools = await probeMcp(withProxy(row.url, row.proxy_url), buildHeaders(row.auth_type, row.header_name, row.secret_enc ? await decryptSecret(row.secret_enc) : null)); }
+    try { tools = await probeMcp(withProxy(validateSafeUrl(row.url), row.proxy_url ? validateSafeUrl(row.proxy_url) : null), buildHeaders(row.auth_type, row.header_name, row.secret_enc ? await decryptSecret(row.secret_enc) : null)); }
     catch (e) { state = "failed"; last_error = String((e as Error).message ?? e).slice(0, 300); }
     await context.supabase.from("mcp_connections").update({ state, last_error, ...(state === "ready" ? { tools: tools as unknown as Json } : {}) }).eq("id", data.id);
     return { state, last_error, toolCount: tools.length };
@@ -73,8 +73,16 @@ export const callMcpTool = createServerFn({ method: "POST" })
     if (!available || row.disabled_tools.includes(data.name)) throw new Error("工具不可用或已停用");
     if (!data.confirmed && /(?:delete|remove|send|write|create|update|edit|post|publish|execute|run|drop|put|patch|modify|submit|deploy|transfer|purchase|cancel|revoke|archive)/i.test(data.name)) throw new Error("此操作需要先确认");
     const { runMcpTool } = await import("@/lib/ai/mcp.server");
+    row.url = validateSafeUrl(row.url);
+    if (row.proxy_url) row.proxy_url = validateSafeUrl(row.proxy_url);
     return runMcpTool(row, data.name, data.args);
   });
+
+function validateSafeUrl(url: string) {
+  const u = new URL(url);
+  if (u.protocol !== "https:" || u.username || u.password || u.port || /^(?:localhost|127\.|10\.|192\.168\.|169\.254\.|0\.|::1|\[|[^.]+$)/i.test(u.hostname) || /^172\.(?:1[6-9]|2\d|3[01])\./.test(u.hostname)) throw new Error("只支持公开的 HTTPS 服务地址");
+  return u.toString();
+}
 
 export const scanSkillSource = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
