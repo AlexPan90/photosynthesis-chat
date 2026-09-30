@@ -73,7 +73,7 @@ export function SettingsCenter(p: Props) {
             </div>
           </>}
           {tab === "models" && <ModelSettings userId={p.userId}/>}
-          {tab === "skills" && <div className="min-h-0 flex-1 overflow-x-auto"><div className="h-full min-w-[660px]"><SkillsPage/></div></div>}
+          {tab === "skills" && (!p.userId ? <div className="flex flex-1 flex-col items-center justify-center gap-3 text-sm text-muted-foreground">登录后才能管理技能<Button asChild size="sm"><Link to="/auth" onClick={() => p.onOpenChange(false)}>去登录</Link></Button></div> : <div className="min-h-0 flex-1 overflow-x-auto"><div className="h-full min-w-[660px]"><SkillsPage/></div></div>)}
           {tab === "orchestra" && <>
             <div className="flex h-12 shrink-0 items-center gap-1 border-b border-border/50 px-4" role="tablist" aria-label="编排管理">
               {([{ id: "agents", label: "Agent", icon: Bot }, { id: "mcp", label: "MCP 连接", icon: Plug }] as const).map(item => <Button key={item.id} role="tab" aria-selected={orchestraTab === item.id} variant={orchestraTab === item.id ? "secondary" : "ghost"} size="sm" className="h-8 gap-1.5 text-xs" onClick={() => setOrchestraTab(item.id)}><item.icon className="size-3.5"/>{item.label}</Button>)}
