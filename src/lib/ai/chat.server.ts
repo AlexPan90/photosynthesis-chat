@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { createOpenAI } from "@ai-sdk/openai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { convertToModelMessages, stepCountIs, streamText, type ToolSet, type UIMessage } from "ai";
 import { allAgents, delegateActionTool, delegateTool, OPENAI_OPTIONS, pickTools, systemFor } from "./agents.server";
 import { needsApproval, TOOL_CATALOG, type AgentConfig } from "./agents.shared";
@@ -113,7 +114,7 @@ export async function handleChat(request: Request) {
   const active = agentId ? agents.find(a => a.id === agentId) ?? null : null;
   if (agentId && !active) return json(404, "Agent 不存在或已被删除");
   if (active && isSupportedModel(active.model)) model = active.model;
-  const { data: configured } = await supabase.from("ai_models").select("id,model_id,connection_type,parameters").eq("model_id", model).eq("enabled", true).not("verified_at", "is", null).maybeSingle();
+  const { data: configured } = await supabase.from("ai_models").select("id,model_id,connection_type,base_url,provider,parameters").eq("model_id", model).eq("enabled", true).not("verified_at", "is", null).maybeSingle();
   if (!configured) return json(400, "模型未配置或尚未通过验证");
   if (configured.connection_type === "gateway" && !isSupportedModel(model)) return json(400, "模型尚未接入当前服务");
 
@@ -160,6 +161,8 @@ export async function handleChat(request: Request) {
     headers: { "Lovable-API-Key": apiKey, "X-Lovable-AIG-SDK": "vercel-ai-sdk" },
     fetch: runIdFetch.fetch,
   });
+  const compatible = direct && !!configured.base_url && configured.provider !== "OpenAI";
+  const compatibleProvider = compatible ? createOpenAICompatible({ name: "compatible", baseURL: configured.base_url, apiKey }) : null;
 
   // 编排：选中 Agent 时用它的提示词+工具+MCP+Skills，否则通用助手拥有全部能力；都可以委派给其他 Agent。
   const toolIds = active ? active.tool_ids : TOOL_CATALOG.map(t => t.id);
@@ -184,7 +187,7 @@ export async function handleChat(request: Request) {
   const goalNote = thread.goal ? `\n\n【对话目标】${thread.goal}\n每一步都要围绕这个目标：先判断本轮请求与目标的关系，偏离时提醒用户；回答末尾用一行「目标进度：…」说明离目标还差什么。当你判断目标已经完全达成时，在末尾明确写「✅ 目标已达成」并建议用户用 /goal 清除或设定新目标。` : "";
   const stateNote = `${goalNote}${cut >= 0 ? `\n\n【早期对话摘要】\n${thread.summary}` : ""}${thread.plan_mode ? "\n\n【计划模式】只制定计划，不执行任何修改外部数据的操作。可以用只读工具（搜索、读取）收集信息，然后输出编号的分步计划：每步写清做什么、用哪个工具或 Agent、预期结果，最后询问用户是否按计划执行。" : permission === "readonly" ? "\n\n【只读权限】当前对话禁止删除、发送、创建、修改和运行脚本，如用户要求这类操作，说明需要先用 /permission 调整权限。" : ""}`;
   const result = streamText({
-    model: provider.responses(model),
+    model: compatibleProvider ? compatibleProvider.chatModel(model) : provider.responses(model),
     system: `${systemFor(active)}${skillsPrompt(skills)}${!direct && delegates.length ? "\n当子任务明显更适合某个专门 Agent 时，调用 delegate_to_agent 委派，然后整合结果回答。" : ""}${stateNote}`,
     messages: await convertToModelMessages(history.length ? history : messages),
     tools: tools as ToolSet,
@@ -208,7 +211,7 @@ export async function handleChat(request: Request) {
     },
     ...(process.env["MCP_ENC_KEY"] ? { experimental_toolApprovalSecret: `approval:${process.env["MCP_ENC_KEY"]}` } : {}),
     abortSignal: request.signal,
-    providerOptions: { openai: (direct && !/^gpt-[56]/.test(model)) ? { store: false } : { ...OPENAI_OPTIONS.openai, reasoningEffort: (["low", "medium", "high"].includes((configured.parameters as { reasoningEffort?: string } | null)?.reasoningEffort ?? "") ? (configured.parameters as { reasoningEffort: "low" | "medium" | "high" }).reasoningEffort : "medium") } },
+    providerOptions: compatible ? {} : { openai: (direct && !/^gpt-[56]/.test(model)) ? { store: false } : { ...OPENAI_OPTIONS.openai, reasoningEffort: (["low", "medium", "high"].includes((configured.parameters as { reasoningEffort?: string } | null)?.reasoningEffort ?? "") ? (configured.parameters as { reasoningEffort: "low" | "medium" | "high" }).reasoningEffort : "medium") } },
     onFinish: closeMcp,
     onError: closeMcp,
   });
