@@ -124,6 +124,6 @@ export function ModelSettings({ userId }: { userId: string | undefined }) {
         </div>
        </div> : null}
     </div>}
-     {loaded && <Button variant="outline" className="relay-model-add mt-3 h-10 w-full justify-center rounded-lg border-dashed text-[12px]" disabled={!userId || !!saved.length || editing} title={saved.length ? "目前仅支持 OpenAI，点击编辑可管理其中的模型" : undefined} onClick={() => begin(true)}><Plus className="size-3.5"/>添加提供商</Button>}
+     {loaded && <Button variant="outline" className="relay-model-add mt-3 h-10 w-full justify-center rounded-lg border-dashed text-[12px]" disabled={!userId || !!saved.length || editing} title={saved.length ? "目前仅支持 OpenAI；点击编辑可管理其中的模型" : undefined} onClick={() => begin(true)}><Plus className="size-3.5"/>添加提供商</Button>}
   </div>;
 }
