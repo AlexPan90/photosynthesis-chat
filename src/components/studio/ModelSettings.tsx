@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, LoaderCircle, Pencil, Plus, RotateCw, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, LoaderCircle, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,72 +8,127 @@ import { SUPPORTED_MODELS, type ConfiguredModel } from "@/lib/ai/model-catalog";
 import { verifyModel } from "@/lib/ai/model-verify.functions";
 import { notifyModelsChanged, useModels } from "./useModels";
 
+type Draft = { modelId: string; label: string };
+const catalog = SUPPORTED_MODELS.filter(m => m.provider === "OpenAI");
+
 export function ModelSettings({ userId }: { userId: string | undefined }) {
   const { models, reload, loaded } = useModels(userId);
-  const [editing, setEditing] = useState<ConfiguredModel | "new" | null>(null);
-  const [modelId, setModelId] = useState("");
-  const [label, setLabel] = useState("");
+  const saved = models.filter(m => m.enabled && m.provider === "OpenAI");
+  const [editing, setEditing] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [rows, setRows] = useState<Draft[]>([]);
   const [busy, setBusy] = useState(false);
-  const [checking, setChecking] = useState<string | null>(null);
-  const current = SUPPORTED_MODELS.find(m => m.model_id === modelId);
-  const shown = models.filter(m => m.enabled);
-  const openEdit = (m: ConfiguredModel | "new") => { setEditing(m); setModelId(m === "new" ? "" : m.model_id); setLabel(m === "new" ? "" : m.label); };
+  const [refreshing, setRefreshing] = useState(false);
+
+  const begin = (add = false) => {
+    const next = saved.map(m => ({ modelId: m.model_id, label: m.label }));
+    if (add) {
+      const available = catalog.find(m => !next.some(row => row.modelId === m.model_id));
+      if (available) next.push({ modelId: available.model_id, label: available.label });
+      else if (saved.length) { toast.info("当前服务的模型已全部添加"); return; }
+    }
+    setRows(next);
+    setExpanded(add || !saved.length);
+    setEditing(true);
+  };
+  const cancel = () => { setEditing(false); setRows([]); };
+  const addRow = () => {
+    const available = catalog.find(m => !rows.some(row => row.modelId === m.model_id));
+    if (available) setRows(previous => [...previous, { modelId: available.model_id, label: available.label }]);
+  };
+  const changeRow = (index: number, patch: Partial<Draft>) => setRows(previous => previous.map((row, i) => i === index ? { ...row, ...patch } : row));
   const refresh = async () => { await reload(); notifyModelsChanged(); };
-  async function check(id: string, rowId?: string) {
-    setChecking(id);
-    try {
-      const result = await verifyModel({ data: { modelId: id } });
-      if (rowId) {
-        const { error } = await supabase.from("ai_models").update({ verified_at: result.verifiedAt }).eq("id", rowId);
-        if (error) throw error;
-        await refresh();
-      }
-      toast.success("模型已验证可用");
-      return result.verifiedAt;
-    } catch (e) { toast.error((e as Error).message || "模型验证失败"); return null; }
-    finally { setChecking(null); }
-  }
-  async function save() {
-    if (!userId) { toast.error("请先登录"); return; }
-    if (!current) { toast.error("请选择当前服务支持的模型"); return; }
-    const name = label.trim().slice(0, 80);
-    if (!name) { toast.error("请输入显示名称"); return; }
+
+  async function apply() {
+    if (!userId || busy) return;
+    if (rows.some(row => !row.modelId || !row.label.trim())) { toast.error("请填写模型名称"); return; }
+    if (new Set(rows.map(row => row.modelId)).size !== rows.length) { toast.error("同一模型不能重复添加"); return; }
+    const removed = saved.filter(m => !rows.some(row => row.modelId === m.model_id));
+    if (removed.length && !window.confirm(`从模型菜单移除 ${removed.map(m => m.label).join("、")}？已有对话记录不会删除。`)) return;
     setBusy(true);
     try {
-      const existing = models.find(m => m.model_id === current.model_id);
-      const verifiedAt = existing?.verified_at ?? await check(current.model_id);
-      if (!verifiedAt) return;
-      const record = { user_id: userId, model_id: current.model_id, label: name, provider: current.provider, verified_at: verifiedAt, enabled: true };
-      const { error } = await supabase.from("ai_models").upsert(record, { onConflict: "user_id,model_id" });
-      if (error) throw error;
-      await refresh(); setEditing(null); toast.success("模型已保存");
-    } catch { toast.error("保存失败，请重试"); }
+      // Verify each newly added or previously unverified model before making it available in chat.
+      const records: { user_id: string; model_id: string; label: string; provider: string; verified_at: string; enabled: boolean }[] = [];
+      for (const row of rows) {
+        const original = models.find(m => m.model_id === row.modelId);
+        const verifiedAt = original?.verified_at ?? (await verifyModel({ data: { modelId: row.modelId } })).verifiedAt;
+        records.push({ user_id: userId, model_id: row.modelId, label: row.label.trim().slice(0, 80), provider: "OpenAI", verified_at: verifiedAt, enabled: true });
+      }
+      if (records.length) {
+        const { error } = await supabase.from("ai_models").upsert(records, { onConflict: "user_id,model_id" });
+        if (error) throw error;
+      }
+      if (removed.length) {
+        const { error } = await supabase.from("ai_models").update({ enabled: false }).in("id", removed.map(m => m.id));
+        if (error) throw error;
+      }
+      await refresh();
+      cancel();
+      toast.success("模型配置已保存");
+    } catch (error) { toast.error((error as Error).message || "保存失败，请重试"); }
     finally { setBusy(false); }
   }
-  async function remove(m: ConfiguredModel) {
-    if (!confirm(`从模型菜单移除「${m.label}」？已有对话记录不会删除。`)) return;
-    const { error } = await supabase.from("ai_models").update({ enabled: false }).eq("id", m.id);
-    if (error) { toast.error("移除失败"); return; }
-    await refresh(); if (editing !== "new" && editing?.id === m.id) setEditing(null); toast.success("已从模型菜单移除");
+  async function recheck(model: ConfiguredModel) {
+    setRefreshing(true);
+    try {
+      const result = await verifyModel({ data: { modelId: model.model_id } });
+      const { error } = await supabase.from("ai_models").update({ verified_at: result.verifiedAt }).eq("id", model.id);
+      if (error) throw error;
+      await refresh(); toast.success("连接已验证");
+    } catch (error) { toast.error((error as Error).message || "连接验证失败"); }
+    finally { setRefreshing(false); }
   }
+
+  const canAdd = catalog.some(m => !rows.some(row => row.modelId === m.model_id));
   return <div className="py-5">
-    <div className="mb-5 flex items-start justify-between gap-4"><div><h4 className="text-[14px] font-semibold">模型提供商</h4><p className="mt-1.5 text-[12px] text-muted-foreground">仅显示已保存并验证可用的模型。</p></div><Button size="sm" onClick={() => openEdit("new")} disabled={!userId}><Plus className="size-3.5"/>添加模型</Button></div>
+    <div className="mb-5">
+      <h4 className="text-[14px] font-semibold">模型</h4>
+      <p className="mt-1.5 text-[12px] text-muted-foreground">管理已接入服务的模型。保存后可在对话中选择。</p>
+    </div>
     {!userId && <p className="mb-4 text-xs text-muted-foreground">登录后可管理模型。</p>}
-    {shown.length > 0 ? <div className="space-y-2">{[...new Set(shown.map(m => m.provider))].map(provider => <div className="relay-model-card p-4" key={provider}>
-      <div className="mb-3 flex items-center gap-2"><span className="text-[13px] font-medium">{provider}</span><span className="relay-model-status size-1.5 rounded-full bg-success"/><span className="ml-auto text-[11px] text-muted-foreground">已连接 · {shown.filter(m => m.provider === provider).length} 个模型</span></div>
-      <div className="space-y-1">{shown.filter(m => m.provider === provider).map(m => <div key={m.id} className="relay-model-row group flex min-w-0 items-center gap-3 rounded-lg px-2 py-2">
-        <div className="min-w-0 flex-1"><span className="block truncate text-[12px] font-medium">{m.label}</span><span className="block truncate font-mono text-[10px] text-muted-foreground">{m.model_id}</span></div>
-        <span className="hidden shrink-0 items-center gap-1 text-[11px] text-success sm:flex"><Check className="size-3"/>已验证</span>
-        <Button variant="ghost" size="icon-sm" aria-label={`编辑 ${m.label}`} title="编辑" onClick={() => openEdit(m)}><Pencil className="size-3.5"/></Button>
-        <Button variant="ghost" size="icon-sm" aria-label={`移除 ${m.label}`} title="移除" onClick={() => void remove(m)}><Trash2 className="size-3.5"/></Button>
-      </div>)}</div>
-    </div>)}</div> : loaded && <div className="relay-model-card px-4 py-8 text-center text-xs text-muted-foreground">暂无可用模型，点击「添加模型」开始。</div>}
-    {editing && <div className="relay-model-editor mt-5 space-y-4 rounded-xl p-4">
-      <div className="flex items-center justify-between text-[13px] font-medium"><span>{editing === "new" ? "添加模型" : "编辑模型"}</span><Button variant="ghost" size="icon-sm" aria-label="关闭编辑" onClick={() => setEditing(null)}><X className="size-4"/></Button></div>
-      <label className="block space-y-1.5 text-[11px] text-muted-foreground">模型<select aria-label="选择模型" value={modelId} onChange={e => { const next = SUPPORTED_MODELS.find(m => m.model_id === e.target.value); setModelId(e.target.value); setLabel(next?.label ?? ""); }} disabled={editing !== "new"} className="relay-model-select block h-9 w-full rounded-lg border px-3 text-[12px] text-foreground"><option value="">选择已接入的模型</option>{SUPPORTED_MODELS.map(m => <option key={m.model_id} value={m.model_id}>{m.provider} · {m.label}</option>)}</select></label>
-      <label className="block space-y-1.5 text-[11px] text-muted-foreground">显示名称<Input value={label} onChange={e => setLabel(e.target.value)} maxLength={80} placeholder="模型显示名称" className="h-9 text-[12px]"/></label>
-      {current && <p className="text-[11px] text-muted-foreground">{current.provider} · {current.model_id}。保存前会验证是否可用。</p>}
-      <div className="flex flex-wrap items-center justify-end gap-2">{editing !== "new" && <Button variant="outline" size="sm" disabled={!!checking} onClick={() => void check(modelId, editing.id)}>{checking ? <LoaderCircle className="size-3.5 animate-spin"/> : <RotateCw className="size-3.5"/>}重新验证</Button>}<Button size="sm" disabled={busy || !!checking || !current || !label.trim()} onClick={() => void save()}>{busy ? <LoaderCircle className="size-3.5 animate-spin"/> : <Check className="size-3.5"/>}保存</Button></div>
+    {loaded && (saved.length > 0 || editing) && <div className="relay-model-card">
+      <div className="flex h-14 items-center gap-2 px-4">
+        <span className="font-medium text-[13px]">OpenAI</span>
+        {!!saved.length && <span className="relay-model-status size-1.5 rounded-full bg-success" aria-label="已连接"/>}
+        <span className="ml-auto text-[11px] text-muted-foreground">{saved.length} 个模型</span>
+        {!editing && <Button variant="outline" size="sm" className="ml-2 h-7 rounded-lg px-3 text-[11px]" onClick={() => begin()} disabled={!userId}>编辑</Button>}
+      </div>
+      {editing ? <div className="relay-model-editor mx-3 mb-3 rounded-lg p-4">
+        <div className="space-y-1.5">
+          <span className="text-[11px] text-muted-foreground">提供商</span>
+          <div className="relay-model-readonly flex h-9 items-center rounded-md px-3 text-[12px]">OpenAI <Check className="ml-auto size-3.5 text-success"/></div>
+        </div>
+        <div className="mt-4 space-y-1.5">
+          <span className="text-[11px] text-muted-foreground">API 密钥</span>
+          <div className="relay-model-readonly flex min-h-9 items-center rounded-md px-3 text-[11px] text-muted-foreground">由应用服务提供，无需在此填写</div>
+        </div>
+        <div className="mt-4 border-t border-border/60 pt-3">
+          <Button variant="ghost" size="sm" className="-ml-2 h-7 gap-1 text-[11px] text-muted-foreground" onClick={() => setExpanded(v => !v)}>{expanded ? <ChevronDown className="size-3.5"/> : <ChevronRight className="size-3.5"/>}自定义设置</Button>
+          {expanded && <div className="pt-3">
+            <div className="mb-4 space-y-1.5"><span className="text-[11px] text-muted-foreground">服务地址</span><div className="relay-model-readonly flex min-h-9 min-w-0 items-center rounded-md px-3 font-mono text-[11px]"><span className="min-w-0 flex-1 truncate" title="https://ai.gateway.lovable.dev/v1">https://ai.gateway.lovable.dev/v1</span><span className="ml-2 shrink-0 font-sans text-[10px] text-muted-foreground">只读</span></div></div>
+            <div className="mb-2 text-[11px] text-muted-foreground">模型 <span className="ml-2">添加、重命名或移除已接入的模型</span></div>
+            <div className="space-y-2">{rows.map((row, i) => <div className="relay-model-edit-row grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-md p-1.5 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto]" key={row.modelId}>
+              <div className="min-w-0">
+                {saved.some(m => m.model_id === row.modelId) ? <div className="relay-model-readonly flex h-8 min-w-0 items-center truncate rounded-md px-2.5 font-mono text-[11px]" title={row.modelId}>{row.modelId}</div> : <select aria-label={`选择模型 ${i + 1}`} value={row.modelId} onChange={e => { const option = catalog.find(m => m.model_id === e.target.value); if (option) changeRow(i, { modelId: option.model_id, label: option.label }); }} className="relay-model-select h-8 w-full rounded-md border px-2 font-mono text-[11px]">{catalog.filter(m => m.model_id === row.modelId || !rows.some(r => r.modelId === m.model_id)).map(m => <option key={m.model_id} value={m.model_id}>{m.model_id}</option>)}</select>}
+              </div>
+              <Input aria-label={`${row.modelId} 显示名称`} value={row.label} maxLength={80} onChange={e => changeRow(i, { label: e.target.value })} className="relay-model-input col-start-1 row-start-2 h-8 min-w-0 rounded-md px-2.5 text-[11px] sm:col-start-2 sm:row-start-1"/>
+              <Button variant="ghost" size="icon-sm" aria-label={`移除 ${row.label}`} title={`移除 ${row.label}`} className="col-start-2 row-span-2 size-8 shrink-0 text-muted-foreground hover:text-destructive sm:col-start-3 sm:row-span-1" onClick={() => setRows(previous => previous.filter((_, index) => index !== i))}><Trash2 className="size-3.5"/></Button>
+            </div>)}</div>
+            {canAdd && <Button variant="outline" size="sm" className="mt-2 h-7 rounded-md px-2 text-[11px]" onClick={addRow}><Plus className="size-3"/>添加模型</Button>}
+            {!rows.length && <p className="py-3 text-[11px] text-muted-foreground">尚无模型。添加模型后即可在对话中切换。</p>}
+          </div>}
+        </div>
+        <div className="mt-4 flex items-center justify-end gap-2">
+          <Button variant="outline" size="sm" className="h-8" onClick={cancel} disabled={busy}>取消</Button>
+          <Button size="sm" className="h-8" onClick={() => void apply()} disabled={busy || rows.some(row => !row.label.trim())}>{busy && <LoaderCircle className="size-3.5 animate-spin"/>}应用</Button>
+        </div>
+      </div> : <div className="border-t border-border/60 px-4 py-3">
+        <div className="space-y-1.5">{saved.map(model => <div key={model.id} className="relay-model-summary flex min-w-0 items-center gap-1 rounded-md px-2 py-1.5">
+          <Button variant="ghost" size="sm" className="min-w-0 flex-1 justify-start gap-2 px-1.5 text-left text-[12px]" onClick={() => begin()}><span className="truncate font-medium">{model.label}</span><span className="ml-auto hidden min-w-0 max-w-[55%] truncate font-mono text-[11px] text-muted-foreground sm:block">{model.model_id}</span><ChevronRight className="size-3.5 shrink-0 text-muted-foreground"/></Button>
+          <Button variant="ghost" size="icon-sm" title={`验证 ${model.label}`} aria-label={`验证 ${model.label}`} disabled={refreshing} className="size-6 shrink-0 text-success" onClick={() => void recheck(model)}>{refreshing ? <LoaderCircle className="size-3 animate-spin"/> : <Check className="size-3"/>}</Button>
+        </div>)}</div>
+      </div>}
     </div>}
+    {loaded && <Button variant="outline" className="relay-model-add mt-3 h-10 w-full justify-center rounded-lg border-dashed text-[12px]" disabled={!userId} onClick={() => begin(true)}><Plus className="size-3.5"/>{saved.length ? "添加模型" : "添加提供商"}</Button>}
   </div>;
 }
