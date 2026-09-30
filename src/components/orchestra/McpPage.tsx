@@ -1,104 +1,156 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, CircleAlert, LoaderCircle, Plug, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, CircleAlert, Copy, ExternalLink, LoaderCircle, MoreHorizontal, Play, Plug, Plus, RefreshCw, Search, Settings2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
-import { saveMcpConnection, testMcpConnection } from "@/lib/orchestra.functions";
+import { saveMcpConnection, testMcpConnection, callMcpTool } from "@/lib/orchestra.functions";
 import { useMcpConnections, type McpConn } from "./data";
 
 const PRESETS = [
-  { name: "DeepWiki", url: "https://mcp.deepwiki.com/mcp", auth: "none", note: "读取 GitHub 开源仓库文档，无需鉴权" },
-  { name: "Context7", url: "https://mcp.context7.com/mcp", auth: "none", note: "最新的开发库文档，无需鉴权" },
-  { name: "GitHub", url: "https://api.githubcopilot.com/mcp/", auth: "api_key", note: "填 GitHub 个人访问令牌" },
-  { name: "Hugging Face", url: "https://huggingface.co/mcp", auth: "api_key", note: "填 Hugging Face 访问令牌" },
-  { name: "Linear", url: "https://mcp.linear.app/mcp", auth: "api_key", note: "填 Linear API Key" },
-  { name: "Notion", url: "https://mcp.notion.com/mcp", auth: "oauth", note: "需要 OAuth 授权（即将支持）" },
-] as const;
-
+  { name: "DeepWiki", url: "https://mcp.deepwiki.com/mcp", auth_type: "none" as const },
+  { name: "Context7", url: "https://mcp.context7.com/mcp", auth_type: "none" as const },
+  { name: "GitHub", url: "https://api.githubcopilot.com/mcp/", auth_type: "api_key" as const },
+  { name: "Hugging Face", url: "https://huggingface.co/mcp", auth_type: "api_key" as const },
+  { name: "Linear", url: "https://mcp.linear.app/mcp", auth_type: "api_key" as const },
+];
 type Form = { id?: string; name: string; url: string; auth_type: "none" | "api_key"; header_name: string; secret: string; proxy_url: string };
-const blank: Form = { name: "", url: "", auth_type: "none", header_name: "Authorization", secret: "", proxy_url: "" };
+const empty: Form = { name: "", url: "", auth_type: "none", header_name: "Authorization", secret: "", proxy_url: "" };
+type ToolInfo = McpConn["tools"][number];
 
-function StateBadge({ c }: { c: McpConn }) {
-  if (c.state === "ready") return <span className="flex items-center gap-1 text-[11px] text-success"><Check className="size-3"/>已就绪</span>;
-  if (c.state === "failed") return <span className="flex items-center gap-1 text-[11px] text-destructive"><CircleAlert className="size-3"/>失败</span>;
-  return <span className="text-[11px] text-muted-foreground">待测试</span>;
+function Status({ item }: { item: McpConn }) {
+  return <span className={`inline-flex items-center gap-1.5 text-[11px] ${item.state === "ready" ? "text-success" : item.state === "failed" ? "text-destructive" : "text-muted-foreground"}`}>
+    <span className={`size-1.5 rounded-full ${item.state === "ready" ? "bg-success" : item.state === "failed" ? "bg-destructive" : "bg-muted-foreground"}`}/>
+    {item.state === "ready" ? "已连接" : item.state === "failed" ? "连接失败" : "待测试"}
+  </span>;
+}
+
+function Field({ title, children, note }: { title: string; children: React.ReactNode; note?: string }) {
+  return <label className="block space-y-1.5 text-xs font-medium text-foreground"><span>{title}</span>{children}{note && <span className="block text-[11px] font-normal leading-4 text-muted-foreground">{note}</span>}</label>;
 }
 
 export function McpPage() {
   const { items, loading, reload } = useMcpConnections();
   const save = useServerFn(saveMcpConnection);
   const test = useServerFn(testMcpConnection);
-  const [sel, setSel] = useState<string | "new" | null>(null);
-  const [form, setForm] = useState<Form>(blank);
+  const call = useServerFn(callMcpTool);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [form, setForm] = useState<Form>(empty);
+  const [editor, setEditor] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState("");
-  const current = items.find(i => i.id === sel);
+  const [error, setError] = useState("");
+  const [activeTool, setActiveTool] = useState<string | null>(null);
+  const [toolSearch, setToolSearch] = useState("");
+  const [args, setArgs] = useState("{}");
+  const [result, setResult] = useState("");
+  const [running, setRunning] = useState(false);
+  const [confirmRun, setConfirmRun] = useState(false);
+  const current = items.find(item => item.id === selected);
+  const tool = current?.tools.find(t => t.name === activeTool);
+  const isWrite = /(?:delete|remove|send|write|create|update|edit|post|publish|execute|run|drop|put|patch|modify|submit|deploy|transfer|purchase|cancel|revoke|archive)/i.test(tool?.name ?? "");
+  const filteredTools = current?.tools.filter(t => `${t.name} ${t.description}`.toLowerCase().includes(toolSearch.toLowerCase())) ?? [];
 
-  function open(c?: McpConn) { setErr(""); setSel(c?.id ?? "new"); setForm(c ? { id: c.id, name: c.name, url: c.url, auth_type: c.auth_type as Form["auth_type"], header_name: c.header_name, secret: "", proxy_url: c.proxy_url ?? "" } : blank); }
+  function start(formValue: Form = empty) { setForm(formValue); setError(""); setEditor(true); }
+  function open(item: McpConn) { setSelected(item.id); setActiveTool(null); setResult(""); setError(""); }
+  function edit(item: McpConn) { start({ id: item.id, name: item.name, url: item.url, auth_type: item.auth_type === "api_key" ? "api_key" : "none", header_name: item.header_name, secret: "", proxy_url: item.proxy_url ?? "" }); }
   async function submit() {
-    if (!form.name.trim() || !form.url.trim()) return setErr("请填写名称和地址");
-    setBusy(true); setErr("");
+    if (!form.name.trim() || !form.url.trim()) { setError("请填写名称和服务地址"); return; }
+    if (form.auth_type === "api_key" && !form.secret && !form.id) { setError("请填写密钥"); return; }
+    setBusy(true); setError("");
     try {
-      const r = await save({ data: { ...form, secret: form.secret || undefined, proxy_url: form.proxy_url.trim() } });
-      await reload(); setSel(r.id); setForm(f => ({ ...f, id: r.id, secret: "" }));
-      if (r.state === "failed") setErr(`已保存，但连接失败：${r.last_error ?? "未知错误"}`);
-    } catch (e) { setErr((e as Error).message || "保存失败"); }
-    setBusy(false);
+      const saved = await save({ data: { ...form, secret: form.secret || undefined, proxy_url: form.proxy_url.trim() } });
+      await reload(); setSelected(saved.id); setEditor(false); setActiveTool(null);
+      if (saved.state === "failed") setError(`已保存，但连接失败：${saved.last_error ?? "未知错误"}`);
+    } catch (e) { setError((e as Error).message || "保存失败"); }
+    finally { setBusy(false); }
   }
-  async function retry(id: string) { setBusy(true); setErr(""); try { const r = await test({ data: { id } }); if (r.state === "failed") setErr(r.last_error ?? "连接失败"); } catch (e) { setErr((e as Error).message); } await reload(); setBusy(false); }
-  async function remove(c: McpConn) { if (!confirm(`断开并删除「${c.name}」？绑定它的 Agent 将不再能使用这些工具。`)) return; await supabase.from("mcp_connections").delete().eq("id", c.id); setSel(null); await reload(); }
-  async function toggleTool(c: McpConn, name: string, on: boolean) {
-    const disabled_tools = on ? c.disabled_tools.filter(t => t !== name) : [...c.disabled_tools, name];
-    await supabase.from("mcp_connections").update({ disabled_tools }).eq("id", c.id); await reload();
+  async function retry(id: string) {
+    setBusy(true); setError("");
+    try { const r = await test({ data: { id } }); if (r.state === "failed") setError(r.last_error ?? "连接失败"); await reload(); }
+    catch (e) { setError((e as Error).message); }
+    finally { setBusy(false); }
+  }
+  async function remove(item: McpConn) {
+    if (!window.confirm(`删除「${item.name}」？绑定它的 Agent 将无法再调用这些工具。`)) return;
+    const { error: e } = await supabase.from("mcp_connections").delete().eq("id", item.id);
+    if (e) { setError(e.message); return; }
+    setSelected(null); setError(""); await reload();
+  }
+  async function toggleTool(item: McpConn, name: string, on: boolean) {
+    const disabled_tools = on ? item.disabled_tools.filter(t => t !== name) : [...item.disabled_tools, name];
+    const { error: e } = await supabase.from("mcp_connections").update({ disabled_tools }).eq("id", item.id);
+    if (e) setError(e.message); else await reload();
+  }
+  function selectTool(next: ToolInfo) {
+    setActiveTool(next.name); setResult(""); setConfirmRun(false);
+    const defaults = Object.fromEntries(Object.entries(next.inputSchema?.properties ?? {}).filter(([key]) => next.inputSchema?.required?.includes(key)).map(([key, value]) => [key, value.type === "array" ? [] : value.type === "object" ? {} : value.type === "number" || value.type === "integer" ? 0 : value.type === "boolean" ? false : ""]));
+    setArgs(JSON.stringify(defaults, null, 2));
+  }
+  async function run() {
+    if (!current || !tool) return;
+    let parsed: unknown;
+    try { parsed = JSON.parse(args); if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") throw new Error(); }
+    catch { setResult("参数必须是 JSON 对象"); return; }
+    if (isWrite && !confirmRun) { setConfirmRun(true); return; }
+    setRunning(true); setResult("");
+    try { const r = await call({ data: { id: current.id, name: tool.name, args: parsed as Record<string, unknown>, confirmed: confirmRun } }); setResult((r.isError ? "工具返回错误\n" : "") + r.content); }
+    catch (e) { setResult(`调用失败：${(e as Error).message}`); }
+    finally { setRunning(false); setConfirmRun(false); }
   }
 
-  return <div className="grid h-full grid-cols-[260px_1fr]">
-    <aside className="soft-scroll overflow-y-auto border-r p-2">
-      <div className="flex items-center px-2 py-1.5 text-[11px] font-medium text-muted-foreground">已连接<button onClick={() => open()} className="ml-auto rounded p-1 hover:bg-secondary" aria-label="新建连接"><Plus className="size-3.5"/></button></div>
-      {loading ? <p className="px-2 py-2 text-xs text-muted-foreground">加载中…</p> : items.length === 0 && <button onClick={() => open()} className="m-1 w-[calc(100%-8px)] rounded-lg border border-dashed px-3 py-4 text-xs text-muted-foreground hover:bg-secondary">+ 添加第一个 MCP 服务</button>}
-      {items.map(c => <button key={c.id} onClick={() => open(c)} className={`mb-0.5 flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-xs hover:bg-secondary ${sel === c.id ? "bg-secondary" : ""}`}>
-        <Plug className="size-3.5 shrink-0 text-muted-foreground"/><span className="min-w-0 flex-1"><span className="block truncate font-medium">{c.name}</span><span className="block truncate text-[11px] text-muted-foreground">{c.tools.length} 个工具</span></span><StateBadge c={c}/>
-      </button>)}
-    </aside>
-
-    <section className="soft-scroll overflow-y-auto">
-      {!sel ? <div className="flex h-full flex-col items-center justify-center gap-3 text-xs text-muted-foreground"><Plug className="size-6"/>连接远程 MCP 服务，把它的工具交给 Agent 使用<Button size="sm" variant="outline" onClick={() => open()}><Plus className="size-3.5"/>新建连接</Button></div> :
-      <div className="mx-auto max-w-[680px] space-y-5 px-8 py-6">
-        <div className="flex items-center gap-2"><h2 className="text-base font-semibold">{sel === "new" ? "新建 MCP 连接" : current?.name}</h2>{current && <StateBadge c={current}/>}
-          {current && <div className="ml-auto flex gap-1.5"><Button size="sm" variant="outline" className="text-xs" disabled={busy} onClick={() => retry(current.id)}><RefreshCw className={`size-3.5 ${busy ? "animate-spin" : ""}`}/>重新测试</Button><Button size="sm" variant="ghost" className="text-xs text-destructive" onClick={() => remove(current)}><Trash2 className="size-3.5"/>断开</Button></div>}
+  return <div className="soft-scroll h-full min-w-0 overflow-y-auto bg-background px-4 py-5 sm:px-7">
+    <div className="mx-auto max-w-[1020px]">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div><h2 className="text-[17px] font-semibold">MCP 服务</h2><p className="mt-1 text-xs text-muted-foreground">管理远程服务与工具调用</p></div>
+        <DropdownMenu><DropdownMenuTrigger asChild><Button size="sm"><Plus className="size-3.5"/>添加服务<ChevronDown className="size-3.5"/></Button></DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48"> <DropdownMenuItem onClick={() => start()}>手动添加 HTTP 服务</DropdownMenuItem>{PRESETS.map(p => <DropdownMenuItem key={p.name} onClick={() => start({ ...empty, ...p })}>{p.name}</DropdownMenuItem>)}</DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      {!current ? <>
+        {loading ? <p className="py-12 text-center text-xs text-muted-foreground">加载连接…</p> : items.length === 0 ? <div className="flex min-h-52 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border text-muted-foreground"><Plug className="size-6"/><p className="text-xs">尚未连接服务</p><Button size="sm" variant="outline" onClick={() => start()}><Plus/>添加服务</Button></div> :
+          <div className="grid gap-3 md:grid-cols-2">{items.map(item => <div key={item.id} className="group flex min-h-40 flex-col rounded-lg border border-border bg-background p-4 transition-colors hover:border-primary/50">
+            <div className="flex min-w-0 items-start gap-3"><div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-secondary text-primary"><Plug className="size-4"/></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{item.name}</p><Status item={item}/></div>
+              <DropdownMenu><DropdownMenuTrigger asChild><Button size="icon-sm" variant="ghost" aria-label={`${item.name} 操作`}><MoreHorizontal/></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => edit(item)}>编辑连接</DropdownMenuItem><DropdownMenuItem onClick={() => void retry(item.id)}>重新测试</DropdownMenuItem><DropdownMenuItem className="text-destructive" onClick={() => void remove(item)}>删除连接</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
+            </div>
+            <p className="mt-4 truncate rounded-md bg-secondary/60 px-3 py-2 font-mono text-[11px] text-muted-foreground" title={item.url}>{item.url}</p>
+            <div className="mt-auto flex items-center justify-between pt-4"><span className="text-[11px] text-muted-foreground">HTTP · {item.tools.length} 个工具</span><Button size="sm" variant="ghost" onClick={() => open(item)}>查看工具 <ExternalLink className="size-3"/></Button></div>
+          </div>)}</div>}
+      </> : <>
+        <div className="mb-5 flex flex-wrap items-center gap-3"><Button size="icon-sm" variant="ghost" aria-label="返回服务列表" onClick={() => { setSelected(null); setError(""); }}><ChevronLeft/></Button><div className="min-w-0 flex-1"><h3 className="truncate text-base font-semibold">{current.name}</h3><Status item={current}/></div><Button size="sm" variant="outline" disabled={busy} onClick={() => void retry(current.id)}><RefreshCw className={busy ? "animate-spin" : ""}/>测试连接</Button><Button size="sm" variant="outline" onClick={() => edit(current)}><Settings2/>配置</Button></div>
+        {error && <p role="alert" className="mb-4 rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive">{error}</p>}
+        <div className="mb-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-border pb-4 text-xs"><span className="text-muted-foreground">传输 <strong className="ml-1 font-medium text-foreground">Streamable HTTP</strong></span><span className="text-muted-foreground">鉴权 <strong className="ml-1 font-medium text-foreground">{current.auth_type === "api_key" ? "请求头密钥" : "无"}</strong></span><span className="min-w-0 truncate font-mono text-[11px] text-muted-foreground" title={current.url}>{current.url}</span></div>
+        {current.state === "failed" && current.last_error && <p role="alert" className="mb-4 rounded-md bg-destructive/10 p-3 text-xs text-destructive">{current.last_error}</p>}
+        <div className="grid min-h-[390px] gap-4 lg:grid-cols-[230px_minmax(0,1fr)]">
+          <aside className="min-w-0 rounded-lg border border-border p-3"><p className="mb-3 text-xs font-semibold">工具 <span className="text-muted-foreground">{current.tools.length}</span></p><div className="relative"><Search className="pointer-events-none absolute left-2.5 top-2.5 size-3.5 text-muted-foreground"/><Input value={toolSearch} onChange={e => setToolSearch(e.target.value)} placeholder="搜索工具" className="h-8 pl-8 text-xs"/></div>
+            <div className="soft-scroll mt-3 max-h-[370px] space-y-1 overflow-y-auto">{filteredTools.map(t => <Button key={t.name} variant="ghost" onClick={() => selectTool(t)} className={`h-auto w-full flex-col items-start gap-0.5 whitespace-normal px-2 py-2 text-left ${activeTool === t.name ? "bg-accent" : ""}`}><span className="max-w-full break-all font-mono text-xs">{t.name}</span><span className="line-clamp-2 text-[11px] font-normal text-muted-foreground">{t.description}</span></Button>)}{filteredTools.length === 0 && <p className="py-5 text-center text-xs text-muted-foreground">暂无工具</p>}</div>
+          </aside>
+          <section className="min-w-0 rounded-lg border border-border p-4">{tool ? <>
+            <div className="flex items-start gap-3 border-b border-border pb-4"><div className="min-w-0 flex-1"><h4 className="break-all font-mono text-sm font-semibold">{tool.name}</h4><p className="mt-1 text-xs leading-5 text-muted-foreground">{tool.description || "此工具没有描述"}</p></div><Switch checked={!current.disabled_tools.includes(tool.name)} onCheckedChange={on => void toggleTool(current, tool.name, on)} aria-label={`启用 ${tool.name}`}/></div>
+            <div className="space-y-3 pt-4"><p className="text-xs font-semibold">调用测试</p>{Object.entries(tool.inputSchema?.properties ?? {}).map(([key, prop]) => <div key={key} className="flex flex-wrap gap-2 text-[11px]"><code className="font-mono text-foreground">{key}{tool.inputSchema?.required?.includes(key) && <span className="text-destructive"> *</span>}</code><span className="text-muted-foreground">{prop.type ?? "any"}{prop.description ? ` · ${prop.description}` : ""}</span></div>)}
+              <Field title="参数 (JSON)" note="按上方字段填写；对象、数组等复杂参数也可直接编辑。"><textarea aria-label="参数 (JSON)" value={args} onChange={e => { setArgs(e.target.value); setConfirmRun(false); }} spellCheck={false} className="h-36 w-full resize-y rounded-md border border-input bg-background px-3 py-2 font-mono text-xs leading-5 text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"/></Field>
+              {isWrite && <p className="text-[11px] text-muted-foreground">此工具可能修改远程数据，运行前需再次确认。</p>}
+              {confirmRun && <div role="alert" className="flex flex-wrap items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-xs"><CircleAlert className="size-4 text-destructive"/><span className="flex-1">确认执行 {tool.name}？远程操作可能无法撤销。</span><Button size="sm" variant="ghost" onClick={() => setConfirmRun(false)}>取消</Button><Button size="sm" variant="destructive" onClick={() => void run()}>确认执行</Button></div>}
+              {!confirmRun && <Button size="sm" disabled={running || current.disabled_tools.includes(tool.name) || current.state !== "ready"} onClick={() => void run()}>{running ? <LoaderCircle className="animate-spin"/> : <Play/>}运行测试</Button>}
+              {result && <div className="space-y-2"><div className="flex items-center justify-between"><p className="text-xs font-semibold">返回结果</p><Button size="icon-sm" variant="ghost" title="复制结果" aria-label="复制结果" onClick={() => void navigator.clipboard.writeText(result)}><Copy/></Button></div><pre className="soft-scroll max-h-64 overflow-auto rounded-md bg-secondary p-3 font-mono text-[11px] leading-5 whitespace-pre-wrap break-all">{result}</pre></div>}
+            </div>
+          </> : <div className="flex h-full min-h-64 flex-col items-center justify-center gap-2 text-xs text-muted-foreground"><Plug className="size-6"/>选择一个工具查看参数并测试</div>}</section>
         </div>
-
-        {sel === "new" && <div><p className="mb-2 text-xs text-muted-foreground">常用服务</p><div className="grid grid-cols-3 gap-2">{PRESETS.map(p => <button key={p.name} disabled={p.auth === "oauth"} onClick={() => setForm({ ...blank, name: p.name, url: p.url, auth_type: p.auth === "oauth" ? "none" : p.auth })}
-          className={`rounded-lg border px-3 py-2.5 text-left text-xs transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50 ${form.url === p.url ? "border-primary" : ""}`}><span className="block font-medium">{p.name}</span><span className="mt-0.5 block text-[10.5px] leading-4 text-muted-foreground">{p.note}</span></button>)}</div></div>}
-
-        <div className="space-y-3">
-          <div className="grid grid-cols-[180px_1fr] gap-3">
-            <label className="space-y-1 text-xs"><span className="text-muted-foreground">名称</span><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="h-8 text-xs"/></label>
-            <label className="space-y-1 text-xs"><span className="text-muted-foreground">服务地址（https）</span><Input value={form.url} onChange={e => setForm({ ...form, url: e.target.value })} placeholder="https://example.com/mcp" className="h-8 font-mono text-xs"/></label>
-          </div>
-          <div className="space-y-1 text-xs"><span className="text-muted-foreground">鉴权方式</span><div className="flex gap-1.5">
-            {([["none", "无鉴权"], ["api_key", "API Key / 令牌"], ["oauth", "OAuth（即将支持）"]] as const).map(([v, l]) => <button key={v} disabled={v === "oauth"} onClick={() => setForm({ ...form, auth_type: v as Form["auth_type"] })} className={`h-8 rounded-md border px-3 text-xs disabled:opacity-50 ${form.auth_type === v ? "border-primary bg-primary/5 font-medium" : "hover:bg-secondary"}`}>{l}</button>)}
-          </div></div>
-          {form.auth_type === "api_key" && <div className="grid grid-cols-[180px_1fr] gap-3">
-            <label className="space-y-1 text-xs"><span className="text-muted-foreground">请求头名称</span><Input value={form.header_name} onChange={e => setForm({ ...form, header_name: e.target.value })} className="h-8 font-mono text-xs"/></label>
-            <label className="space-y-1 text-xs"><span className="text-muted-foreground">密钥 {current?.auth_type === "api_key" && "（已保存，留空则不修改）"}</span><Input type="password" autoComplete="off" value={form.secret} onChange={e => setForm({ ...form, secret: e.target.value })} placeholder={current?.auth_type === "api_key" ? "••••••••" : "粘贴密钥"} className="h-8 font-mono text-xs"/></label>
-          </div>}
-          <label className="block space-y-1 text-xs"><span className="text-muted-foreground">代理地址（可选）</span><Input value={form.proxy_url} onChange={e => setForm({ ...form, proxy_url: e.target.value })} placeholder="https://proxy.example.com" className="h-8 font-mono text-xs"/><span className="block text-[11px] text-muted-foreground">填写后请求会发往「代理地址/服务地址」，用于经网关或中转访问受限的 MCP 服务。</span></label>
-          <p className="text-[11px] text-muted-foreground">密钥加密保存在服务端，保存后不会再显示。</p>
-          {err && <p className="text-xs text-destructive">{err}</p>}
-          <Button size="sm" className="text-xs" disabled={busy} onClick={submit}>{busy && <LoaderCircle className="size-3.5 animate-spin"/>}{sel === "new" ? "连接并保存" : "保存修改"}</Button>
-        </div>
-
-        {current && <div>
-          <div className="mb-1.5 text-xs font-medium">工具 <span className="font-normal text-muted-foreground">{current.tools.length}</span></div>
-          {current.state === "failed" && current.last_error && <p className="mb-2 rounded-md bg-destructive/5 px-3 py-2 text-[11px] text-destructive">{current.last_error}</p>}
-          {current.tools.length === 0 ? <p className="text-xs text-muted-foreground">暂无工具</p> : <div className="divide-y rounded-lg border">{current.tools.map(t => { const on = !current.disabled_tools.includes(t.name);
-            return <div key={t.name} className="flex items-start gap-3 px-3 py-2.5"><span className="min-w-0 flex-1"><span className={`block font-mono text-xs ${on ? "" : "text-muted-foreground line-through"}`}>{t.name}</span>{t.description && <span className="mt-0.5 line-clamp-2 block text-[11px] leading-4 text-muted-foreground">{t.description}</span>}</span><Switch checked={on} onCheckedChange={v => toggleTool(current, t.name, v)} aria-label={`启用 ${t.name}`}/></div>; })}</div>}
-          <p className="mt-2 text-[11px] text-muted-foreground">不绑定 Agent 时，通用助手可使用全部已启用工具；到「Agent」页把工具拖给指定 Agent。</p>
-        </div>}
-      </div>}
-    </section>
+      </>}
+      {error && !current && <p role="alert" className="mt-4 text-xs text-destructive">{error}</p>}
+    </div>
+    <Dialog open={editor} onOpenChange={v => { if (!busy) setEditor(v); }}><DialogContent className="relay-settings-surface soft-scroll max-h-[min(740px,90dvh)] w-[min(560px,94vw)] max-w-none overflow-y-auto p-0 [&>button:last-child]:hidden">
+      <div className="border-b border-border px-6 py-4"><div className="flex items-center justify-between"><DialogTitle className="text-base">{form.id ? "编辑 MCP 服务" : "添加 MCP 服务"}</DialogTitle><Button size="icon-sm" variant="ghost" aria-label="关闭表单" onClick={() => setEditor(false)}><ChevronDown className="rotate-90"/></Button></div><DialogDescription className="mt-1 text-xs">连接远程 Streamable HTTP 服务，保存时自动获取工具列表。</DialogDescription></div>
+      <div className="space-y-4 px-6 py-5">
+        <Field title="服务名称 *"><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="例如：我的知识库" className="h-9 text-xs"/></Field>
+        <Field title="服务地址 *" note="仅支持 HTTPS 远程 MCP。服务器上的本地进程 (stdio) 不适用于此应用。"><Input value={form.url} onChange={e => setForm({ ...form, url: e.target.value })} placeholder="https://example.com/mcp" className="h-9 font-mono text-xs"/></Field>
+        <fieldset className="space-y-2"><legend className="text-xs font-medium">鉴权方式</legend><div className="flex gap-2">{([ ["none", "无需鉴权"], ["api_key", "请求头密钥"] ] as const).map(([key, label]) => <Button key={key} type="button" size="sm" variant={form.auth_type === key ? "secondary" : "outline"} className={form.auth_type === key ? "border border-primary/50" : ""} onClick={() => setForm({ ...form, auth_type: key })}>{label}</Button>)}</div></fieldset>
+        {form.auth_type === "api_key" && <div className="grid gap-3 sm:grid-cols-[160px_1fr]"><Field title="请求头名称"><Input value={form.header_name} onChange={e => setForm({ ...form, header_name: e.target.value })} className="h-9 font-mono text-xs"/></Field><Field title="密钥" note={form.id ? "已保存的密钥不回显，留空则保持不变。" : "保存在服务端，不会回显。"}><Input type="password" autoComplete="off" value={form.secret} onChange={e => setForm({ ...form, secret: e.target.value })} placeholder={form.id ? "留空保持原密钥" : "输入密钥或 Bearer token"} className="h-9 text-xs"/></Field></div>}
+        <details className="rounded-md border border-border p-3 text-xs"><summary className="cursor-pointer font-medium">高级设置 · 代理</summary><div className="pt-3"><Field title="代理地址" note="仅适用于将目标地址拼接在路径末尾的 HTTPS 中转服务。"><Input value={form.proxy_url} onChange={e => setForm({ ...form, proxy_url: e.target.value })} placeholder="https://proxy.example.com/" className="h-9 font-mono text-xs"/></Field></div></details>
+        {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
+      </div><div className="flex justify-end gap-2 border-t border-border px-6 py-4"><Button size="sm" variant="outline" onClick={() => setEditor(false)} disabled={busy}>取消</Button><Button size="sm" onClick={() => void submit()} disabled={busy}>{busy && <LoaderCircle className="animate-spin"/>}{form.id ? "保存并测试" : "添加并测试"}</Button></div>
+    </DialogContent></Dialog>
   </div>;
 }
