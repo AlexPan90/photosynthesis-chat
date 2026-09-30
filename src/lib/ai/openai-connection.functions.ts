@@ -32,5 +32,13 @@ export const getOpenAIConnection = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase.from("ai_provider_connections")
       .select("verified_at").eq("provider", "OpenAI").maybeSingle();
     if (error) throw new Error("无法读取 OpenAI 连接状态");
-    return { connected: !!data?.verified_at };
+    if (!data?.verified_at) return { connected: false, models: [] as string[] };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: credential } = await supabaseAdmin.from("ai_provider_connections")
+      .select("secret_enc").eq("user_id", context.userId).eq("provider", "OpenAI").maybeSingle();
+    if (!credential) return { connected: false, models: [] as string[] };
+    const { decryptSecret } = await import("./crypto.server");
+    const { fetchOpenAIModels } = await import("./model-management.server");
+    try { return { connected: true, models: await fetchOpenAIModels(await decryptSecret(credential.secret_enc)) }; }
+    catch { return { connected: false, models: [] as string[] }; }
   });
