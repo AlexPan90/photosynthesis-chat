@@ -13,7 +13,7 @@
 - Conversation is the focal pane; files open in a contextual resizable right pane. The chat shell uses 272px sidebar, 60px header, 860px message column and 300px contextual rail.
 - Real chat streams through `/api/chat` via Lovable Gateway OpenAI Responses, default `openai/gpt-6-astra`; threads/messages are RLS user-owned, demo threads client-only.
 - Agent orchestration stays in `/api/chat`; tools, prompt, model, delegates and streaming events share one UI message stream.
-- Reuse orchestra pages in Settings for Agent/MCP/Skills; retain `/studio/*` deep links. Encrypt MCP secrets server-side and close clients after streaming.
+- Embed orchestra pages in Settings; retain `/studio/*` links. MCP uses remote HTTPS only (hosted runtime cannot spawn stdio), per-user encrypted keys and short-lived clients.
 - Skills load progressively via `load_skill`/`read_skill_file` (GitHub raw files read-only), keeping the system prompt brief.
 - Execute scripts only in approved browser Web Worker or E2B sandbox; Worker runtime cannot spawn or eval.
 - Persist paused delegate history in own-only `delegate_sessions`; resume via `delegate_action`, never trusting model-supplied args.
