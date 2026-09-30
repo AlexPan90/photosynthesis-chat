@@ -5,19 +5,15 @@
 > Commits you push to the connected branch sync back to Lovable and show up in the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
-- Model CRUD manages user-owned configuration, not OpenAI's catalog; direct keys are encrypted server-only, gateway models use the workspace key.
-- Use AI Elements for transcript, messages, tools, and composer so the mockup follows real chat interaction primitives.
-- Keep conversation IDs in `/chat/$threadId` URLs so each local thread can be revisited and refreshed independently.
-- Extend the shared small icon button size and adapt installed AI Elements to the existing Select and strict motion types; these compatibility edits keep the UI primitives reusable.
-- Keep branching-story sample content and reader state client-side, with browser speech synthesis used only for narration preview; this avoids implying that demo assets include recorded audio.
-- Use neutral near-black #0B0B0D / white surfaces with indigo #5B50F0 (dark) / #4F46E5 (light) as the only accent, Sora/Manrope; matches the user-supplied Monolithic Technical Glass reference screenshot.
-- Keep the conversation as the default focal surface, with workspace files opened contextually in a separately resizable right column rather than showing the file pane on arrival; this avoids competing content while allowing focused file inspection.
-- Real chat streams through the `/api/chat` server route (OpenAI Responses via Lovable AI Gateway, default `openai/gpt-6-astra`); threads/messages live in Cloud tables scoped by RLS to the signed-in user, while seed demo threads stay client-side and read-only — keeps demos browsable without an account.
-- Agent 编排在 /api/chat 内完成：选中 Agent 覆盖提示词/工具/模型，委派通过 delegate_to_agent 工具的流式预览输出回传子 Agent 执行记录——前端只消费统一的 UI 消息流，无需额外协议。
-- Agent/MCP/Skills 编排在 /studio/* 页面管理；MCP 密钥用 MCP_ENC_KEY 做 AES-GCM 加密后只在服务端解密，/api/chat 按 Agent 绑定临时建 MCP 客户端并在流结束时关闭——避免令牌进入浏览器或长连接泄漏。
-- Skills 渐进加载：系统提示只放名称+描述，正文用 load_skill/read_skill_file 按需读取（远程文件从 GitHub raw 拉取、只读）——节省上下文且不执行脚本。
-- Scripts run in two sandboxes: run_js (browser Web Worker, user-confirmed client tool) and run_skill_script (E2B cloud sandbox via E2B_API_KEY, server toolApproval) — the Worker runtime cannot spawn processes or eval.
-- Paused sub-agent tasks persist their model history in delegate_sessions (RLS own-only); delegate_action executes the server-stored pending action and resumes the sub-agent — Worker is stateless, and the model-supplied args are never trusted.
-- Chat layout follows the reference: 272px sidebar (brand, search, recent sessions, user footer), 60px breadcrumb header, square-avatar left-aligned messages in an 860px column, composer with context chip row, and a 300px Context Files + token usage rail on xl that swaps to the file workspace when a file opens.
-
-- Keep workspace text sizing driven by the shell-scale CSS variable and artifact previews specialized by file type; this prevents isolated hard-coded type sizes and misleading generic thumbnails.
+- Model CRUD is user-owned, not provider-catalog CRUD; gateway uses workspace key, direct models use encrypted credentials and per-model HTTPS endpoints; /models discovery is server-only with manual fallback, so keys stay private.
+- Use AI Elements for transcript, tools and composer; preserve reusable Select, motion and icon-button compatibility.
+- Keep thread IDs in `/chat/$threadId`; sample story/reader state is client-side and narration uses browser speech synthesis, not recorded audio.
+- Use near-black/white surfaces with indigo accent and Sora/Manrope per the Monolithic Technical Glass reference.
+- Conversation is the focal pane; files open in a contextual resizable right pane. The chat shell uses 272px sidebar, 60px header, 860px message column and 300px contextual rail.
+- Real chat streams through `/api/chat` via Lovable Gateway OpenAI Responses, default `openai/gpt-6-astra`; threads/messages are RLS user-owned, demo threads client-only.
+- Agent orchestration stays in `/api/chat`; tools, prompt, model, delegates and streaming events share one UI message stream.
+- Manage Agent/MCP/Skills under `/studio/*`; encrypt MCP secrets server-side and close per-request MCP clients after streaming.
+- Skills load progressively via `load_skill`/`read_skill_file` (GitHub raw files read-only), keeping the system prompt brief.
+- Execute scripts only in approved browser Web Worker or E2B sandbox; Worker runtime cannot spawn or eval.
+- Persist paused delegate history in own-only `delegate_sessions`; resume via `delegate_action`, never trusting model-supplied args.
+- Scale workspace text with shell-scale and preview each artifact by file type, avoiding misleading generic thumbnails.
