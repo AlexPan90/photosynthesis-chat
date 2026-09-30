@@ -96,6 +96,7 @@ export type Database = {
       }
       ai_models: {
         Row: {
+          base_url: string
           connection_type: string
           created_at: string
           description: string
@@ -111,6 +112,7 @@ export type Database = {
           version: string
         }
         Insert: {
+          base_url?: string
           connection_type?: string
           created_at?: string
           description?: string
@@ -126,6 +128,7 @@ export type Database = {
           version?: string
         }
         Update: {
+          base_url?: string
           connection_type?: string
           created_at?: string
           description?: string

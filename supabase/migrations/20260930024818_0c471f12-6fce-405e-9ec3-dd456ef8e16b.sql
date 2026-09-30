@@ -1,0 +1,1 @@
+ALTER TABLE public.ai_models ADD COLUMN base_url text NOT NULL DEFAULT '';
