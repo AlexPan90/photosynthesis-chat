@@ -23,10 +23,12 @@ type Props = {
 
 const tabs = [
   { id: "general", label: "通用", icon: SlidersHorizontal },
-  { id: "models", label: "模型", icon: Cpu },
   { id: "appearance", label: "外观", icon: Sun },
-  { id: "skills", label: "技能", icon: Sparkles },
-  { id: "orchestra", label: "编排中心", icon: Blocks },
+  { id: "models", label: "模型", icon: Cpu },
+  { id: "agents", label: "Agent", icon: Bot },
+  { id: "skills", label: "Skills", icon: Sparkles },
+  { id: "mcp", label: "MCP", icon: Plug },
+  { id: "orchestra", label: "编排", icon: Blocks },
   { id: "keys", label: "快捷键", icon: Keyboard },
 ] as const;
 
@@ -39,8 +41,7 @@ function Row({ title, desc, children }: { title: string; desc?: string; children
 
 export function SettingsCenter(p: Props) {
   const [tab, setTab] = useState<(typeof tabs)[number]["id"]>("general");
-  const [orchestraTab, setOrchestraTab] = useState<"agents" | "mcp">("agents");
-  const management = tab === "skills" || tab === "orchestra";
+  const management = tab === "agents" || tab === "skills" || tab === "mcp" || tab === "orchestra";
   return <Dialog open={p.open} onOpenChange={p.onOpenChange}>
     <DialogContent className="relay-settings-surface flex h-[min(860px,94dvh)] w-[min(1200px,96vw)] max-w-none gap-0 overflow-hidden rounded-[20px] p-0 [&>button:last-child]:hidden">
       <nav className="flex w-12 shrink-0 flex-col border-r border-border/50 bg-sidebar px-2 py-3 sm:w-[178px] sm:px-3 sm:py-4">
@@ -73,19 +74,19 @@ export function SettingsCenter(p: Props) {
             </div>
           </>}
           {tab === "models" && <ModelSettings userId={p.userId}/>}
+          {tab === "agents" && (!p.userId ? <LoginPrompt title="登录后才能管理 Agent" onClose={() => p.onOpenChange(false)}/> : <div className="min-h-0 flex-1 overflow-x-auto"><div className="h-full min-w-[650px]"><AgentsPage mode="manage"/></div></div>)}
           {tab === "skills" && (!p.userId ? <div className="flex flex-1 flex-col items-center justify-center gap-3 text-sm text-muted-foreground">登录后才能管理技能<Button asChild size="sm"><Link to="/auth" onClick={() => p.onOpenChange(false)}>去登录</Link></Button></div> : <div className="min-h-0 flex-1 overflow-x-auto"><div className="h-full min-w-[660px]"><SkillsPage/></div></div>)}
-          {tab === "orchestra" && <>
-            <div className="flex h-12 shrink-0 items-center gap-1 border-b border-border/50 px-4" role="tablist" aria-label="编排管理">
-              {([{ id: "agents", label: "Agent", icon: Bot }, { id: "mcp", label: "MCP 连接", icon: Plug }] as const).map(item => <Button key={item.id} role="tab" aria-selected={orchestraTab === item.id} variant={orchestraTab === item.id ? "secondary" : "ghost"} size="sm" className="h-8 gap-1.5 text-xs" onClick={() => setOrchestraTab(item.id)}><item.icon className="size-3.5"/>{item.label}</Button>)}
-            </div>
-            {!p.userId ? <div className="flex flex-1 flex-col items-center justify-center gap-3 text-sm text-muted-foreground">登录后才能管理 Agent、MCP 和 Skills<Button asChild size="sm"><Link to="/auth" onClick={() => p.onOpenChange(false)}>去登录</Link></Button></div> :
-              <div className="min-h-0 flex-1 overflow-x-auto" role="tabpanel"><div className={`h-full ${orchestraTab === "agents" ? "min-w-[850px]" : "min-w-[650px]"}`}>{orchestraTab === "agents" ? <AgentsPage/> : <McpPage/>}</div></div>}
-          </>}
+          {tab === "mcp" && (!p.userId ? <LoginPrompt title="登录后才能管理 MCP 连接" onClose={() => p.onOpenChange(false)}/> : <div className="min-h-0 flex-1 overflow-x-auto"><div className="h-full min-w-[650px]"><McpPage/></div></div>)}
+          {tab === "orchestra" && (!p.userId ? <LoginPrompt title="登录后才能编排 Agent 能力" onClose={() => p.onOpenChange(false)}/> : <div className="min-h-0 flex-1 overflow-x-auto"><div className="h-full min-w-[850px]"><AgentsPage mode="compose"/></div></div>)}
           {tab === "keys" && [["发送消息", "Enter"], ["换行", "Shift + Enter"], ["新建对话", "⌘ K"], ["搜索对话", "⌘ F"], ["快捷指令", "/"]].map(([l, k]) => <Row key={l} title={l!}><kbd className="rounded-md border bg-muted px-2 py-0.5 font-mono text-[11px]">{k}</kbd></Row>)}
         </div>
       </section>
     </DialogContent>
   </Dialog>;
+}
+
+function LoginPrompt({ title, onClose }: { title: string; onClose: () => void }) {
+  return <div className="flex flex-1 flex-col items-center justify-center gap-3 text-sm text-muted-foreground">{title}<Button asChild size="sm"><Link to="/auth" onClick={onClose}>去登录</Link></Button></div>;
 }
 
 const permOpts = { ask: { name: "操作前确认", desc: "删除、发送、运行脚本前弹卡片确认" }, auto: { name: "自动执行", desc: "不再询问，直接执行所有工具" }, readonly: { name: "只读", desc: "禁止任何写操作和脚本" } } as const;

@@ -31,3 +31,4 @@
 - [x] Add OpenAI API Key connection testing in model editing; hide its direct-model list until verified, while preserving application-service models; verify in the UI.
 - [x] Separate preset provider setup (provider, key, optional advanced model settings) from custom provider setup (ID, name, endpoint, protocol, key and models).
 - [x] Enlarge the Settings window and embed complete Skills, Agent, and MCP management without page navigation.
+- [x] Separate Settings navigation into General, Appearance, Models, Agent, Skills, MCP, Orchestration, and Shortcuts; keep configuration separate from capability composition.
