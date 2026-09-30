@@ -443,3 +443,22 @@ body { font-size: calc(16px * var(--relay-type-scale)); }
 .relay-model-add:disabled { opacity: .68; }
 .relay-model-status { box-shadow: 0 0 0 3px color-mix(in oklab, var(--success) 19%, transparent), 0 0 10px color-mix(in oklab, var(--success) 40%, transparent); }
 .relay-model-edit-row:focus-within { outline: 1px solid var(--primary); }
+
+/* Reference-matched settings: a quiet modal, inset provider form and inline model rows. */
+.relay-settings-surface { --model-outline: var(--border); --model-editor: #F7F8FA; --model-input: #FFFFFF; --model-ink: #15171C; --model-selected: #F0F2F8; }
+.dark .relay-settings-surface { --model-outline: color-mix(in oklab, white 36%, transparent); --model-editor: #24252A; --model-input: #1B1C20; --model-ink: #F4F4F5; --model-selected: #292A30; }
+.relay-models { color: var(--model-ink); }
+.relay-model-provider { border: 1px solid var(--model-outline); border-radius: 11px; background: var(--background); }
+.relay-model-editor { border-radius: 9px; background: var(--model-editor); }
+.relay-model-divider { border-top: 1px solid var(--border); }
+.relay-model-field { display: flex; flex-direction: column; gap: 5px; color: var(--muted-foreground); font-size: 11px; }
+.relay-model-input, .relay-model-select { background: var(--model-input); border: 1px solid var(--model-outline); color: var(--foreground); border-radius: 6px; box-shadow: none; }
+.relay-model-input:focus-visible, .relay-model-select:focus-visible { border-color: var(--ring); outline: 2px solid color-mix(in oklab, var(--ring) 23%, transparent); outline-offset: 0; }
+.relay-model-row-wrap { border: 1px solid var(--model-outline); border-radius: 7px; }
+.relay-model-row { display: flex; align-items: center; gap: 5px; min-width: 0; padding: 4px; }
+.relay-model-row-wrap:focus-within { border-color: var(--ring); }
+.relay-model-empty { padding: 12px 8px; border: 1px dashed var(--model-outline); border-radius: 6px; text-align: center; color: var(--muted-foreground); font-size: 11px; }
+.relay-model-add { border-color: var(--model-outline); background: var(--background); }
+.relay-model-add:hover { border-color: var(--foreground); background: var(--model-selected); }
+.relay-model-apply { background: var(--foreground); color: var(--background); }
+.relay-model-apply:hover { background: color-mix(in oklab, var(--foreground) 85%, var(--background)); }
