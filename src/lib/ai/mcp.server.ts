@@ -3,7 +3,7 @@ import type { ToolSet } from "ai";
 import { decryptSecret } from "./crypto.server";
 
 export type McpRow = { id: string; name: string; url: string; auth_type: string; header_name: string; proxy_url?: string | null; secret_enc: string | null; state: string; disabled_tools: string[] };
-export type McpToolInfo = { name: string; description: string };
+export type McpToolInfo = { name: string; description: string; inputSchema?: Record<string, unknown> };
 
 export function validateMcpUrl(url: string) {
   let u: URL;
@@ -35,7 +35,18 @@ export async function probeMcp(url: string, headers: Record<string, string>): Pr
   try {
     client = await connect(url, headers);
     const res = await client.listTools();
-    return res.tools.map(t => ({ name: t.name, description: (t.description ?? "").slice(0, 300) }));
+    return res.tools.map(t => ({ name: t.name, description: (t.description ?? "").slice(0, 300), inputSchema: t.inputSchema as Record<string, unknown> }));
+  } finally { await client?.close().catch(() => {}); }
+}
+
+/** Run one user-selected tool against a saved connection; never return connection credentials. */
+export async function runMcpTool(row: McpRow, name: string, args: Record<string, unknown>) {
+  const secret = row.secret_enc ? await decryptSecret(row.secret_enc) : null;
+  let client: MCPClient | undefined;
+  try {
+    client = await connect(withProxy(row.url, row.proxy_url), buildHeaders(row.auth_type, row.header_name, secret));
+    const result = await client.callTool({ name, arguments: args, options: { timeout: 20000 } });
+    return { isError: result.isError === true, content: JSON.stringify(result.content).slice(0, 30000) };
   } finally { await client?.close().catch(() => {}); }
 }
 
