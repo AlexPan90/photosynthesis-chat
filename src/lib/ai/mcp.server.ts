@@ -47,7 +47,10 @@ export async function runMcpTool(row: McpRow, name: string, args: Record<string,
   try {
     client = await connect(withProxy(row.url, row.proxy_url), buildHeaders(row.auth_type, row.header_name, secret));
     const result = await client.callTool({ name, arguments: args, options: { timeout: 20000 } });
-    const content = result.content.map(part => part.type === "text" ? part.text : JSON.stringify(part)).join("\n\n");
+    const content = Array.isArray(result.content) ? result.content.map((part: unknown) => {
+      if (part && typeof part === "object" && "type" in part && part.type === "text" && "text" in part && typeof part.text === "string") return part.text;
+      return JSON.stringify(part);
+    }).join("\n\n") : JSON.stringify(result.content);
     return { isError: result.isError === true, content: content.slice(0, 30000) };
   } finally { await client?.close().catch(() => {}); }
 }
