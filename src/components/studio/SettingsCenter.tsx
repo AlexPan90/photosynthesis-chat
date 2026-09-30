@@ -39,7 +39,7 @@ export function SettingsCenter(p: Props) {
   const [tab, setTab] = useState<(typeof tabs)[number]["id"]>("general");
   const current = tabs.find(t => t.id === tab)!;
   return <Dialog open={p.open} onOpenChange={p.onOpenChange}>
-    <DialogContent className="relay-settings-surface flex h-[min(720px,88vh)] w-[min(1040px,94vw)] max-w-none gap-0 overflow-hidden rounded-2xl p-0 [&>button:last-child]:hidden">
+    <DialogContent className="relay-settings-surface flex h-[min(820px,92vh)] w-[min(1040px,94vw)] max-w-none gap-0 overflow-hidden rounded-2xl p-0 [&>button:last-child]:hidden">
       <nav className="flex w-14 shrink-0 flex-col border-r border-border/60 bg-sidebar/60 p-2 sm:w-56 sm:p-3">
         <DialogTitle className="flex items-center justify-center gap-2 px-1 pb-4 pt-2 text-[15px] font-semibold sm:justify-start sm:px-2.5"><Settings2 className="size-4 shrink-0"/><span className="hidden sm:inline">设置中心</span></DialogTitle>
         {tabs.map(t => <Button key={t.id} variant="ghost" size="sm" title={t.label} aria-label={t.label} onClick={() => setTab(t.id)} className={`mb-0.5 flex h-9 w-full items-center justify-center gap-2.5 rounded-lg px-2.5 text-[13px] sm:justify-start ${tab === t.id ? "bg-accent font-medium text-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"}`}><t.icon className="size-4 shrink-0"/><span className="hidden sm:inline">{t.label}</span></Button>)}
