@@ -31,7 +31,7 @@ export const saveModel = createServerFn({ method: "POST" })
       await verifyDirectModel(data.modelId, data.connectionType === "direct" ? key : undefined);
     }
     const record = {
-      user_id: userId, model_id: data.modelId, label: data.label, version: data.version,
+      user_id: userId, model_id: data.modelId, label: data.label, provider: "OpenAI", version: data.version,
       description: data.description, parameters: { reasoningEffort: data.reasoningEffort },
       connection_type: data.connectionType, enabled: true,
       verified_at: mustVerify ? new Date().toISOString() : existing?.verified_at,
