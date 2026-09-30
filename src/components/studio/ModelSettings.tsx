@@ -82,16 +82,15 @@ export function ModelSettings({ userId }: { userId: string | undefined }) {
   const canAdd = catalog.some(m => !rows.some(row => row.modelId === m.model_id));
   return <div className="py-5">
     <div className="mb-5">
-      <h4 className="text-[14px] font-semibold">模型</h4>
-      <p className="mt-1.5 text-[12px] text-muted-foreground">管理已接入服务的模型。保存后可在对话中选择。</p>
+      <h4 className="text-[15px] font-semibold">模型</h4>
+      <p className="mt-2 text-[12px] text-muted-foreground">配置模型服务商，在对话中使用已验证的模型。</p>
     </div>
     {!userId && <p className="mb-4 text-xs text-muted-foreground">登录后可管理模型。</p>}
     {loaded && (saved.length > 0 || editing) && <div className="relay-model-card">
-      <div className="flex h-14 items-center gap-2 px-4">
+      <div className="flex h-12 items-center gap-2 px-4">
         <span className="font-medium text-[13px]">OpenAI</span>
         {!!saved.length && <span className="relay-model-status size-1.5 rounded-full bg-success" aria-label="已连接"/>}
-        <span className="ml-auto text-[11px] text-muted-foreground">{saved.length} 个模型</span>
-        {!editing && <Button variant="outline" size="sm" className="ml-2 h-7 rounded-lg px-3 text-[11px]" onClick={() => begin()} disabled={!userId}>编辑</Button>}
+        {!editing && <Button variant="outline" size="sm" className="ml-auto h-7 rounded-md px-3 text-[11px]" onClick={() => begin()} disabled={!userId}>编辑</Button>}
       </div>
       {editing ? <div className="relay-model-editor mx-3 mb-3 rounded-lg p-4">
         <div className="space-y-1.5">
@@ -112,7 +111,7 @@ export function ModelSettings({ userId }: { userId: string | undefined }) {
                 {saved.some(m => m.model_id === row.modelId) ? <div className="relay-model-readonly flex h-8 min-w-0 items-center truncate rounded-md px-2.5 font-mono text-[11px]" title={row.modelId}>{row.modelId}</div> : <select aria-label={`选择模型 ${i + 1}`} value={row.modelId} onChange={e => { const option = catalog.find(m => m.model_id === e.target.value); if (option) changeRow(i, { modelId: option.model_id, label: option.label }); }} className="relay-model-select h-8 w-full rounded-md border px-2 font-mono text-[11px]">{catalog.filter(m => m.model_id === row.modelId || !rows.some(r => r.modelId === m.model_id)).map(m => <option key={m.model_id} value={m.model_id}>{m.model_id}</option>)}</select>}
               </div>
               <Input aria-label={`${row.modelId} 显示名称`} value={row.label} maxLength={80} onChange={e => changeRow(i, { label: e.target.value })} className="relay-model-input col-start-1 row-start-2 h-8 min-w-0 rounded-md px-2.5 text-[11px] sm:col-start-2 sm:row-start-1"/>
-              <Button variant="ghost" size="icon-sm" aria-label={`移除 ${row.label}`} title={`移除 ${row.label}`} className="col-start-2 row-span-2 size-8 shrink-0 text-muted-foreground hover:text-destructive sm:col-start-3 sm:row-span-1" onClick={() => setRows(previous => previous.filter((_, index) => index !== i))}><Trash2 className="size-3.5"/></Button>
+               <Button variant="ghost" size="icon-sm" aria-label={`移除 ${row.label}`} title={`移除 ${row.label}`} className="col-start-2 row-span-2 size-8 shrink-0 text-muted-foreground hover:text-destructive sm:col-start-3 sm:row-span-1" onClick={() => setRows(previous => previous.filter((_, index) => index !== i))}><Trash2 className="size-3.5"/></Button>
             </div>)}</div>
             {canAdd && <Button variant="outline" size="sm" className="mt-2 h-7 rounded-md px-2 text-[11px]" onClick={addRow}><Plus className="size-3"/>添加模型</Button>}
             {!rows.length && <p className="py-3 text-[11px] text-muted-foreground">尚无模型。添加模型后即可在对话中切换。</p>}
@@ -122,13 +121,8 @@ export function ModelSettings({ userId }: { userId: string | undefined }) {
           <Button variant="outline" size="sm" className="h-8" onClick={cancel} disabled={busy}>取消</Button>
           <Button size="sm" className="h-8" onClick={() => void apply()} disabled={busy || rows.some(row => !row.label.trim())}>{busy && <LoaderCircle className="size-3.5 animate-spin"/>}应用</Button>
         </div>
-      </div> : <div className="border-t border-border/60 px-4 py-3">
-        <div className="space-y-1.5">{saved.map(model => <div key={model.id} className="relay-model-summary flex min-w-0 items-center gap-1 rounded-md px-2 py-1.5">
-          <Button variant="ghost" size="sm" className="min-w-0 flex-1 justify-start gap-2 px-1.5 text-left text-[12px]" onClick={() => begin()}><span className="truncate font-medium">{model.label}</span><span className="ml-auto hidden min-w-0 max-w-[55%] truncate font-mono text-[11px] text-muted-foreground sm:block">{model.model_id}</span><ChevronRight className="size-3.5 shrink-0 text-muted-foreground"/></Button>
-          <Button variant="ghost" size="icon-sm" title={`验证 ${model.label}`} aria-label={`验证 ${model.label}`} disabled={refreshing} className="size-6 shrink-0 text-success" onClick={() => void recheck(model)}>{refreshing ? <LoaderCircle className="size-3 animate-spin"/> : <Check className="size-3"/>}</Button>
-        </div>)}</div>
-      </div>}
+       </div> : null}
     </div>}
-    {loaded && <Button variant="outline" className="relay-model-add mt-3 h-10 w-full justify-center rounded-lg border-dashed text-[12px]" disabled={!userId} onClick={() => begin(true)}><Plus className="size-3.5"/>{saved.length ? "添加模型" : "添加提供商"}</Button>}
+     {loaded && <Button variant="outline" className="relay-model-add mt-3 h-10 w-full justify-center rounded-lg border-dashed text-[12px]" disabled={!userId || !!saved.length || editing} title={saved.length ? "目前仅支持 OpenAI，点击编辑可管理其中的模型" : undefined} onClick={() => begin(true)}><Plus className="size-3.5"/>添加提供商</Button>}
   </div>;
 }
