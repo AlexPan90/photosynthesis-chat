@@ -145,6 +145,36 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_provider_connections: {
+        Row: {
+          created_at: string
+          id: string
+          provider: string
+          secret_enc: string
+          updated_at: string
+          user_id: string
+          verified_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          provider: string
+          secret_enc: string
+          updated_at?: string
+          user_id?: string
+          verified_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          provider?: string
+          secret_enc?: string
+          updated_at?: string
+          user_id?: string
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
       delegate_sessions: {
         Row: {
           agent_id: string
