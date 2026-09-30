@@ -462,3 +462,13 @@ body { font-size: calc(16px * var(--relay-type-scale)); }
 .relay-model-add:hover { border-color: var(--foreground); background: var(--model-selected); }
 .relay-model-apply { background: var(--foreground); color: var(--background); }
 .relay-model-apply:hover { background: color-mix(in oklab, var(--foreground) 85%, var(--background)); }
+.relay-model-provider-trigger { background: var(--model-input); border: 1px solid var(--model-outline); color: var(--foreground); border-radius: 7px; box-shadow: none; }
+.relay-model-provider-trigger:hover { border-color: color-mix(in oklab, var(--foreground) 38%, var(--model-outline)); background: color-mix(in oklab, var(--foreground) 2%, var(--model-input)); }
+.relay-model-provider-trigger:focus-visible, .relay-model-provider-trigger[data-state="open"] { outline: none; border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 15%, transparent); }
+.relay-model-provider-trigger[data-state="open"] svg { transform: rotate(180deg); }
+.relay-model-provider-trigger svg { transition: transform 150ms ease; }
+.relay-model-provider-menu { border: 1px solid var(--border); background: var(--popover); color: var(--popover-foreground); box-shadow: 0 12px 30px color-mix(in oklab, var(--foreground) 12%, transparent); }
+.relay-model-provider-option[data-highlighted] { background: var(--accent); color: var(--foreground); }
+.relay-model-provider-option[data-state="checked"] { background: color-mix(in oklab, var(--primary) 8%, var(--popover)); color: var(--foreground); }
+.relay-model-provider-option[data-highlighted][data-state="checked"] { background: color-mix(in oklab, var(--primary) 13%, var(--popover)); }
+@media (prefers-reduced-motion: reduce) { .relay-model-provider-trigger svg { transition: none; } }
