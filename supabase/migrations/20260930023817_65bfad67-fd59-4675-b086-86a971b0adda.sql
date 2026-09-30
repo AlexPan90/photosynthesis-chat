@@ -1,0 +1,1 @@
+CREATE POLICY "server only credentials" ON public.ai_model_credentials FOR ALL TO service_role USING (true) WITH CHECK (true);

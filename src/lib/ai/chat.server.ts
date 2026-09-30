@@ -103,7 +103,6 @@ export async function handleChat(request: Request) {
   if (!parsed.success) return json(400, "请求格式不正确");
   const { threadId, agentId } = parsed.data;
   let model: string = parsed.data.model;
-  if (!isSupportedModel(model)) return json(400, "模型尚未接入当前服务");
   const messages = parsed.data.messages as UIMessage[];
 
   const { data: thread } = await supabase.from("threads").select("id,title,summary,summary_upto,permission,plan_mode,goal").eq("id", threadId).maybeSingle();
@@ -114,8 +113,9 @@ export async function handleChat(request: Request) {
   const active = agentId ? agents.find(a => a.id === agentId) ?? null : null;
   if (agentId && !active) return json(404, "Agent 不存在或已被删除");
   if (active && isSupportedModel(active.model)) model = active.model;
-  const { data: configured } = await supabase.from("ai_models").select("model_id").eq("model_id", model).eq("enabled", true).not("verified_at", "is", null).maybeSingle();
+  const { data: configured } = await supabase.from("ai_models").select("id,model_id,connection_type,parameters").eq("model_id", model).eq("enabled", true).not("verified_at", "is", null).maybeSingle();
   if (!configured) return json(400, "模型未配置或尚未通过验证");
+  if (configured.connection_type === "gateway" && !isSupportedModel(model)) return json(400, "模型尚未接入当前服务");
 
   const last = messages[messages.length - 1];
   // 消息分支：每个回复挂在它回答的提问下（parent_id），同一提问下多个回复即多个版本。
@@ -144,12 +144,19 @@ export async function handleChat(request: Request) {
     parentId = idx >= 0 && messages[idx]?.role === "user" ? messages[idx]!.id : null;
   }
 
-  const apiKey = process.env["LOVABLE_API_KEY"];
+  let apiKey = process.env["LOVABLE_API_KEY"];
+  const direct = configured.connection_type === "direct";
+  if (direct) {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: credential } = await supabaseAdmin.from("ai_model_credentials").select("secret_enc").eq("model_id", configured.id).eq("user_id", userId).maybeSingle();
+    if (!credential) return json(400, "该模型缺少 API Key，请在设置中重新保存");
+    const { decryptSecret } = await import("./crypto.server");
+    apiKey = await decryptSecret(credential.secret_enc);
+  }
   if (!apiKey) return json(500, "AI 服务未配置");
   const runIdFetch = createLovableAiGatewayRunIdFetch(getLovableAiGatewayRunId(request));
-  const provider = createOpenAI({
-    baseURL: GATEWAY,
-    apiKey,
+  const provider = createOpenAI(direct ? { apiKey } : {
+    baseURL: GATEWAY, apiKey,
     headers: { "Lovable-API-Key": apiKey, "X-Lovable-AIG-SDK": "vercel-ai-sdk" },
     fetch: runIdFetch.fetch,
   });
@@ -170,7 +177,7 @@ export async function handleChat(request: Request) {
   const permission = thread.permission === "auto" || thread.permission === "readonly" ? thread.permission : "ask";
   const readOnly = permission === "readonly" || thread.plan_mode;
   const isWrite = (name: string) => name === "run_skill_script" || name === "run_js" || name === "delegate_action" || (name in mcp.tools && needsApproval(name));
-  const allTools: ToolSet = { ...pickTools(toolIds), ...mcp.tools, ...skillTools(skills), ...(delegates.length ? { delegate_to_agent: delegateTool(provider, delegates, request.signal, subRes), delegate_action: delegateActionTool(provider, delegates, request.signal, subRes) } : {}) };
+  const allTools: ToolSet = { ...pickTools(toolIds), ...mcp.tools, ...skillTools(skills), ...(!direct && delegates.length ? { delegate_to_agent: delegateTool(provider, delegates, request.signal, subRes), delegate_action: delegateActionTool(provider, delegates, request.signal, subRes) } : {}) };
   const tools = readOnly ? Object.fromEntries(Object.entries(allTools).filter(([n]) => !isWrite(n))) : allTools;
   const cut = thread.summary && thread.summary_upto ? messages.findIndex(m => m.id === thread.summary_upto) : -1;
   const history = cut >= 0 ? messages.slice(cut + 1) : messages;
@@ -178,7 +185,7 @@ export async function handleChat(request: Request) {
   const stateNote = `${goalNote}${cut >= 0 ? `\n\n【早期对话摘要】\n${thread.summary}` : ""}${thread.plan_mode ? "\n\n【计划模式】只制定计划，不执行任何修改外部数据的操作。可以用只读工具（搜索、读取）收集信息，然后输出编号的分步计划：每步写清做什么、用哪个工具或 Agent、预期结果，最后询问用户是否按计划执行。" : permission === "readonly" ? "\n\n【只读权限】当前对话禁止删除、发送、创建、修改和运行脚本，如用户要求这类操作，说明需要先用 /permission 调整权限。" : ""}`;
   const result = streamText({
     model: provider.responses(model),
-    system: `${systemFor(active)}${skillsPrompt(skills)}${delegates.length ? "\n当子任务明显更适合某个专门 Agent 时，调用 delegate_to_agent 委派，然后整合结果回答。" : ""}${stateNote}`,
+    system: `${systemFor(active)}${skillsPrompt(skills)}${!direct && delegates.length ? "\n当子任务明显更适合某个专门 Agent 时，调用 delegate_to_agent 委派，然后整合结果回答。" : ""}${stateNote}`,
     messages: await convertToModelMessages(history.length ? history : messages),
     tools: tools as ToolSet,
     stopWhen: stepCountIs(50),
@@ -201,7 +208,7 @@ export async function handleChat(request: Request) {
     },
     ...(process.env["MCP_ENC_KEY"] ? { experimental_toolApprovalSecret: `approval:${process.env["MCP_ENC_KEY"]}` } : {}),
     abortSignal: request.signal,
-    providerOptions: OPENAI_OPTIONS,
+    providerOptions: { openai: (direct && !/^gpt-[56]/.test(model)) ? { store: false } : { ...OPENAI_OPTIONS.openai, reasoningEffort: (["low", "medium", "high"].includes((configured.parameters as { reasoningEffort?: string } | null)?.reasoningEffort ?? "") ? (configured.parameters as { reasoningEffort: "low" | "medium" | "high" }).reasoningEffort : "medium") } },
     onFinish: closeMcp,
     onError: closeMcp,
   });
@@ -233,8 +240,9 @@ export async function handleChat(request: Request) {
       const status = (error as { statusCode?: number })?.statusCode;
       if (status === 402) return "AI 额度不足，请在 设置 → 套餐与额度 中充值后再试。";
       if (status === 429) return "请求过于频繁，请稍后再试。";
-      if (status === 403) return "当前模型暂不可用（访问被拒绝）。";
-      return "生成回复时出错，请稍后重试。";
+       if (status === 403) return "当前模型访问被拒绝，请检查此账户的使用权限。";
+       if (status === 401) return "模型密钥无效，请在设置中更新。";
+       return (error as Error)?.message || "生成回复时出错，请稍后重试。";
     },
   });
   return withLovableAiGatewayRunIdHeader(response, runIdFetch);

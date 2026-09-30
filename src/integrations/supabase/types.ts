@@ -62,39 +62,83 @@ export type Database = {
         }
         Relationships: []
       }
-      ai_models: {
+      ai_model_credentials: {
         Row: {
           created_at: string
+          model_id: string
+          secret_enc: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          model_id: string
+          secret_enc: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          model_id?: string
+          secret_enc?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_model_credentials_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: true
+            referencedRelation: "ai_models"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_models: {
+        Row: {
+          connection_type: string
+          created_at: string
+          description: string
           enabled: boolean
           id: string
           label: string
           model_id: string
+          parameters: Json
           provider: string
           updated_at: string
           user_id: string
           verified_at: string | null
+          version: string
         }
         Insert: {
+          connection_type?: string
           created_at?: string
+          description?: string
           enabled?: boolean
           id?: string
           label: string
           model_id: string
+          parameters?: Json
           provider: string
           updated_at?: string
           user_id: string
           verified_at?: string | null
+          version?: string
         }
         Update: {
+          connection_type?: string
           created_at?: string
+          description?: string
           enabled?: boolean
           id?: string
           label?: string
           model_id?: string
+          parameters?: Json
           provider?: string
           updated_at?: string
           user_id?: string
           verified_at?: string | null
+          version?: string
         }
         Relationships: []
       }

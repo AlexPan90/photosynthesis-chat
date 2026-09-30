@@ -22,6 +22,7 @@ import { WorkspacePanel } from "./WorkspacePanel";
 import { demoFiles } from "./files";
 import { LiveChat, fmtTok, ModelMenu, modelLabel, type LiveModel } from "./LiveChat";
 import { updateThreadModel } from "@/lib/orchestra.functions";
+import { useModels } from "./useModels";
 import { useSlashCommands, type SlashCommand } from "./slash-commands";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -99,6 +100,7 @@ function AttachedFiles() { const { files, remove, openFileDialog } = usePromptIn
 export function Studio({ threadId }: { threadId?: string }) {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const { available: availableModels } = useModels(user?.id);
   const [liveThreads, setLiveThreads] = useState<Thread[]>([]);
   const [demoThreads, setDemoThreads] = useState<Thread[]>(seed);
   const [ctxPill, setCtxPill] = useState(true);
@@ -164,7 +166,7 @@ export function Studio({ threadId }: { threadId?: string }) {
   }
   function changeModel(m: LiveModel) {
     setModel(m);
-    setNotice(`已切换到 ${modelLabel(m)}`);
+    setNotice(`已切换到 ${availableModels.find(item => item.model_id === m)?.label ?? modelLabel(m)}`);
     setTimeout(() => setNotice(""), 2200);
     if (isLive && threadId) {
       setLiveThreads(prev => prev.map(t => t.id === threadId ? { ...t, model: m, agentId: null } : t));

@@ -26,3 +26,4 @@
 - [x] Apply the selected Glass paned command center direction across the full chat workspace and verify desktop, workspace, and mobile states.
 - [x] Unify the chat workspace font-size preference across navigation, transcript, controls and artifact previews.
 - [x] Refine markdown tables, image/chart previews and delivered files by content type; verify light/dark and narrow layouts.
+- [x] Add model metadata and secure OpenAI API-key setup; verify edits and model switching in a real conversation.

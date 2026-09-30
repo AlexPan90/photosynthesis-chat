@@ -190,7 +190,7 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
     for (const m of messages) {
       const t = m.parts.filter(p => p.type === "text").map(p => p.text).join("\n").trim();
       if (!t) continue;
-      lines.push(m.role === "user" ? `## 你` : `## ${modelLabel(model)}`, "", t, "");
+      lines.push(m.role === "user" ? `## 你` : `## ${available.find(item => item.model_id === model)?.label ?? modelLabel(model)}`, "", t, "");
     }
     const blob = new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" });
     const a = document.createElement("a");
@@ -255,7 +255,7 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
         const text = m.parts.filter(p => p.type === "text").map(p => p.text).join("\n");
         const streamingThis = busy && i === messages.length - 1 && isAgent;
          return <div key={m.id} id={`msg-${m.id}`} className="relay-message mb-8 flex gap-4 scroll-mt-6 rounded-lg transition-colors duration-700 data-[flash=true]:bg-primary/5">{isAgent ? <Mark/> : <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-card text-[11px] font-semibold text-muted-foreground">{initials}</div>}<div className="min-w-0 flex-1 pt-1.5">
-           {isAgent && <div className="mb-1 text-[11px] font-medium text-muted-foreground">{activeAgent?.name ?? modelLabel(model)}</div>}
+           {isAgent && <div className="mb-1 text-[11px] font-medium text-muted-foreground">{activeAgent?.name ?? available.find(item => item.model_id === model)?.label ?? modelLabel(model)}</div>}
            {m.parts.map((p, idx) => {
             if (p.type === "reasoning" && p.text) return <Reasoning key={idx} className="mb-2 w-full" isStreaming={streamingThis && idx === m.parts.length - 1}><ReasoningTrigger className="text-[11px]"/><ReasoningContent className="text-[12px] text-muted-foreground">{p.text}</ReasoningContent></Reasoning>;
             if (p.type.startsWith("tool-") || p.type === "dynamic-tool") {
@@ -289,7 +289,7 @@ export function LiveChat({ threadId, initialMessages, initialVersions = {}, mode
       {stats && <div className="mb-2 rounded-lg border bg-card p-3 text-[12px]"><div className="mb-2 flex items-center gap-2 font-medium"><BarChart3 className="size-3.5 text-primary"/>回复评分统计<button type="button" onClick={() => setStats(null)} className="ml-auto text-muted-foreground hover:text-foreground"><X className="size-3.5"/></button></div>
         {stats.up + stats.down === 0 ? <p className="text-muted-foreground">还没有评分。在回复下方点 👍 / 👎 即可评分。</p> : <>
         <div className="mb-3 grid grid-cols-3 gap-2">{[["全部评分", `${stats.up + stats.down}`], ["满意率", `${Math.round(stats.up / (stats.up + stats.down) * 100)}%`], ["本对话", `👍 ${stats.thread.up} · 👎 ${stats.thread.down}`]].map(([k, v]) => <div key={k} className="rounded-md bg-muted/40 px-2.5 py-2"><div className="text-[10px] text-muted-foreground">{k}</div><div className="font-display text-sm font-semibold">{v}</div></div>)}</div>
-        <div className="space-y-1.5">{stats.byModel.map(r => { const n = r.up + r.down; return <div key={r.model} className="flex items-center gap-2"><span className="w-32 truncate text-muted-foreground">{r.model.startsWith("agent:") ? `Agent · ${r.model.slice(6)}` : modelLabel(r.model)}</span><div className="flex h-1.5 flex-1 overflow-hidden rounded-full bg-destructive/30"><div className="bg-primary" style={{ width: `${r.up / n * 100}%` }}/></div><span className="w-16 text-right tabular-nums text-muted-foreground">{r.up}/{n}</span></div>; })}</div>
+        <div className="space-y-1.5">{stats.byModel.map(r => { const n = r.up + r.down; return <div key={r.model} className="flex items-center gap-2"><span className="w-32 truncate text-muted-foreground">{r.model.startsWith("agent:") ? `Agent · ${r.model.slice(6)}` : available.find(item => item.model_id === r.model)?.label ?? modelLabel(r.model)}</span><div className="flex h-1.5 flex-1 overflow-hidden rounded-full bg-destructive/30"><div className="bg-primary" style={{ width: `${r.up / n * 100}%` }}/></div><span className="w-16 text-right tabular-nums text-muted-foreground">{r.up}/{n}</span></div>; })}</div>
         {stats.recent.length > 0 && <div className="mt-3 border-t pt-2"><div className="mb-1 text-[10px] text-muted-foreground">最近的意见</div>{stats.recent.map((r, i) => <div key={i} className="truncate py-0.5">{r.rating > 0 ? "👍" : "👎"} {r.comment}</div>)}</div>}</>}
       </div>}
        <PromptInput className="relay-composer overflow-hidden rounded-xl border bg-card transition-[border-color,box-shadow] duration-200 focus-within:border-primary/50" onSubmit={({ text }) => submit(text)}>
