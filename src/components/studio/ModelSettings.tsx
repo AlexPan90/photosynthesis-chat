@@ -125,7 +125,7 @@ export function ModelSettings({ userId }: { userId: string | undefined }) {
     {catalog.length > 0 && <select aria-label="已发现模型" className="relay-model-select mt-2 h-8 w-full rounded-md px-2 text-[12px]" value="" onChange={e => { if (e.target.value && !rows.some(r => r.modelId === e.target.value)) setRows(prev => [...prev, { ...fresh(custom ? providerName : preset ? selectedPreset : active ?? "OpenAI", baseUrl), modelId:e.target.value, label:e.target.value, apiKey: custom || preset ? customKey : key }]); }}><option value="">Choose a discovered model to add</option>{catalog.map(id => <option key={id} value={id}>{id}</option>)}</select>}
     <Button variant="outline" size="sm" className="relay-model-small-action mt-2 h-7 rounded-full px-2 text-[11px]" disabled={active === "OpenAI" && !connected} onClick={() => setRows(prev => [...prev, { ...fresh(custom ? providerName : preset ? selectedPreset : active ?? "OpenAI", baseUrl), connectionType: "direct", apiKey: custom || preset ? customKey : key }])}><Plus className="size-3"/>Add model</Button>
   </>;
-  return <div className="relay-models py-3">
+  return <div className="relay-models py-2">
     <h4 className="text-[13px] font-medium">Models</h4>
     <p className="mb-5 mt-2 text-[12px] text-muted-foreground">Enter your API keys to use models from the following providers.</p>
     {loaded && providers.map(name => <div key={name} className="mb-2.5">

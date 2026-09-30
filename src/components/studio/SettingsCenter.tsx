@@ -45,7 +45,7 @@ export function SettingsCenter(p: Props) {
 
       </nav>
       <section className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-10 shrink-0 items-center justify-end px-3">
+        <header className="flex h-8 shrink-0 items-center justify-end px-3">
           <div className="flex items-center gap-1">
             {tab !== "models" && <Button asChild variant="outline" size="sm" className="hidden h-7 text-[11px] sm:inline-flex"><Link to="/studio/agents" onClick={() => p.onOpenChange(false)}>打开编排中心<ArrowUpRight className="size-3.5"/></Link></Button>}
             <Button variant="ghost" size="icon" className="size-7" onClick={() => p.onOpenChange(false)} aria-label="关闭"><X className="size-4"/></Button>

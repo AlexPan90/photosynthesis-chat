@@ -472,3 +472,51 @@ body { font-size: calc(16px * var(--relay-type-scale)); }
 .relay-model-provider-option[data-state="checked"] { background: color-mix(in oklab, var(--primary) 8%, var(--popover)); color: var(--foreground); }
 .relay-model-provider-option[data-highlighted][data-state="checked"] { background: color-mix(in oklab, var(--primary) 13%, var(--popover)); }
 @media (prefers-reduced-motion: reduce) { .relay-model-provider-trigger svg { transition: none; } }
+
+/* Model settings reference: aligned outer frame, restrained provider hierarchy. */
+.relay-settings-surface[role="dialog"] {
+  border: 1px solid var(--model-frame-outline) !important;
+  box-shadow: 0 22px 64px color-mix(in oklab, var(--foreground) 13%, transparent);
+}
+.relay-settings-surface {
+  --model-frame-outline: #ECEEF1;
+  --model-outline: #E4E7EC;
+  --model-editor: #F7F8FA;
+  --model-input: #FFFFFF;
+  --model-selected: #F0F2F7;
+}
+.dark .relay-settings-surface {
+  --model-frame-outline: #43444C;
+  --model-outline: #555760;
+  --model-editor: #24252B;
+  --model-input: #1A1B20;
+  --model-selected: #34353D;
+}
+.relay-models { font-family: var(--font-sans); }
+.relay-model-provider {
+  background: var(--background);
+  border-color: var(--model-outline);
+  border-radius: 11px;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+.relay-model-provider:hover { border-color: color-mix(in oklab, var(--foreground) 32%, var(--model-outline)); background: color-mix(in oklab, var(--foreground) 1.5%, var(--background)); }
+.relay-model-connection-dot { box-shadow: none; }
+.relay-model-connection-dot.bg-success { box-shadow: 0 0 0 2px color-mix(in oklab, var(--success) 14%, transparent); }
+.relay-model-edit-button { background: var(--background); border-color: var(--model-outline); border-radius: 9px; box-shadow: none; }
+.relay-model-edit-button:hover { background: var(--model-selected); border-color: color-mix(in oklab, var(--foreground) 36%, var(--model-outline)); }
+.relay-model-editor { border-radius: 9px; background: var(--model-editor); }
+.relay-model-divider { border-color: var(--model-outline); }
+.relay-model-field { gap: 5px; font-size: 11px; font-weight: 400; color: var(--muted-foreground); }
+.relay-model-input, .relay-model-select { border-color: var(--model-outline); background: var(--model-input); }
+.relay-model-row-wrap { border-color: var(--model-outline); background: color-mix(in oklab, var(--model-input) 42%, var(--model-editor)); }
+.relay-model-row-wrap:hover { border-color: color-mix(in oklab, var(--foreground) 35%, var(--model-outline)); }
+.relay-model-row .relay-model-input { background: var(--model-input); }
+.relay-model-details { border-top: 1px solid var(--model-outline); }
+.relay-model-empty { border-color: var(--model-outline); }
+.relay-model-small-action { box-shadow: none; border-color: var(--model-outline); background: var(--model-input); }
+.relay-model-small-action:hover { background: var(--model-selected); }
+.relay-model-add { background: var(--background); border-color: var(--model-outline); box-shadow: none; }
+.relay-model-add:hover { background: var(--model-selected); }
+.relay-model-apply { background: var(--model-ink); color: var(--background); box-shadow: none; }
+.relay-model-apply:hover { background: color-mix(in oklab, var(--model-ink) 86%, var(--background)); color: var(--background); }
+@media (prefers-reduced-motion: reduce) { .relay-model-provider { transition: none; } }
