@@ -96,7 +96,7 @@ export function ModelSettings({ userId }: { userId: string | undefined }) {
         <div className="space-y-1.5">
           <span className="text-[11px] text-muted-foreground">提供商</span>
            <div className="relay-model-readonly flex h-9 items-center rounded-md px-3 text-[12px]">OpenAI <Check className="ml-auto size-3.5 text-success"/></div>
-           {saved.length > 0 && <Button variant="ghost" size="sm" className="h-7 px-0 text-[11px] text-muted-foreground" disabled={refreshing} onClick={() => void recheck(saved[0])}>{refreshing ? <LoaderCircle className="size-3 animate-spin"/> : <Check className="size-3 text-success"/>}验证连接</Button>}
+           {saved[0] && <Button variant="ghost" size="sm" className="h-7 px-0 text-[11px] text-muted-foreground" disabled={refreshing} onClick={() => { const model = saved[0]; if (model) void recheck(model); }}>{refreshing ? <LoaderCircle className="size-3 animate-spin"/> : <Check className="size-3 text-success"/>}验证连接</Button>}
         </div>
         <div className="mt-4 space-y-1.5">
           <span className="text-[11px] text-muted-foreground">API 密钥</span>
