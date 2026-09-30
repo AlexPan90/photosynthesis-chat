@@ -11,11 +11,20 @@ import { notifyModelsChanged, useModels } from "./useModels";
 type Draft = { id?: string; modelId: string; label: string; version: string; description: string; reasoningEffort: "low" | "medium" | "high"; connectionType: "gateway" | "direct"; providerName: string; baseUrl: string; apiKey: string };
 const fresh = (providerName: string, baseUrl = ""): Draft => ({ modelId: "", label: "", version: "", description: "", reasoningEffort: "medium", connectionType: providerName === "OpenAI" ? "gateway" : "direct", providerName, baseUrl, apiKey: "" });
 const fromModel = (m: ConfiguredModel): Draft => ({ id: m.id, modelId: m.model_id, label: m.label, version: m.version ?? "", description: m.description ?? "", reasoningEffort: m.parameters?.reasoningEffort ?? "medium", connectionType: m.connection_type === "direct" ? "direct" : "gateway", providerName: m.provider, baseUrl: m.base_url ?? "", apiKey: "" });
+const providerPresets = [
+  { name: "DeepSeek", url: "https://api.deepseek.com/v1" },
+  { name: "Groq", url: "https://api.groq.com/openai/v1" },
+  { name: "Mistral", url: "https://api.mistral.ai/v1" },
+  { name: "Together", url: "https://api.together.xyz/v1" },
+  { name: "Fireworks", url: "https://api.fireworks.ai/inference/v1" },
+] as const;
 
 export function ModelSettings({ userId }: { userId: string | undefined }) {
   const { models, loaded, reload } = useModels(userId);
   const [active, setActive] = useState<string | null>(null);
   const [custom, setCustom] = useState(false);
+  const [preset, setPreset] = useState(false);
+  const [selectedPreset, setSelectedPreset] = useState<string>(providerPresets[0].name);
   const [rows, setRows] = useState<Draft[]>([]);
   const [removed, setRemoved] = useState<ConfiguredModel[]>([]);
   const [details, setDetails] = useState<number | null>(null);
@@ -33,15 +42,16 @@ export function ModelSettings({ userId }: { userId: string | undefined }) {
   const [customKey, setCustomKey] = useState("");
   const [connectionChecked, setConnectionChecked] = useState(false);
   const providers = [...new Set(["OpenAI", ...models.map(m => m.provider)])];
+  const availablePresets = providerPresets.filter(p => !providers.includes(p.name));
   const canSee = active !== "OpenAI" || connected;
   const inputStyle = "relay-model-input h-8 text-[12px]";
   const label = (text: string, children: React.ReactNode) => <label className="relay-model-field">{text}{children}</label>;
   const refresh = async () => { await reload(); notifyModelsChanged(); };
   const patchRow = (index: number, patch: Partial<Draft>) => setRows(prev => prev.map((r, i) => i === index ? { ...r, ...patch } : r));
-  function reset() { setActive(null); setCustom(false); setRows([]); setRemoved([]); setDetails(null); setCatalog([]); setKey(""); setAdvanced(false); setConnectionChecked(false); setProviderId(""); setProviderName(""); setBaseUrl(""); setCustomKey(""); }
+  function reset() { setActive(null); setCustom(false); setPreset(false); setRows([]); setRemoved([]); setDetails(null); setCatalog([]); setKey(""); setAdvanced(false); setConnectionChecked(false); setProviderId(""); setProviderName(""); setBaseUrl(""); setCustomKey(""); }
   function open(name: string) {
     if (active === name) { reset(); return; }
-    setActive(name); setCustom(false); setRows(models.filter(m => m.provider === name && m.enabled).map(fromModel)); setRemoved([]); setCatalog([]); setDetails(null); setAdvanced(false); setKey("");
+    setActive(name); setCustom(false); setPreset(false); setRows(models.filter(m => m.provider === name && m.enabled).map(fromModel)); setRemoved([]); setCatalog([]); setDetails(null); setAdvanced(false); setKey("");
     setBaseUrl(models.find(m => m.provider === name)?.base_url ?? "");
     setConnectionChecked(false);
   }
@@ -67,25 +77,26 @@ export function ModelSettings({ userId }: { userId: string | undefined }) {
       finally { setFetching(false); }
       return;
     }
-    const url = custom ? baseUrl : baseUrl || rows[0]?.baseUrl;
-    const apiKey = custom ? customKey : key || rows[0]?.apiKey;
+    const url = custom || preset ? baseUrl : baseUrl || rows[0]?.baseUrl;
+    const apiKey = custom || preset ? customKey : key || rows[0]?.apiKey;
     if (!url) { toast.error("请填写 Base URL"); return; }
     setFetching(true);
-    try { const r = await fetchProviderModels({ data: { id: custom ? undefined : rows.find(x => x.id)?.id, baseUrl: url, apiKey: apiKey || undefined } }); setCatalog(r.models); toast.success(`发现 ${r.models.length} 个模型`); }
+    try { const r = await fetchProviderModels({ data: { id: custom || preset ? undefined : rows.find(x => x.id)?.id, baseUrl: url, apiKey: apiKey || undefined } }); setCatalog(r.models); toast.success(`发现 ${r.models.length} 个模型`); }
     catch (e) { toast.error((e as Error).message || "无法读取目录，可以手动添加模型"); }
     finally { setFetching(false); }
   }
   async function apply() {
     if (busy) return;
     if (custom && (!providerName.trim() || !baseUrl.trim() || !customKey.trim())) { toast.error("请填写服务商名称、Base URL 和 API Key"); return; }
+    if (preset && (!baseUrl.trim() || !customKey.trim())) { toast.error("请填写 API Key 和服务地址"); return; }
     if (active === "OpenAI" && !connected && rows.some(r => r.connectionType === "direct")) { toast.error("请先测试 OpenAI 连接"); return; }
     const dirty = rows.filter(r => !r.id || JSON.stringify({ modelId:r.modelId, label:r.label, version:r.version, description:r.description, reasoningEffort:r.reasoningEffort, connectionType:r.connectionType, providerName:r.providerName, baseUrl:r.baseUrl }) !== JSON.stringify((() => { const old = models.find(m => m.id === r.id); if (!old) return {}; const x = fromModel(old); return { modelId:x.modelId, label:x.label, version:x.version, description:x.description, reasoningEffort:x.reasoningEffort, connectionType:x.connectionType, providerName:x.providerName, baseUrl:x.baseUrl }; })()));
     if (dirty.some(r => !r.modelId.trim() || !r.label.trim())) { toast.error("请填写模型 ID 和显示名称"); return; }
-    if (custom && !rows.length) { toast.error("请先添加至少一个模型"); return; }
+    if ((custom || preset) && !rows.length) { setAdvanced(true); toast.error("请先拉取或手动添加至少一个模型"); return; }
     setBusy(true);
     try {
       for (const m of removed) await removeModel({ data: { id: m.id } });
-      for (const r of dirty) await saveModel({ data: { ...r, providerName: custom ? providerName.trim() : r.providerName, baseUrl: r.connectionType === "direct" ? (custom ? baseUrl : baseUrl || r.baseUrl) : "", apiKey: r.connectionType === "direct" ? (custom ? customKey : key || r.apiKey) : "" } });
+      for (const r of dirty) await saveModel({ data: { ...r, providerName: custom ? providerName.trim() : preset ? selectedPreset : r.providerName, baseUrl: r.connectionType === "direct" ? (custom || preset ? baseUrl : baseUrl || r.baseUrl) : "", apiKey: r.connectionType === "direct" ? (custom || preset ? customKey : key || r.apiKey) : "" } });
       await refresh(); reset(); toast.success("模型配置已保存");
     } catch (e) { await refresh(); toast.error((e as Error).message || "保存失败，请检查模型配置"); }
     finally { setBusy(false); }
@@ -110,8 +121,8 @@ export function ModelSettings({ userId }: { userId: string | undefined }) {
         </div>}
       </div>;
     })}</div>
-    {catalog.length > 0 && <select aria-label="已发现模型" className="relay-model-select mt-2 h-8 w-full rounded-md px-2 text-[12px]" value="" onChange={e => { if (e.target.value && !rows.some(r => r.modelId === e.target.value)) setRows(prev => [...prev, { ...fresh(custom ? providerName : active ?? "OpenAI", baseUrl), modelId:e.target.value, label:e.target.value, apiKey: custom ? customKey : key }]); }}><option value="">Choose a discovered model to add</option>{catalog.map(id => <option key={id} value={id}>{id}</option>)}</select>}
-    <Button variant="outline" size="sm" className="mt-2 h-7 rounded-full px-2 text-[11px]" disabled={active === "OpenAI" && !connected} onClick={() => setRows(prev => [...prev, { ...fresh(custom ? providerName : active ?? "OpenAI", baseUrl), connectionType: "direct", apiKey: custom ? customKey : key }])}><Plus className="size-3"/>Add model</Button>
+    {catalog.length > 0 && <select aria-label="已发现模型" className="relay-model-select mt-2 h-8 w-full rounded-md px-2 text-[12px]" value="" onChange={e => { if (e.target.value && !rows.some(r => r.modelId === e.target.value)) setRows(prev => [...prev, { ...fresh(custom ? providerName : preset ? selectedPreset : active ?? "OpenAI", baseUrl), modelId:e.target.value, label:e.target.value, apiKey: custom || preset ? customKey : key }]); }}><option value="">Choose a discovered model to add</option>{catalog.map(id => <option key={id} value={id}>{id}</option>)}</select>}
+    <Button variant="outline" size="sm" className="mt-2 h-7 rounded-full px-2 text-[11px]" disabled={active === "OpenAI" && !connected} onClick={() => setRows(prev => [...prev, { ...fresh(custom ? providerName : preset ? selectedPreset : active ?? "OpenAI", baseUrl), connectionType: "direct", apiKey: custom || preset ? customKey : key }])}><Plus className="size-3"/>Add model</Button>
   </>;
   return <div className="relay-models py-3">
     <h4 className="text-[14px] font-medium">Models</h4>
@@ -131,7 +142,18 @@ export function ModelSettings({ userId }: { userId: string | undefined }) {
         <div className="mt-3 flex justify-end gap-2"><Button variant="outline" size="sm" className="h-8 text-[11px]" onClick={reset}>Cancel</Button><Button size="sm" className="relay-model-apply h-8 text-[11px]" disabled={busy} onClick={() => void apply()}>{busy ? <LoaderCircle className="size-3 animate-spin"/> : null}Apply</Button></div>
       </div>}
     </div>)}
-    {loaded && !custom && !active && <div className="grid gap-2 sm:grid-cols-2"><Button variant="outline" className="relay-model-add h-9 border-dashed text-[12px]" disabled={!userId} onClick={() => { reset(); setCustom(true); }}><Plus className="size-3.5"/>Add provider</Button><Button variant="outline" className="relay-model-add h-9 border-dashed text-[12px]" disabled={!userId} onClick={() => { reset(); setCustom(true); }}><Plus className="size-3.5"/>Add a custom provider</Button></div>}
+    {loaded && !custom && !preset && !active && <div className="grid gap-2 sm:grid-cols-2"><Button variant="outline" className="relay-model-add h-9 border-dashed text-[12px]" disabled={!userId || availablePresets.length === 0} onClick={() => { const first = availablePresets[0]; if (!first) return; reset(); setPreset(true); setSelectedPreset(first.name); setBaseUrl(first.url); }}><Plus className="size-3.5"/>Add provider</Button><Button variant="outline" className="relay-model-add h-9 border-dashed text-[12px]" disabled={!userId} onClick={() => { reset(); setCustom(true); }}><Plus className="size-3.5"/>Add a custom provider</Button></div>}
+    {preset && <div className="relay-model-editor p-3.5"><div className="space-y-3">
+      {label("Provider", <select aria-label="Provider" className="relay-model-select h-8 w-full max-w-52 px-2 text-[12px]" value={selectedPreset} onChange={e => { const next = providerPresets.find(p => p.name === e.target.value); if (!next) return; setSelectedPreset(next.name); setBaseUrl(next.url); setCustomKey(""); setRows([]); setCatalog([]); setAdvanced(false); }}>
+        {availablePresets.map(p => <option key={p.name} value={p.name}>{p.name}</option>)}
+      </select>)}
+      {label("API key", <Input aria-label="Provider API key" type="password" autoComplete="new-password" className={inputStyle} placeholder="Enter an API key" value={customKey} onChange={e => setCustomKey(e.target.value)}/>)}
+      <div className="relay-model-divider pt-2"><Button variant="ghost" size="sm" className="-ml-2 h-7 px-2 text-[11px] text-muted-foreground" onClick={() => setAdvanced(v => !v)}>{advanced ? <ChevronDown className="size-3"/> : <ChevronRight className="size-3"/>}Customized settings</Button></div>
+      {advanced && <div className="space-y-3">{label("Base URL", <Input aria-label="Provider Base URL" className={inputStyle} value={baseUrl} onChange={e => { setBaseUrl(e.target.value); setCatalog([]); }}/>) }
+        <div className="relay-model-divider pt-3"><div className="flex items-center justify-between text-[11px]"><span>Models</span><Button variant="ghost" size="sm" className="h-6 px-1 text-[11px] text-muted-foreground" disabled={!customKey.trim() || fetching} onClick={() => void fetchModels()}>{fetching ? <LoaderCircle className="size-3 animate-spin"/> : null}Fetch available models</Button></div><p className="mb-2 text-[11px] text-muted-foreground">{selectedPreset} model catalog</p>{renderRows()}</div>
+      </div>}
+      <div className="flex justify-end gap-2"><Button variant="outline" size="sm" className="h-8 text-[11px]" onClick={reset}>Cancel</Button><Button size="sm" className="relay-model-apply h-8 text-[11px]" disabled={busy || !customKey.trim()} onClick={() => void apply()}>{busy ? <LoaderCircle className="size-3 animate-spin"/> : null}Apply</Button></div>
+    </div></div>}
     {custom && <div className="relay-model-editor p-3.5"><h5 className="text-[12px] font-medium">Custom provider</h5><div className="mt-3 space-y-3">
       {label("Provider ID", <Input aria-label="Provider ID" className={inputStyle} placeholder="acme-gateway" value={providerId} onChange={e => setProviderId(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))}/>)}
       <p className="-mt-2 text-[11px] text-muted-foreground">A lowercase identifier for this provider.</p>
