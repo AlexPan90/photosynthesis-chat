@@ -1,0 +1,6 @@
+- Model CRUD is user-owned: gateway uses workspace key; direct models use encrypted keys and HTTPS endpoints. Presets supply endpoint defaults, custom providers need manual endpoints, and `/models` discovery is server-side with manual fallback to keep keys private.
+- Test OpenAI credentials against its model directory before advertising direct models; keep encrypted credentials scoped to the owner so unverified keys never appear available.
+- Real chat streams through `/api/chat` via Lovable Gateway OpenAI Responses, default `openai/gpt-6-astra`; threads/messages use user-owned RLS and demo threads remain client-only.
+- MCP uses remote HTTPS only because hosted runtime cannot spawn stdio; encrypt per-user keys and custom headers, use short-lived clients, and share connection/request settings between tests and chat so behavior agrees.
+- Load Skills progressively through `load_skill`/`read_skill_file` (GitHub raw files read-only) to keep the system prompt brief.
+- Persist paused delegate history in own-only `delegate_sessions`; resume with `delegate_action`, never model-supplied arguments, to preserve approval boundaries.

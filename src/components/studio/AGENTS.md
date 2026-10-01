@@ -1,0 +1,3 @@
+- Keep sample story/reader state client-side and use browser speech synthesis, not recorded audio, so demo media needs no server persistence.
+- Conversation is the focal pane; open files in a contextual resizable right pane. Preserve the 272px sidebar, 60px header, 860px message column and 300px contextual rail so workspace density stays consistent.
+- Preview each artifact by file type rather than generic thumbnails so content is not misrepresented.

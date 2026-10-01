@@ -5,16 +5,9 @@
 > Commits you push to the connected branch sync back to Lovable and show up in the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
-- Model CRUD is user-owned; gateway uses workspace key, direct models use encrypted keys and HTTPS endpoints. Presets supply endpoint defaults; custom providers require manual endpoints. Discover /models server-side with manual fallback to keep keys private.
-- Test OpenAI connections against its model directory before showing direct models; keep provider credentials encrypted and scoped to the owner so unverified keys cannot advertise availability.
-- Use AI Elements for transcript, tools and composer; preserve reusable Select, motion and icon-button compatibility.
-- Keep thread IDs in `/chat/$threadId`; sample story/reader state is client-side and narration uses browser speech synthesis, not recorded audio.
-- Use near-black/white surfaces with indigo accent and Sora/Manrope per the Monolithic Technical Glass reference.
-- Conversation is the focal pane; files open in a contextual resizable right pane. The chat shell uses 272px sidebar, 60px header, 860px message column and 300px contextual rail.
-- Real chat streams through `/api/chat` via Lovable Gateway OpenAI Responses, default `openai/gpt-6-astra`; threads/messages are RLS user-owned, demo threads client-only.
-- Agent orchestration stays in `/api/chat`; tools, prompt, model, delegates and streaming events share one UI message stream.
-- Embed orchestra pages in Settings; retain `/studio/*` links. MCP uses remote HTTPS only (hosted runtime cannot spawn stdio), per-user encrypted keys and custom headers, and short-lived clients with persisted connection/request settings; all paths share one MCP client factory so tests and chat use identical configuration.
-- Skills load progressively via `load_skill`/`read_skill_file` (GitHub raw files read-only), keeping the system prompt brief.
-- Execute scripts only in approved browser Web Worker or E2B sandbox; Worker runtime cannot spawn or eval.
-- Persist paused delegate history in own-only `delegate_sessions`; resume via `delegate_action`, never trusting model-supplied args.
-- Scale workspace text with shell-scale and preview each artifact by file type, avoiding misleading generic thumbnails.
+- Model configuration and chat records are user-owned; keep credentials encrypted server-side and enforce RLS so one user's data cannot leak to another.
+- Keep `/chat/$threadId` URLs and `/studio/*` deep links; embed orchestra management in Settings so existing links and workflows survive.
+- Use near-black/white surfaces with indigo accent and Sora/Manrope for the Monolithic Technical Glass direction; scale workspace text with shell-scale.
+- Use AI Elements for transcript, tools and composer; preserve reusable Select, motion and icon-button compatibility so interaction patterns stay consistent.
+- Agent orchestration stays in `/api/chat` with one stream for tool, prompt, model and delegate events so execution remains visible in conversation.
+- Never execute scripts in the Worker runtime; use approved browser Web Worker or E2B sandbox because the Worker cannot spawn or eval.
