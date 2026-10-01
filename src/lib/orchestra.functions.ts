@@ -16,7 +16,7 @@ const mcpInput = z.object({
     request_timeout_ms: z.number().int().min(1000).max(300000),
     protocol_discovery: z.boolean(),
     max_retries: z.number().int().min(0).max(3),
-  }).optional(),
+  }),
   extra_headers: z.array(z.object({ name: z.string(), value: z.string() })).max(12).optional(),
   keep_extra_headers: z.boolean().optional(),
 });
@@ -52,7 +52,7 @@ export const saveMcpConnection = createServerFn({ method: "POST" })
     let state = "ready", last_error: string | null = null, tools: { name: string; description: string; inputSchema?: Record<string, unknown> }[] = [];
     try { tools = await probeMcp(withProxy(url, proxy_url), { ...customHeaders, ...buildHeaders(data.auth_type, data.header_name, plain) }, data.settings); }
     catch (e) { state = "failed"; last_error = String((e as Error).message ?? e).slice(0, 300); }
-    const row = { name: data.name, url, proxy_url, settings: data.settings, ...(extra_headers_enc !== undefined ? { extra_headers_enc } : {}), auth_type: data.auth_type, header_name: data.header_name || "Authorization", state, last_error, tools: tools as unknown as Json, ...(secret_enc !== undefined ? { secret_enc } : {}) };
+    const row = { name: data.name, url, proxy_url, settings: data.settings as Json, ...(extra_headers_enc !== undefined ? { extra_headers_enc } : {}), auth_type: data.auth_type, header_name: data.header_name || "Authorization", state, last_error, tools: tools as unknown as Json, ...(secret_enc !== undefined ? { secret_enc } : {}) };
     const q = data.id
       ? context.supabase.from("mcp_connections").update(row).eq("id", data.id).select("id").single()
       : context.supabase.from("mcp_connections").insert(row).select("id").single();
@@ -65,12 +65,12 @@ export const testMcpConnection = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { probeMcp, buildHeaders, withProxy, validateCustomHeaders } = await import("@/lib/ai/mcp.server");
+    const { probeMcp, buildHeaders, withProxy, mcpSettings } = await import("@/lib/ai/mcp.server");
     const { decryptSecret } = await import("@/lib/ai/crypto.server");
     const { data: row } = await context.supabase.from("mcp_connections").select("url,auth_type,header_name,proxy_url,secret_enc,extra_headers_enc,settings").eq("id", data.id).maybeSingle();
     if (!row) throw new Error("连接不存在");
     let state = "ready", last_error: string | null = null, tools: { name: string; description: string; inputSchema?: Record<string, unknown> }[] = [];
-    try { tools = await probeMcp(withProxy(validateSafeUrl(row.url), row.proxy_url ? validateSafeUrl(row.proxy_url) : null), { ...(row.extra_headers_enc ? JSON.parse(await decryptSecret(row.extra_headers_enc)) as Record<string, string> : {}), ...buildHeaders(row.auth_type, row.header_name, row.secret_enc ? await decryptSecret(row.secret_enc) : null) }, row.settings); }
+    try { tools = await probeMcp(withProxy(validateSafeUrl(row.url), row.proxy_url ? validateSafeUrl(row.proxy_url) : null), { ...(row.extra_headers_enc ? JSON.parse(await decryptSecret(row.extra_headers_enc)) as Record<string, string> : {}), ...buildHeaders(row.auth_type, row.header_name, row.secret_enc ? await decryptSecret(row.secret_enc) : null) }, mcpSettings(row.settings)); }
     catch (e) { state = "failed"; last_error = String((e as Error).message ?? e).slice(0, 300); }
     await context.supabase.from("mcp_connections").update({ state, last_error, ...(state === "ready" ? { tools: tools as unknown as Json } : {}) }).eq("id", data.id);
     return { state, last_error, toolCount: tools.length };

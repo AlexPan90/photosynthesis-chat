@@ -2,8 +2,19 @@ import { createMCPClient, type MCPClient } from "@ai-sdk/mcp";
 import type { ToolSet } from "ai";
 import { decryptSecret } from "./crypto.server";
 
-export type McpRow = { settings?: McpSettings | null; extra_headers_enc?: string | null; id: string; name: string; url: string; auth_type: string; header_name: string; proxy_url?: string | null; secret_enc: string | null; state: string; disabled_tools: string[] };
+export type McpRow = { settings?: unknown; extra_headers_enc?: string | null; id: string; name: string; url: string; auth_type: string; header_name: string; proxy_url?: string | null; secret_enc: string | null; state: string; disabled_tools: string[] };
 export type McpSettings = { connection_timeout_ms?: number; request_timeout_ms?: number; protocol_discovery?: boolean; max_retries?: number };
+
+export function mcpSettings(value: unknown): McpSettings {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const v = value as Record<string, unknown>;
+  return {
+    connection_timeout_ms: typeof v.connection_timeout_ms === "number" && v.connection_timeout_ms >= 1000 && v.connection_timeout_ms <= 120000 ? v.connection_timeout_ms : 15000,
+    request_timeout_ms: typeof v.request_timeout_ms === "number" && v.request_timeout_ms >= 1000 && v.request_timeout_ms <= 300000 ? v.request_timeout_ms : 20000,
+    protocol_discovery: typeof v.protocol_discovery === "boolean" ? v.protocol_discovery : true,
+    max_retries: typeof v.max_retries === "number" && v.max_retries >= 0 && v.max_retries <= 3 ? v.max_retries : 0,
+  };
+}
 
 export function validateCustomHeaders(headers: { name: string; value: string }[]) {
   if (headers.length > 12) throw new Error("自定义请求头最多 12 条");
@@ -69,8 +80,8 @@ export async function probeMcp(url: string, headers: Record<string, string>, set
 export async function runMcpTool(row: McpRow, name: string, args: Record<string, unknown>) {
   let client: MCPClient | undefined;
   try {
-    client = await connect(withProxy(row.url, row.proxy_url), await connectionHeaders(row), row.settings);
-    const result = await client.callTool({ name, arguments: args, options: { timeout: row.settings?.request_timeout_ms ?? 20000 } });
+    client = await connect(withProxy(row.url, row.proxy_url), await connectionHeaders(row), mcpSettings(row.settings));
+    const result = await client.callTool({ name, arguments: args, options: { timeout: mcpSettings(row.settings).request_timeout_ms ?? 20000 } });
     const content = Array.isArray(result.content) ? result.content.map((part: unknown) => {
       if (part && typeof part === "object" && "type" in part && part.type === "text" && "text" in part && typeof part.text === "string") return part.text;
       return JSON.stringify(part);
@@ -94,7 +105,7 @@ export async function loadMcpTools(rows: McpRow[], wanted: string[] | "all") {
     if (picks && picks.size === 0) continue;
     i++;
     try {
-      const client = await connect(withProxy(row.url, row.proxy_url), await connectionHeaders(row), row.settings);
+      const client = await connect(withProxy(row.url, row.proxy_url), await connectionHeaders(row), mcpSettings(row.settings));
       clients.push(client);
       const set = await client.tools() as ToolSet;
       for (const [name, t] of Object.entries(set)) {
