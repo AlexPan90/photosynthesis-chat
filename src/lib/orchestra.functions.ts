@@ -11,6 +11,14 @@ const mcpInput = z.object({
   header_name: z.string().trim().max(60).default("Authorization"),
   secret: z.string().max(4000).optional(),
   proxy_url: z.string().trim().max(500).optional(),
+  settings: z.object({
+    connection_timeout_ms: z.number().int().min(1000).max(120000),
+    request_timeout_ms: z.number().int().min(1000).max(300000),
+    protocol_discovery: z.boolean(),
+    max_retries: z.number().int().min(0).max(3),
+  }).optional(),
+  extra_headers: z.array(z.object({ name: z.string(), value: z.string() })).max(12).optional(),
+  keep_extra_headers: z.boolean().optional(),
 });
 
 /** 保存 MCP 连接：加密密钥 → 测试连接 → 记录状态和工具列表。 */
@@ -18,7 +26,7 @@ export const saveMcpConnection = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => mcpInput.parse(d))
   .handler(async ({ data, context }) => {
-    const { validateMcpUrl, probeMcp, buildHeaders, withProxy } = await import("@/lib/ai/mcp.server");
+    const { validateMcpUrl, probeMcp, buildHeaders, withProxy, validateCustomHeaders } = await import("@/lib/ai/mcp.server");
     const { encryptSecret, decryptSecret } = await import("@/lib/ai/crypto.server");
     const url = validateMcpUrl(data.url);
     const proxy_url = data.proxy_url ? validateMcpUrl(data.proxy_url) : null;
@@ -30,10 +38,20 @@ export const saveMcpConnection = createServerFn({ method: "POST" })
       const { data: row } = await context.supabase.from("mcp_connections").select("secret_enc").eq("id", data.id).maybeSingle();
       plain = row?.secret_enc ? await decryptSecret(row.secret_enc) : null;
     }
+    let extra_headers_enc: string | null | undefined;
+    let customHeaders: Record<string, string> = {};
+    if (data.extra_headers?.length) {
+      customHeaders = validateCustomHeaders(data.extra_headers);
+      if (data.auth_type === "api_key" && Object.keys(customHeaders).some(k => k.toLowerCase() === data.header_name.toLowerCase())) throw new Error("自定义请求头不能与鉴权请求头重复");
+      extra_headers_enc = await encryptSecret(JSON.stringify(customHeaders));
+    } else if (data.keep_extra_headers && data.id) {
+      const { data: previous } = await context.supabase.from("mcp_connections").select("extra_headers_enc").eq("id", data.id).maybeSingle();
+      if (previous?.extra_headers_enc) customHeaders = JSON.parse(await decryptSecret(previous.extra_headers_enc));
+    } else extra_headers_enc = null;
     let state = "ready", last_error: string | null = null, tools: { name: string; description: string; inputSchema?: Record<string, unknown> }[] = [];
-    try { tools = await probeMcp(withProxy(url, proxy_url), buildHeaders(data.auth_type, data.header_name, plain)); }
+    try { tools = await probeMcp(withProxy(url, proxy_url), { ...customHeaders, ...buildHeaders(data.auth_type, data.header_name, plain) }, data.settings); }
     catch (e) { state = "failed"; last_error = String((e as Error).message ?? e).slice(0, 300); }
-    const row = { name: data.name, url, proxy_url, auth_type: data.auth_type, header_name: data.header_name || "Authorization", state, last_error, tools: tools as unknown as Json, ...(secret_enc !== undefined ? { secret_enc } : {}) };
+    const row = { name: data.name, url, proxy_url, settings: data.settings, ...(extra_headers_enc !== undefined ? { extra_headers_enc } : {}), auth_type: data.auth_type, header_name: data.header_name || "Authorization", state, last_error, tools: tools as unknown as Json, ...(secret_enc !== undefined ? { secret_enc } : {}) };
     const q = data.id
       ? context.supabase.from("mcp_connections").update(row).eq("id", data.id).select("id").single()
       : context.supabase.from("mcp_connections").insert(row).select("id").single();
@@ -46,12 +64,12 @@ export const testMcpConnection = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { probeMcp, buildHeaders, withProxy } = await import("@/lib/ai/mcp.server");
+    const { probeMcp, buildHeaders, withProxy, validateCustomHeaders } = await import("@/lib/ai/mcp.server");
     const { decryptSecret } = await import("@/lib/ai/crypto.server");
-    const { data: row } = await context.supabase.from("mcp_connections").select("url,auth_type,header_name,proxy_url,secret_enc").eq("id", data.id).maybeSingle();
+    const { data: row } = await context.supabase.from("mcp_connections").select("url,auth_type,header_name,proxy_url,secret_enc,extra_headers_enc,settings").eq("id", data.id).maybeSingle();
     if (!row) throw new Error("连接不存在");
     let state = "ready", last_error: string | null = null, tools: { name: string; description: string; inputSchema?: Record<string, unknown> }[] = [];
-    try { tools = await probeMcp(withProxy(validateSafeUrl(row.url), row.proxy_url ? validateSafeUrl(row.proxy_url) : null), buildHeaders(row.auth_type, row.header_name, row.secret_enc ? await decryptSecret(row.secret_enc) : null)); }
+    try { tools = await probeMcp(withProxy(validateSafeUrl(row.url), row.proxy_url ? validateSafeUrl(row.proxy_url) : null), { ...(row.extra_headers_enc ? JSON.parse(await decryptSecret(row.extra_headers_enc)) as Record<string, string> : {}), ...buildHeaders(row.auth_type, row.header_name, row.secret_enc ? await decryptSecret(row.secret_enc) : null) }, row.settings); }
     catch (e) { state = "failed"; last_error = String((e as Error).message ?? e).slice(0, 300); }
     await context.supabase.from("mcp_connections").update({ state, last_error, ...(state === "ready" ? { tools: tools as unknown as Json } : {}) }).eq("id", data.id);
     return { state, last_error, toolCount: tools.length };
@@ -66,7 +84,7 @@ export const callMcpTool = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     if (JSON.stringify(data.args).length > 16000) throw new Error("参数过长");
     const { data: row, error } = await context.supabase.from("mcp_connections")
-      .select("id,name,url,auth_type,header_name,proxy_url,secret_enc,state,disabled_tools,tools")
+      .select("id,name,url,auth_type,header_name,proxy_url,secret_enc,extra_headers_enc,settings,state,disabled_tools,tools")
       .eq("id", data.id).maybeSingle();
     if (error || !row || row.state !== "ready") throw new Error("连接未就绪");
     const available = Array.isArray(row.tools) && row.tools.some(t => t && typeof t === "object" && "name" in t && t['name'] === data.name);
