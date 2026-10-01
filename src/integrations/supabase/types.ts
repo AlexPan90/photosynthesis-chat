@@ -211,12 +211,14 @@ export type Database = {
           auth_type: string
           created_at: string
           disabled_tools: string[]
+          extra_headers_enc: string | null
           header_name: string
           id: string
           last_error: string | null
           name: string
           proxy_url: string | null
           secret_enc: string | null
+          settings: Json
           state: string
           tools: Json
           updated_at: string
@@ -228,12 +230,14 @@ export type Database = {
           auth_type?: string
           created_at?: string
           disabled_tools?: string[]
+          extra_headers_enc?: string | null
           header_name?: string
           id?: string
           last_error?: string | null
           name: string
           proxy_url?: string | null
           secret_enc?: string | null
+          settings?: Json
           state?: string
           tools?: Json
           updated_at?: string
@@ -245,12 +249,14 @@ export type Database = {
           auth_type?: string
           created_at?: string
           disabled_tools?: string[]
+          extra_headers_enc?: string | null
           header_name?: string
           id?: string
           last_error?: string | null
           name?: string
           proxy_url?: string | null
           secret_enc?: string | null
+          settings?: Json
           state?: string
           tools?: Json
           updated_at?: string
