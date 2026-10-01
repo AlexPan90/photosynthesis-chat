@@ -29,6 +29,7 @@ export const saveMcpConnection = createServerFn({ method: "POST" })
     const { validateMcpUrl, probeMcp, buildHeaders, withProxy, validateCustomHeaders } = await import("@/lib/ai/mcp.server");
     const { encryptSecret, decryptSecret } = await import("@/lib/ai/crypto.server");
     const url = validateMcpUrl(data.url);
+    if (data.auth_type === "api_key" && !/^[A-Za-z0-9-]{1,64}$/.test(data.header_name)) throw new Error("鉴权请求头名称不合法");
     const proxy_url = data.proxy_url ? validateMcpUrl(data.proxy_url) : null;
     let secret_enc: string | null | undefined;
     if (data.auth_type === "none") secret_enc = null;

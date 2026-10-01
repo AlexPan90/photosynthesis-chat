@@ -33,3 +33,5 @@
 - [x] Enlarge the Settings window and embed complete Skills, Agent, and MCP management without page navigation.
 - [x] Separate Settings navigation into General, Appearance, Models, Agent, Skills, MCP, Orchestration, and Shortcuts; keep configuration separate from capability composition.
 - [x] Rework MCP management around server cards, a focused connection form, connection settings, and live tool testing.
+
+- [x] Refine MCP connection editor controls and persist supported transport, auth, header, timeout, discovery and retry settings for testing and Agent use.
