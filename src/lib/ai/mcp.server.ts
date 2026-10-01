@@ -8,11 +8,15 @@ export type McpSettings = { connection_timeout_ms?: number; request_timeout_ms?:
 export function mcpSettings(value: unknown): McpSettings {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   const v = value as Record<string, unknown>;
+  const connectionTimeout = v["connection_timeout_ms"];
+  const requestTimeout = v["request_timeout_ms"];
+  const discovery = v["protocol_discovery"];
+  const retries = v["max_retries"];
   return {
-    connection_timeout_ms: typeof v.connection_timeout_ms === "number" && v.connection_timeout_ms >= 1000 && v.connection_timeout_ms <= 120000 ? v.connection_timeout_ms : 15000,
-    request_timeout_ms: typeof v.request_timeout_ms === "number" && v.request_timeout_ms >= 1000 && v.request_timeout_ms <= 300000 ? v.request_timeout_ms : 20000,
-    protocol_discovery: typeof v.protocol_discovery === "boolean" ? v.protocol_discovery : true,
-    max_retries: typeof v.max_retries === "number" && v.max_retries >= 0 && v.max_retries <= 3 ? v.max_retries : 0,
+    connection_timeout_ms: typeof connectionTimeout === "number" && connectionTimeout >= 1000 && connectionTimeout <= 120000 ? connectionTimeout : 15000,
+    request_timeout_ms: typeof requestTimeout === "number" && requestTimeout >= 1000 && requestTimeout <= 300000 ? requestTimeout : 20000,
+    protocol_discovery: typeof discovery === "boolean" ? discovery : true,
+    max_retries: typeof retries === "number" && retries >= 0 && retries <= 3 ? retries : 0,
   };
 }
 
