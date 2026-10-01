@@ -520,3 +520,10 @@ body { font-size: calc(16px * var(--relay-type-scale)); }
 .relay-model-apply { background: var(--model-ink); color: var(--background); box-shadow: none; }
 .relay-model-apply:hover { background: color-mix(in oklab, var(--model-ink) 86%, var(--background)); color: var(--background); }
 @media (prefers-reduced-motion: reduce) { .relay-model-provider { transition: none; } }
+
+/* MCP connection editor: quiet framed controls in both settings themes. */
+.mcp-editor-dialog { background: var(--background); }
+.mcp-editor-dialog .mcp-form-control { border: 1px solid var(--model-outline, var(--input)); border-radius: 7px; background: var(--model-input, var(--background)); box-shadow: none; color: var(--foreground); transition: border-color 150ms, box-shadow 150ms, background 150ms; }
+.mcp-editor-dialog .mcp-form-control:hover:not(:disabled) { border-color: color-mix(in oklab, var(--foreground) 40%, var(--input)); }
+.mcp-editor-dialog .mcp-form-control:focus-visible, .mcp-editor-dialog .mcp-form-control[data-state="open"] { outline: none; border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 16%, transparent); }
+.mcp-editor-dialog .mcp-form-control[readonly] { background: var(--secondary); }

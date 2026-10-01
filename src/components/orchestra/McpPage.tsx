@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, ChevronDown, ChevronLeft, CircleAlert, Copy, ExternalLink, LoaderCircle, MoreHorizontal, Play, Plug, Plus, RefreshCw, Search, Settings2, Trash2 } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, CircleAlert, Copy, ExternalLink, LoaderCircle, MoreHorizontal, Play, Plug, Plus, RefreshCw, Search, Settings2, Trash2, ShieldCheck, Clock3, Network, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,8 +18,9 @@ const PRESETS = [
   { name: "Hugging Face", url: "https://huggingface.co/mcp", auth_type: "api_key" as const },
   { name: "Linear", url: "https://mcp.linear.app/mcp", auth_type: "api_key" as const },
 ];
-type Form = { id?: string; name: string; url: string; auth_type: "none" | "api_key"; header_name: string; secret: string; proxy_url: string };
-const empty: Form = { name: "", url: "", auth_type: "none", header_name: "Authorization", secret: "", proxy_url: "" };
+type Form = { id?: string; name: string; url: string; auth_type: "none" | "api_key"; header_name: string; secret: string; proxy_url: string; connection_timeout_ms: number; request_timeout_ms: number; protocol_discovery: boolean; max_retries: number; extra_headers: { name: string; value: string }[]; keep_extra_headers: boolean };
+const empty: Form = { name: "", url: "", auth_type: "none", header_name: "Authorization", secret: "", proxy_url: "", connection_timeout_ms: 15000, request_timeout_ms: 20000, protocol_discovery: true, max_retries: 0, extra_headers: [], keep_extra_headers: false };
+const fieldClass = "mcp-form-control h-10 text-[13px]";
 type ToolInfo = McpConn["tools"][number];
 
 function Status({ item }: { item: McpConn }) {
@@ -29,7 +31,10 @@ function Status({ item }: { item: McpConn }) {
 }
 
 function Field({ title, children, note }: { title: string; children: React.ReactNode; note?: string }) {
-  return <label className="block space-y-1.5 text-xs font-medium text-foreground"><span>{title}</span>{children}{note && <span className="block text-[11px] font-normal leading-4 text-muted-foreground">{note}</span>}</label>;
+  return <label className="block space-y-2 text-[12px] font-medium text-foreground"><span>{title}</span>{children}{note && <span className="block text-[11px] font-normal leading-5 text-muted-foreground">{note}</span>}</label>;
+}
+function SectionTitle({ icon: Icon, title, description }: { icon: typeof Network; title: string; description: string }) {
+  return <div className="flex items-start gap-2.5"><span className="mt-0.5 rounded-md bg-primary/10 p-1.5 text-primary"><Icon className="size-3.5"/></span><div><h3 className="text-[13px] font-semibold">{title}</h3><p className="mt-0.5 text-[11px] leading-5 text-muted-foreground">{description}</p></div></div>;
 }
 
 export function McpPage() {
@@ -52,15 +57,15 @@ export function McpPage() {
   const tool = current?.tools.find(t => t.name === activeTool);
   const filteredTools = current?.tools.filter(t => `${t.name} ${t.description}`.toLowerCase().includes(toolSearch.toLowerCase())) ?? [];
 
-  function start(formValue: Form = empty) { setForm(formValue); setError(""); setEditor(true); }
+  function start(formValue: Form = empty) { setForm({ ...formValue, extra_headers: [...formValue.extra_headers] }); setError(""); setEditor(true); }
   function open(item: McpConn) { setSelected(item.id); setActiveTool(null); setResult(""); setError(""); }
-  function edit(item: McpConn) { start({ id: item.id, name: item.name, url: item.url, auth_type: item.auth_type === "api_key" ? "api_key" : "none", header_name: item.header_name, secret: "", proxy_url: item.proxy_url ?? "" }); }
+  function edit(item: McpConn) { start({ id: item.id, name: item.name, url: item.url, auth_type: item.auth_type === "api_key" ? "api_key" : "none", header_name: item.header_name, secret: "", proxy_url: item.proxy_url ?? "", connection_timeout_ms: item.settings?.connection_timeout_ms ?? 15000, request_timeout_ms: item.settings?.request_timeout_ms ?? 20000, protocol_discovery: item.settings?.protocol_discovery ?? true, max_retries: item.settings?.max_retries ?? 0, extra_headers: [], keep_extra_headers: true }); }
   async function submit() {
     if (!form.name.trim() || !form.url.trim()) { setError("请填写名称和服务地址"); return; }
     if (form.auth_type === "api_key" && !form.secret && !form.id) { setError("请填写密钥"); return; }
     setBusy(true); setError("");
     try {
-      const saved = await save({ data: { ...form, secret: form.secret || undefined, proxy_url: form.proxy_url.trim() } });
+      const saved = await save({ data: { ...form, secret: form.secret || undefined, proxy_url: form.proxy_url.trim(), settings: { connection_timeout_ms: form.connection_timeout_ms, request_timeout_ms: form.request_timeout_ms, protocol_discovery: form.protocol_discovery, max_retries: form.max_retries }, extra_headers: form.extra_headers.filter(h => h.name.trim() || h.value.trim()), keep_extra_headers: form.keep_extra_headers && form.extra_headers.length === 0 } });
       await reload(); setSelected(saved.id); setEditor(false); setActiveTool(null);
       if (saved.state === "failed") setError(`已保存，但连接失败：${saved.last_error ?? "未知错误"}`);
     } catch (e) { setError((e as Error).message || "保存失败"); }
@@ -139,16 +144,28 @@ export function McpPage() {
       </>}
       {error && !current && <p role="alert" className="mt-4 text-xs text-destructive">{error}</p>}
     </div>
-    <Dialog open={editor} onOpenChange={v => { if (!busy) setEditor(v); }}><DialogContent className="relay-settings-surface soft-scroll max-h-[min(740px,90dvh)] w-[min(560px,94vw)] max-w-none overflow-y-auto p-0 [&>button:last-child]:hidden">
-      <div className="border-b border-border px-6 py-4"><div className="flex items-center justify-between"><DialogTitle className="text-base">{form.id ? "编辑 MCP 服务" : "添加 MCP 服务"}</DialogTitle><Button size="icon-sm" variant="ghost" aria-label="关闭表单" onClick={() => setEditor(false)}><ChevronDown className="rotate-90"/></Button></div><DialogDescription className="mt-1 text-xs">连接远程 Streamable HTTP 服务，保存时自动获取工具列表。</DialogDescription></div>
-      <div className="space-y-4 px-6 py-5">
-        <Field title="服务名称 *"><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="例如：我的知识库" className="h-9 text-xs"/></Field>
-        <Field title="服务地址 *" note="仅支持 HTTPS 远程 MCP。服务器上的本地进程 (stdio) 不适用于此应用。"><Input value={form.url} onChange={e => setForm({ ...form, url: e.target.value })} placeholder="https://example.com/mcp" className="h-9 font-mono text-xs"/></Field>
-        <fieldset className="space-y-2"><legend className="text-xs font-medium">鉴权方式</legend><div className="flex gap-2">{([ ["none", "无需鉴权"], ["api_key", "请求头密钥"] ] as const).map(([key, label]) => <Button key={key} type="button" size="sm" variant={form.auth_type === key ? "secondary" : "outline"} className={form.auth_type === key ? "border border-primary/50" : ""} onClick={() => setForm({ ...form, auth_type: key })}>{label}</Button>)}</div></fieldset>
-        {form.auth_type === "api_key" && <div className="grid gap-3 sm:grid-cols-[160px_1fr]"><Field title="请求头名称"><Input value={form.header_name} onChange={e => setForm({ ...form, header_name: e.target.value })} className="h-9 font-mono text-xs"/></Field><Field title="密钥" note={form.id ? "已保存的密钥不回显，留空则保持不变。" : "保存在服务端，不会回显。"}><Input type="password" autoComplete="off" value={form.secret} onChange={e => setForm({ ...form, secret: e.target.value })} placeholder={form.id ? "留空保持原密钥" : "输入密钥或 Bearer token"} className="h-9 text-xs"/></Field></div>}
-        <details className="rounded-md border border-border p-3 text-xs"><summary className="cursor-pointer font-medium">高级设置 · 代理</summary><div className="pt-3"><Field title="代理地址" note="仅适用于将目标地址拼接在路径末尾的 HTTPS 中转服务。"><Input value={form.proxy_url} onChange={e => setForm({ ...form, proxy_url: e.target.value })} placeholder="https://proxy.example.com/" className="h-9 font-mono text-xs"/></Field></div></details>
-        {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
-      </div><div className="flex justify-end gap-2 border-t border-border px-6 py-4"><Button size="sm" variant="outline" onClick={() => setEditor(false)} disabled={busy}>取消</Button><Button size="sm" onClick={() => void submit()} disabled={busy}>{busy && <LoaderCircle className="animate-spin"/>}{form.id ? "保存并测试" : "添加并测试"}</Button></div>
+    <Dialog open={editor} onOpenChange={v => { if (!busy) setEditor(v); }}><DialogContent className="relay-settings-surface mcp-editor-dialog flex max-h-[min(850px,94dvh)] w-[min(760px,96vw)] max-w-none flex-col overflow-hidden p-0 [&>button:last-child]:hidden">
+      <div className="flex shrink-0 items-start justify-between border-b border-border px-5 py-5 sm:px-8"><div><DialogTitle className="text-[17px] font-semibold">{form.id ? "配置 MCP 服务" : "添加 MCP 服务"}</DialogTitle><DialogDescription className="mt-1 text-xs">远程 Streamable HTTP · 保存时连接并同步工具目录</DialogDescription></div><Button size="icon-sm" variant="ghost" aria-label="关闭表单" onClick={() => setEditor(false)}><X/></Button></div>
+      <div className="soft-scroll min-h-0 flex-1 space-y-7 overflow-y-auto px-5 py-6 sm:px-8">
+        <section className="space-y-4"><SectionTitle icon={Network} title="连接" description="指定服务地址和传输方式"/>
+          <div className="grid gap-4 sm:grid-cols-[1fr_1.5fr]"><Field title="服务名称 *"><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="例如：团队知识库" className={fieldClass}/></Field><Field title="服务 ID" note="创建后由系统分配，供 Agent 引用。"><Input value={form.id ?? "保存后生成"} readOnly className={`${fieldClass} text-muted-foreground`}/></Field></div>
+          <div className="grid gap-4 sm:grid-cols-[180px_1fr]"><Field title="传输方式"><Select value="http" onValueChange={() => {}}><SelectTrigger aria-label="传输方式" className="mcp-form-control h-10 text-[13px]"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="http">Streamable HTTP</SelectItem></SelectContent></Select></Field><Field title="服务地址 *" note="仅支持公开 HTTPS 地址；托管环境不支持本地 stdio 命令。"><Input value={form.url} onChange={e => setForm({ ...form, url: e.target.value })} placeholder="https://example.com/mcp" className={`${fieldClass} font-mono`}/></Field></div>
+        </section>
+        <section className="space-y-4 border-t border-border pt-6"><SectionTitle icon={ShieldCheck} title="鉴权与请求头" description="凭证加密保存在服务端，编辑时不会回显"/>
+          <div className="grid gap-4 sm:grid-cols-[180px_1fr]"><Field title="鉴权方式"><Select value={form.auth_type} onValueChange={v => setForm({ ...form, auth_type: v as Form["auth_type"] })}><SelectTrigger aria-label="鉴权方式" className="mcp-form-control h-10 text-[13px]"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="none">无需鉴权</SelectItem><SelectItem value="api_key">请求头密钥</SelectItem></SelectContent></Select></Field>{form.auth_type === "api_key" && <Field title="请求头名称"><Input value={form.header_name} onChange={e => setForm({ ...form, header_name: e.target.value })} className={`${fieldClass} font-mono`}/></Field>}</div>
+          {form.auth_type === "api_key" && <Field title="密钥" note={form.id ? "留空则保留已保存的密钥。" : "Authorization 请求头会自动添加 Bearer 前缀。"}><Input type="password" autoComplete="off" value={form.secret} onChange={e => setForm({ ...form, secret: e.target.value })} placeholder={form.id ? "已保存 · 输入新值以替换" : "输入 API Key 或 token"} className={fieldClass}/></Field>}
+          <div className="space-y-2"><div className="flex items-center justify-between"><span className="text-[12px] font-medium">自定义请求头</span><Button size="sm" variant="ghost" onClick={() => setForm(f => ({ ...f, keep_extra_headers: false, extra_headers: [...f.extra_headers, { name: "", value: "" }] }))}><Plus className="size-3.5"/>添加</Button></div>
+            {form.id && form.keep_extra_headers && form.extra_headers.length === 0 && <p className="text-[11px] text-muted-foreground">现有请求头保持不变，值不会回显。<Button size="sm" variant="link" className="h-auto px-1 text-[11px]" onClick={() => setForm(f => ({ ...f, keep_extra_headers: false }))}>清除现有请求头</Button></p>}
+            {form.extra_headers.map((header, i) => <div key={i} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_32px] items-center gap-2"><Input aria-label={`请求头名称 ${i + 1}`} value={header.name} placeholder="X-Workspace-ID" className={`${fieldClass} font-mono`} onChange={e => setForm(f => ({ ...f, extra_headers: f.extra_headers.map((h, n) => n === i ? { ...h, name: e.target.value } : h) }))}/><Input aria-label={`请求头值 ${i + 1}`} type="password" autoComplete="off" value={header.value} placeholder="请求头值" className={fieldClass} onChange={e => setForm(f => ({ ...f, extra_headers: f.extra_headers.map((h, n) => n === i ? { ...h, value: e.target.value } : h) }))}/><Button size="icon-sm" variant="ghost" aria-label={`移除请求头 ${i + 1}`} onClick={() => setForm(f => ({ ...f, extra_headers: f.extra_headers.filter((_, n) => n !== i) }))}><Trash2 className="size-3.5"/></Button></div>)}
+            <p className="text-[11px] text-muted-foreground">最多 12 条。系统保留的协议与鉴权请求头不可覆盖。</p></div>
+        </section>
+        <section className="space-y-4 border-t border-border pt-6"><SectionTitle icon={Clock3} title="协议与请求" description="调整握手、调用超时与失败重试"/>
+          <div className="flex items-center justify-between gap-4 rounded-md border border-border px-3 py-3"><div><p className="text-xs font-medium">协议版本自动发现</p><p className="text-[11px] text-muted-foreground">关闭后直接使用传统初始化，适合旧版服务。</p></div><Switch aria-label="协议版本自动发现" checked={form.protocol_discovery} onCheckedChange={v => setForm({ ...form, protocol_discovery: v })}/></div>
+          <div className="grid gap-4 sm:grid-cols-3"><Field title="连接超时 (ms)"><Input aria-label="连接超时 (ms)" type="number" min={1000} max={120000} step={1000} value={form.connection_timeout_ms} onChange={e => setForm({ ...form, connection_timeout_ms: Number(e.target.value) })} className={fieldClass}/></Field><Field title="请求超时 (ms)"><Input aria-label="请求超时 (ms)" type="number" min={1000} max={300000} step={1000} value={form.request_timeout_ms} onChange={e => setForm({ ...form, request_timeout_ms: Number(e.target.value) })} className={fieldClass}/></Field><Field title="失败重试"><Select value={String(form.max_retries)} onValueChange={v => setForm({ ...form, max_retries: Number(v) })}><SelectTrigger aria-label="失败重试" className="mcp-form-control h-10 text-[13px]"><SelectValue/></SelectTrigger><SelectContent>{[0,1,2,3].map(n => <SelectItem key={n} value={String(n)}>{n === 0 ? "不重试" : `${n} 次`}</SelectItem>)}</SelectContent></Select></Field></div>
+          <Field title="代理地址" note="可选。仅支持把原服务 URL 拼接在路径末尾的 HTTPS 中转服务。"><Input value={form.proxy_url} onChange={e => setForm({ ...form, proxy_url: e.target.value })} placeholder="https://proxy.example.com/" className={`${fieldClass} font-mono`}/></Field>
+        </section>
+        {error && <p role="alert" className="rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive">{error}</p>}
+      </div><div className="flex shrink-0 justify-end gap-2 border-t border-border px-5 py-4 sm:px-8"><Button size="sm" variant="outline" onClick={() => setEditor(false)} disabled={busy}>取消</Button><Button size="sm" onClick={() => void submit()} disabled={busy}>{busy && <LoaderCircle className="animate-spin"/>}{form.id ? "保存并测试" : "添加并测试"}</Button></div>
     </DialogContent></Dialog>
   </div>;
 }
